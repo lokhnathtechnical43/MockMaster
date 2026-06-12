@@ -144,6 +144,7 @@ export default function ExamPrepApp() {
   const [showBackConfirm, setShowBackConfirm] = useState(false)
   const [showLanguageSheet, setShowLanguageSheet] = useState(false)
   const [showAboutSheet, setShowAboutSheet] = useState(false)
+  const [showFaqSheet, setShowFaqSheet] = useState(false)
   const [selectedLanguage, setSelectedLanguage] = useState<Lang>('en')
   const [showQuestionNav, setShowQuestionNav] = useState(false)
   const [showSideMenu, setShowSideMenu] = useState(false)
@@ -281,6 +282,11 @@ export default function ExamPrepApp() {
     // If about sheet is open, close it
     if (showAboutSheet) {
       setShowAboutSheet(false)
+      return
+    }
+    // If FAQ sheet is open, close it
+    if (showFaqSheet) {
+      setShowFaqSheet(false)
       return
     }
     // If taking a test, show confirmation
@@ -443,8 +449,26 @@ export default function ExamPrepApp() {
       const userId = auth.getUserId()
       const userResults = userId ? results.filter((r: TestResult) => r.userId === userId) : results
       const testsTaken = userResults.length
-      const avgScore = testsTaken > 0 ? Math.round(userResults.reduce((sum: number, r: TestResult) => sum + (r.score / r.maxScore) * 100, 0) / testsTaken) : 0
-      const bestRank = 1 // simplified
+      const avgScore = testsTaken > 0 ? Math.round(userResults.reduce((sum: number, r: TestResult) => sum + (r.score / r.totalQuestions) * 100, 0) / testsTaken) : 0
+      // Calculate best rank from leaderboard data across all tests the user has taken
+      let bestRank = 0
+      if (userId && testsTaken > 0) {
+        const allResults: TestResult[] = JSON.parse(data)
+        const userTestIds = [...new Set(userResults.map((r: TestResult) => r.testId))]
+        let bestFound = Infinity
+        for (const testId of userTestIds) {
+          const testResults = allResults.filter((r: TestResult) => r.testId === testId)
+          testResults.sort((a: TestResult, b: TestResult) => {
+            const scoreA = a.score / a.totalQuestions
+            const scoreB = b.score / b.totalQuestions
+            if (scoreB !== scoreA) return scoreB - scoreA
+            return a.timeTaken - b.timeTaken
+          })
+          const rank = testResults.findIndex((r: TestResult) => r.userId === userId) + 1
+          if (rank > 0 && rank < bestFound) bestFound = rank
+        }
+        bestRank = bestFound === Infinity ? 0 : bestFound
+      }
       return { testsTaken, avgScore, bestRank }
     } catch {
       return { testsTaken: 0, avgScore: 0, bestRank: 0 }
@@ -1610,7 +1634,10 @@ export default function ExamPrepApp() {
                   <p className="text-gray-400 text-[11px] mt-1">{_t('practice.quickSub')}</p>
                 </CardContent>
               </Card>
-              <Card className="border-0 shadow-sm cursor-pointer hover:shadow-md transition-shadow">
+              <Card className="border-0 shadow-sm cursor-pointer hover:shadow-md transition-shadow" onClick={() => {
+                // Topic wise: navigate to exams page to pick a category/exam
+                handleBottomNav('exams')
+              }}>
                 <CardContent className="p-4 text-center">
                   <div className="w-12 h-12 rounded-2xl bg-blue-50 flex items-center justify-center mx-auto mb-2">
                     <Target className="w-6 h-6 text-blue-500" />
@@ -1619,7 +1646,8 @@ export default function ExamPrepApp() {
                   <p className="text-gray-400 text-[11px] mt-1">{_t('practice.topicWiseSub')}</p>
                 </CardContent>
               </Card>
-              <Card className="border-0 shadow-sm cursor-pointer hover:shadow-md transition-shadow">
+              <Card className="border-0 shadow-sm cursor-pointer hover:shadow-md transition-shadow relative opacity-70">
+                <Badge variant="secondary" className="absolute top-2 right-2 text-[9px]">{_t('menu.soon')}</Badge>
                 <CardContent className="p-4 text-center">
                   <div className="w-12 h-12 rounded-2xl bg-green-50 flex items-center justify-center mx-auto mb-2">
                     <BookMarked className="w-6 h-6 text-green-500" />
@@ -1628,7 +1656,8 @@ export default function ExamPrepApp() {
                   <p className="text-gray-400 text-[11px] mt-1">{_t('practice.bookmarkedSub')}</p>
                 </CardContent>
               </Card>
-              <Card className="border-0 shadow-sm cursor-pointer hover:shadow-md transition-shadow">
+              <Card className="border-0 shadow-sm cursor-pointer hover:shadow-md transition-shadow relative opacity-70">
+                <Badge variant="secondary" className="absolute top-2 right-2 text-[9px]">{_t('menu.soon')}</Badge>
                 <CardContent className="p-4 text-center">
                   <div className="w-12 h-12 rounded-2xl bg-purple-50 flex items-center justify-center mx-auto mb-2">
                     <PenTool className="w-6 h-6 text-purple-500" />
@@ -1678,12 +1707,54 @@ export default function ExamPrepApp() {
           <div>
             <h2 className="font-bold text-lg mb-3">{_t('practice.recent')}</h2>
             {auth.isLoggedIn ? (
-              <Card className="border-0 shadow-sm">
-                <CardContent className="p-4 text-center">
-                  <Clock className="w-8 h-8 text-gray-300 mx-auto mb-2" />
-                  <p className="text-gray-400 text-sm">{_t('practice.historyEmpty')}</p>
-                </CardContent>
-              </Card>
+              (() => {
+                try {
+                  const storedResults = localStorage.getItem('mockmaster_results')
+                  const allResults: TestResult[] = storedResults ? JSON.parse(storedResults) : []
+                  const userId = auth.getUserId()
+                  const userResults = userId ? allResults.filter((r: TestResult) => r.userId === userId).slice(-5).reverse() : []
+                  if (userResults.length === 0) {
+                    return (
+                      <Card className="border-0 shadow-sm">
+                        <CardContent className="p-4 text-center">
+                          <Clock className="w-8 h-8 text-gray-300 mx-auto mb-2" />
+                          <p className="text-gray-400 text-sm">{_t('practice.historyEmpty')}</p>
+                        </CardContent>
+                      </Card>
+                    )
+                  }
+                  return (
+                    <div className="space-y-2">
+                      {userResults.map((r: TestResult) => {
+                        const pct = Math.round((r.score / r.totalQuestions) * 100)
+                        return (
+                          <Card key={r.id} className="border-0 shadow-sm">
+                            <CardContent className="p-3 flex items-center gap-3">
+                              <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${pct >= 60 ? 'bg-emerald-50' : pct >= 40 ? 'bg-yellow-50' : 'bg-red-50'}`}>
+                                <span className={`font-bold text-sm ${pct >= 60 ? 'text-emerald-600' : pct >= 40 ? 'text-yellow-600' : 'text-red-600'}`}>{pct}%</span>
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <p className="font-semibold text-sm truncate">{r.testId.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase())}</p>
+                                <p className="text-gray-400 text-xs">{r.correctAnswers}/{r.totalQuestions} · {Math.round(r.timeTaken / 60)}m</p>
+                              </div>
+                              <Badge variant="outline" className="text-[10px]">{r.correctAnswers} ✓</Badge>
+                            </CardContent>
+                          </Card>
+                        )
+                      })}
+                    </div>
+                  )
+                } catch {
+                  return (
+                    <Card className="border-0 shadow-sm">
+                      <CardContent className="p-4 text-center">
+                        <Clock className="w-8 h-8 text-gray-300 mx-auto mb-2" />
+                        <p className="text-gray-400 text-sm">{_t('practice.historyEmpty')}</p>
+                      </CardContent>
+                    </Card>
+                  )
+                }
+              })()
             ) : (
               <Card className="border-0 shadow-sm bg-gradient-to-r from-orange-50 to-red-50">
                 <CardContent className="p-4 text-center">
@@ -1874,6 +1945,21 @@ export default function ExamPrepApp() {
                   <div className="flex-1 text-left">
                     <p className="font-semibold text-[13px]">{_t('profile.language')}</p>
                     <p className="text-gray-400 text-[11px]">{lng === 'en' ? _t('lang.english') : lng === 'hi' ? _t('lang.hindi') : _t('lang.bangla')}</p>
+                  </div>
+                  <ChevronRight className="w-4 h-4 text-gray-300" />
+                </button>
+                <div className="mx-4 border-t border-gray-100" />
+                {/* Help & FAQ */}
+                <button
+                  className="w-full flex items-center gap-3 p-4 hover:bg-gray-50/80 transition-colors active:bg-gray-100"
+                  onClick={() => setShowFaqSheet(true)}
+                >
+                  <div className="w-9 h-9 rounded-xl bg-cyan-50 flex items-center justify-center">
+                    <HelpCircle className="w-4 h-4 text-cyan-600" />
+                  </div>
+                  <div className="flex-1 text-left">
+                    <p className="font-semibold text-[13px]">{_t('menu.helpFaq')}</p>
+                    <p className="text-gray-400 text-[11px]">{_t('menu.getSupport')}</p>
                   </div>
                   <ChevronRight className="w-4 h-4 text-gray-300" />
                 </button>
@@ -2118,21 +2204,21 @@ export default function ExamPrepApp() {
               <div className="px-3 py-2">
                 <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider px-3 mb-1">{_t('menu.settings')}</p>
                 {[
-                  { icon: BookOpen, id: 'language', label: _t('profile.language'), sub: lng === 'en' ? _t('lang.english') : lng === 'hi' ? _t('lang.hindi') : _t('lang.bangla'), action: () => setShowLanguageSheet(true) },
-                  { icon: Wifi, id: 'offline', label: _t('menu.offlineMode'), sub: _t('menu.downloadTests'), action: () => {} },
-                  { icon: HelpCircle, id: 'help', label: _t('menu.helpFaq'), sub: _t('menu.getSupport'), action: () => setShowAboutSheet(true) },
+                  { icon: BookOpen, id: 'language', label: _t('profile.language'), sub: lng === 'en' ? _t('lang.english') : lng === 'hi' ? _t('lang.hindi') : _t('lang.bangla'), action: () => setShowLanguageSheet(true), soon: false },
+                  { icon: Wifi, id: 'offline', label: _t('menu.offlineMode'), sub: _t('menu.downloadTests'), action: () => {}, soon: true },
+                  { icon: HelpCircle, id: 'help', label: _t('menu.helpFaq'), sub: _t('menu.getSupport'), action: () => setShowFaqSheet(true), soon: false },
                   { icon: Share2, id: 'share', label: _t('menu.shareApp'), sub: _t('menu.tellFriends'), action: () => {
                     if (navigator.share) {
                       navigator.share({ title: _t('app.name'), text: _t('share.text'), url: window.location.href })
                     }
-                  }},
-                  { icon: Shield, id: 'about', label: _t('menu.about'), sub: _t('app.version'), action: () => setShowAboutSheet(true) },
+                  }, soon: false },
+                  { icon: Shield, id: 'about', label: _t('menu.about'), sub: _t('app.version'), action: () => setShowAboutSheet(true), soon: false },
                 ].map((item, i) => (
                   <button
                     key={i}
-                    onClick={() => { setShowSideMenu(false); setTimeout(() => item.action(), 150) }}
-                    onTouchEnd={(e) => { e.preventDefault(); setShowSideMenu(false); setTimeout(() => item.action(), 150) }}
-                    className="w-full flex items-center gap-3 px-3 py-3 rounded-xl text-gray-600 hover:bg-gray-50 active:bg-gray-100 transition-colors"
+                    onClick={() => { if (!item.soon) { setShowSideMenu(false); setTimeout(() => item.action(), 150) } }}
+                    onTouchEnd={(e) => { e.preventDefault(); if (!item.soon) { setShowSideMenu(false); setTimeout(() => item.action(), 150) } }}
+                    className={`w-full flex items-center gap-3 px-3 py-3 rounded-xl text-gray-600 hover:bg-gray-50 active:bg-gray-100 transition-colors ${item.soon ? 'opacity-70' : ''}`}
                     style={{ touchAction: 'manipulation', WebkitTapHighlightColor: 'transparent' }}
                   >
                     <item.icon className="w-5 h-5 text-gray-400" />
@@ -2140,7 +2226,11 @@ export default function ExamPrepApp() {
                       <span className="font-medium text-sm block">{item.label}</span>
                       {item.sub && <span className="text-gray-400 text-[11px]">{item.sub}</span>}
                     </div>
-                    <ChevronRight className="w-4 h-4 text-gray-300" />
+                    {item.soon ? (
+                      <Badge variant="secondary" className="text-[9px]">{_t('menu.soon')}</Badge>
+                    ) : (
+                      <ChevronRight className="w-4 h-4 text-gray-300" />
+                    )}
                   </button>
                 ))}
               </div>
@@ -2258,6 +2348,31 @@ export default function ExamPrepApp() {
               variant="outline"
               className="w-full mt-4 rounded-xl h-11"
               onClick={() => setShowAboutSheet(false)}
+            >
+              {_t('about.close')}
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {/* FAQ Sheet - Global */}
+      {showFaqSheet && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[110] flex items-end justify-center" onClick={() => setShowFaqSheet(false)}>
+          <div className="bg-white rounded-t-[28px] w-full p-6 animate-slide-up max-h-[80vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+            <div className="w-10 h-1 rounded-full bg-gray-200 mx-auto mb-5" />
+            <h3 className="font-bold text-lg mb-4">{_t('faq.title')}</h3>
+            <div className="space-y-3">
+              {Array.from({ length: 7 }, (_, i) => i + 1).map(n => (
+                <div key={n} className="bg-gray-50 rounded-xl p-3">
+                  <p className="font-semibold text-sm text-gray-800">{_t(`faq.q${n}`)}</p>
+                  <p className="text-gray-500 text-xs mt-1 leading-relaxed">{_t(`faq.a${n}`)}</p>
+                </div>
+              ))}
+            </div>
+            <Button
+              variant="outline"
+              className="w-full mt-5 rounded-xl h-11"
+              onClick={() => setShowFaqSheet(false)}
             >
               {_t('about.close')}
             </Button>

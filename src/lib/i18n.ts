@@ -163,6 +163,23 @@ const translations: Record<Lang, Record<string, string>> = {
     'about.no': 'No',
     'about.close': 'Close',
 
+    // === FAQ ===
+    'faq.title': 'Help & FAQ',
+    'faq.q1': 'How do I start a mock test?',
+    'faq.a1': 'Go to Home or Tests tab, pick an exam category, select an exam, choose a test and tap "Start Test". You can also use Quick Practice for a random test.',
+    'faq.q2': 'Can I use the app offline?',
+    'faq.a2': 'Offline mode is coming soon! Currently you need an internet connection to use the app.',
+    'faq.q3': 'How is the score calculated?',
+    'faq.a3': 'Each test has a marking scheme (e.g., +2 for correct, -0.5 for wrong). Skipped questions get 0 marks. Your final score is shown after submitting.',
+    'faq.q4': 'How do I change the language?',
+    'faq.a4': 'Go to Side Menu → Language, or Profile → Language. We support English, Hindi, and Bangla.',
+    'faq.q5': 'How does the leaderboard work?',
+    'faq.a5': 'After submitting a test, your score is ranked against other users. Higher score = better rank. Same score? Faster time wins.',
+    'faq.q6': 'Is my data saved?',
+    'faq.a6': 'Yes! Your test results, progress, and settings are saved locally. Login with email to sync across devices.',
+    'faq.q7': 'How do I bookmark questions?',
+    'faq.a7': 'Bookmarked questions feature is coming soon! Stay tuned for updates.',
+
     // === Bottom Nav ===
     'nav.home': 'Home',
     'nav.practice': 'Practice',
@@ -369,6 +386,23 @@ const translations: Record<Lang, Record<string, string>> = {
     'about.no': 'नहीं',
     'about.close': 'बंद करें',
 
+    // === FAQ ===
+    'faq.title': 'सहायता और FAQ',
+    'faq.q1': 'मॉक टेस्ट कैसे शुरू करें?',
+    'faq.a1': 'होम या टेस्ट टैब पर जाएं, एग्जाम कैटेगरी चुनें, एग्जाम सेलेक्ट करें और "टेस्ट शुरू करें" टैप करें। क्विक प्रैक्टिस से रैंडम टेस्ट भी ले सकते हैं।',
+    'faq.q2': 'क्या ऐप ऑफलाइन काम करता है?',
+    'faq.a2': 'ऑफलाइन मोड जल्द आ रहा है! अभी इंटरनेट कनेक्शन जरूरी है।',
+    'faq.q3': 'स्कोर कैसे कैलकुलेट होता है?',
+    'faq.a3': 'हर टेस्ट की मार्किंग स्कीम होती है (जैसे सही के लिए +2, गलत के लिए -0.5)। छोड़े गए सवालों पर 0 अंक।',
+    'faq.q4': 'भाषा कैसे बदलें?',
+    'faq.a4': 'साइड मेनू → भाषा, या प्रोफाइल → भाषा पर जाएं। हम अंग्रेजी, हिंदी और बांग्ला सपोर्ट करते हैं।',
+    'faq.q5': 'लीडरबोर्ड कैसे काम करता है?',
+    'faq.a5': 'टेस्ट सबमिट करने के बाद आपका स्कोर दूसरे यूजर्स से रैंक होता है। ज्यादा स्कोर = बेहतर रैंक। समान स्कोर? तेज समय जीतता है।',
+    'faq.q6': 'क्या मेरा डेटा सेव होता है?',
+    'faq.a6': 'हां! आपके टेस्ट रिजल्ट्स, प्रोग्रेस और सेटिंग्स लोकली सेव होते हैं। डिवाइस सिंक के लिए ईमेल से लॉगिन करें।',
+    'faq.q7': 'सवाल बुकमार्क कैसे करें?',
+    'faq.a7': 'बुकमार्क्ड सवाल फीचर जल्द आ रहा है! अपडेट के लिए बने रहें।',
+
     // === Bottom Nav ===
     'nav.home': 'होम',
     'nav.practice': 'अभ्यास',
@@ -574,6 +608,23 @@ const translations: Record<Lang, Record<string, string>> = {
     'about.yes': 'হ্যাঁ',
     'about.no': 'না',
     'about.close': 'বন্ধ করুন',
+
+    // === FAQ ===
+    'faq.title': 'সাহায্য ও FAQ',
+    'faq.q1': 'মক টেস্ট কিভাবে শুরু করব?',
+    'faq.a1': 'হোম বা টেস্ট ট্যাবে যান, পরীক্ষার ক্যাটাগরি বেছে নিন, পরীক্ষা সিলেক্ট করুন এবং "টেস্ট শুরু করুন" ট্যাপ করুন। কুইক প্র্যাকটিস দিয়ে র‍্যান্ডম টেস্টও নিতে পারেন।',
+    'faq.q2': 'অফলাইনে অ্যাপ কি কাজ করে?',
+    'faq.a2': 'অফলাইন মোড শীঘ্রই আসছে! এখন ইন্টারনেট কানেকশন লাগবে।',
+    'faq.q3': 'স্কোর কিভাবে ক্যালকুলেট হয়?',
+    'faq.a3': 'প্রতিটি টেস্টের মার্কিং স্কিম আছে (যেমন সঠিকের জন্য +2, ভুলের জন্য -0.5)। বাদ দেওয়া প্রশ্নে 0 নম্বর।',
+    'faq.q4': 'ভাষা কিভাবে পরিবর্তন করব?',
+    'faq.a4': 'সাইড মেনু → ভাষা, বা প্রোফাইল → ভাষায় যান। আমরা ইংরেজি, হিন্দি ও বাংলা সাপোর্ট করি।',
+    'faq.q5': 'লিডারবোর্ড কিভাবে কাজ করে?',
+    'faq.a5': 'টেস্ট সাবমিট করার পর আপনার স্কোর অন্য ইউজারদের সাথে র‍্যাংক হয়। বেশি স্কোর = ভালো র‍্যাংক। সমান স্কোর? দ্রুত সময় জিতবে।',
+    'faq.q6': 'আমার ডেটা কি সেভ হয়?',
+    'faq.a6': 'হ্যাঁ! আপনার টেস্ট রেজাল্ট, প্রগ্রেস ও সেটিংস লোকালি সেভ হয়। ডিভাইস সিঙ্কের জন্য ইমেইল দিয়ে লগইন করুন।',
+    'faq.q7': 'প্রশ্ন বুকমার্ক কিভাবে করব?',
+    'faq.a7': 'বুকমার্কড প্রশ্ন ফিচার শীঘ্রই আসছে! আপডেটের জন্য থাকুন।',
 
     // === Bottom Nav ===
     'nav.home': 'হোম',
