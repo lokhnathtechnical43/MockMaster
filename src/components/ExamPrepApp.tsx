@@ -1865,7 +1865,7 @@ export default function ExamPrepApp() {
                   </div>
                   <div className="flex-1 text-left">
                     <p className="font-semibold text-[13px]">Language</p>
-                    <p className="text-gray-400 text-[11px]">{selectedLanguage === 'en' ? 'English' : selectedLanguage === 'hi' ? 'Hindi' : 'Bengali'}</p>
+                    <p className="text-gray-400 text-[11px]">{selectedLanguage === 'en' ? 'English' : selectedLanguage === 'hi' ? 'हिन्दी (Hindi)' : 'বাংলা (Bangla)'}</p>
                   </div>
                   <ChevronRight className="w-4 h-4 text-gray-300" />
                 </button>
@@ -1952,8 +1952,8 @@ export default function ExamPrepApp() {
               <div className="space-y-1">
                 {[
                   { code: 'en', name: 'English', flag: '🇬🇧', available: true },
-                  { code: 'hi', name: 'हिंदी (Hindi)', flag: '🇮🇳', available: false },
-                  { code: 'bn', name: 'বাংলা (Bengali)', flag: '🇮🇳', available: false },
+                  { code: 'hi', name: 'हिन्दी (Hindi)', flag: '🇮🇳', available: true },
+                  { code: 'bn', name: 'বাংলা (Bangla)', flag: '🇧🇩', available: true },
                 ].map(lang => (
                   <button
                     key={lang.code}
@@ -1962,6 +1962,13 @@ export default function ExamPrepApp() {
                     }`}
                     onClick={() => {
                       if (lang.available) {
+                        setSelectedLanguage(lang.code)
+                        setShowLanguageSheet(false)
+                      }
+                    }}
+                    onTouchEnd={(e) => {
+                      if (lang.available) {
+                        e.preventDefault()
                         setSelectedLanguage(lang.code)
                         setShowLanguageSheet(false)
                       }
@@ -2192,7 +2199,7 @@ export default function ExamPrepApp() {
               <div className="px-3 py-2">
                 <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider px-3 mb-1">Settings</p>
                 {[
-                  { icon: BookOpen, label: 'Language', sub: selectedLanguage === 'en' ? 'English' : selectedLanguage === 'hi' ? 'Hindi' : 'Bengali', action: () => setShowLanguageSheet(true) },
+                  { icon: BookOpen, label: 'Language', sub: selectedLanguage === 'en' ? 'English' : selectedLanguage === 'hi' ? 'हिन्दी (Hindi)' : 'বাংলা (Bangla)', action: () => setShowLanguageSheet(true) },
                   { icon: Bell, label: 'Notifications', sub: unreadCount > 0 ? `${unreadCount} unread` : 'Manage alerts', action: () => { setShowSideMenu(false); setCurrentPage('home'); setTimeout(() => setShowNotificationPanel(true), 300) } },
                   { icon: Wifi, label: 'Offline Mode', sub: 'Download tests', action: () => {} },
                   { icon: HelpCircle, label: 'Help & FAQ', sub: 'Get support', action: () => setShowAboutSheet(true) },
