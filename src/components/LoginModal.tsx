@@ -46,7 +46,7 @@ export default function LoginModal({
   }
 
   return (
-    <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+    <div className="fixed inset-0 bg-black/50 z-[100] flex items-center justify-center p-4" style={{ touchAction: 'manipulation' }}>
       <Card className="w-full max-w-sm border-0 shadow-2xl">
         <CardContent className="p-6">
           <div className="flex items-center gap-3 mb-4">

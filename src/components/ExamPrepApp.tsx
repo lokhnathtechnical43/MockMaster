@@ -13,7 +13,7 @@ import {
   ChevronRight, ChevronLeft, Home, User, ArrowLeft, X,
   Play, Zap, Target, Award, Timer, RefreshCw, BookMarked,
   GraduationCap, Shield, Building, Train, ShieldCheck, Swords,
-  LogOut, Loader2, Phone, AlertTriangle, Settings, Bell,
+  LogOut, Loader2, Mail, AlertTriangle, Settings, Bell,
   ChevronDown, Star, Flame, TrendingUp, Calendar, Gift,
   HelpCircle, Share2, MessageCircle, Crown,
   Menu,
@@ -500,6 +500,7 @@ export default function ExamPrepApp() {
               <button
                 onClick={() => setShowSideMenu(true)}
                 className="w-8 h-8 rounded-lg bg-white/20 backdrop-blur flex items-center justify-center active:bg-white/30 transition-colors"
+                style={{ touchAction: 'manipulation' }}
               >
                 <Menu className="w-4 h-4 text-white" />
               </button>
@@ -513,6 +514,7 @@ export default function ExamPrepApp() {
             <button
               onClick={() => setShowNotificationPanel(!showNotificationPanel)}
               className="w-8 h-8 rounded-lg bg-white/20 backdrop-blur flex items-center justify-center active:bg-white/30 transition-colors relative"
+              style={{ touchAction: 'manipulation' }}
             >
               <Bell className="w-4 h-4 text-white" />
               {unreadCount > 0 && (
@@ -1790,7 +1792,7 @@ export default function ExamPrepApp() {
                     className="bg-white text-orange-600 hover:bg-white/90 rounded-xl font-bold px-3"
                     onClick={() => setShowLoginModal(true)}
                   >
-                    <Phone className="w-3 h-3 mr-1" /> Login
+                    <Mail className="w-3 h-3 mr-1" /> Login
                   </Button>
                 </div>
               </CardContent>
@@ -1812,7 +1814,7 @@ export default function ExamPrepApp() {
                   className="w-full h-11 bg-gradient-to-r from-orange-500 to-red-500 text-white rounded-xl font-semibold"
                   onClick={() => setShowLoginModal(true)}
                 >
-                  <Phone className="w-4 h-4 mr-2" /> Login with Phone
+                  <Mail className="w-4 h-4 mr-2" /> Login with Email
                 </Button>
               </CardContent>
             </Card>
@@ -2040,7 +2042,7 @@ export default function ExamPrepApp() {
     ]
 
     return (
-      <div className="fixed bottom-0 left-0 right-0 z-40 safe-area-pb">
+      <div className="fixed bottom-0 left-0 right-0 z-40 safe-area-pb" style={{ touchAction: 'manipulation' }}>
         <div className="bg-white/95 backdrop-blur-lg border-t border-gray-100 w-full">
           <div className="flex items-center justify-around py-2">
             {navItems.map(item => {
@@ -2087,20 +2089,21 @@ export default function ExamPrepApp() {
   }
 
   return (
-    <div className="min-h-screen min-h-dvh bg-gray-50 relative w-full overflow-x-hidden">
+    <div className="min-h-screen min-h-dvh bg-gray-50 relative w-full overflow-x-hidden" style={{ touchAction: 'manipulation' }}>
       {renderPage()}
       {renderBottomNav()}
 
       {/* ===== Side Menu Drawer ===== */}
       {showSideMenu && (
-        <div className="fixed inset-0 z-50">
+        <div className="fixed inset-0 z-[100]">
           {/* Backdrop */}
           <div
             className="absolute inset-0 bg-black/50 backdrop-blur-sm"
             onClick={() => setShowSideMenu(false)}
+            style={{ touchAction: 'manipulation' }}
           />
           {/* Drawer Panel */}
-          <div className="absolute left-0 top-0 bottom-0 w-[280px] bg-white shadow-2xl animate-slide-in-left flex flex-col">
+          <div className="absolute left-0 top-0 bottom-0 w-[280px] bg-white shadow-2xl flex flex-col" style={{ touchAction: 'manipulation' }}>
             {/* Drawer Header */}
             <div className="bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 px-5 pt-[calc(env(safe-area-inset-top,0px)+1.5rem)] pb-5">
               <div className="flex items-center justify-between mb-4">
@@ -2228,7 +2231,7 @@ export default function ExamPrepApp() {
                   onClick={() => { setShowLoginModal(true); setShowSideMenu(false) }}
                   className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-gradient-to-r from-orange-500 to-red-500 text-white rounded-xl font-semibold text-sm"
                 >
-                  <Phone className="w-4 h-4" /> Login
+                  <Mail className="w-4 h-4" /> Login
                 </button>
               )}
             </div>
