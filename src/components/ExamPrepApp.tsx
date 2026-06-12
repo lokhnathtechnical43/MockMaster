@@ -310,7 +310,7 @@ export default function ExamPrepApp() {
     return (
       <div className="pb-20">
         {/* Header */}
-        <div className="bg-gradient-to-r from-orange-500 to-red-500 px-4 pt-12 pb-8 rounded-b-3xl">
+        <div className="bg-gradient-to-r from-orange-500 to-red-500 px-4 pt-[calc(env(safe-area-inset-top,0px)+3rem)] pb-8 rounded-b-3xl">
           <div className="flex items-center justify-between mb-6">
             <div>
               <h1 className="text-white text-2xl font-bold">ExamPrep Bharat</h1>
@@ -448,7 +448,7 @@ export default function ExamPrepApp() {
   function renderExams() {
     return (
       <div className="pb-20">
-        <div className="bg-gradient-to-r from-orange-500 to-red-500 px-4 pt-12 pb-6 rounded-b-3xl">
+        <div className="bg-gradient-to-r from-orange-500 to-red-500 px-4 pt-[calc(env(safe-area-inset-top,0px)+3rem)] pb-6 rounded-b-3xl">
           <div className="flex items-center gap-3 mb-4">
             <button onClick={goBack} className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center">
               <ArrowLeft className="w-5 h-5 text-white" />
@@ -505,7 +505,7 @@ export default function ExamPrepApp() {
     const color = getCatColor(selectedCategory.slug)
     return (
       <div className="pb-20">
-        <div className={`bg-gradient-to-r ${color.gradient} px-4 pt-12 pb-6 rounded-b-3xl`}>
+        <div className={`bg-gradient-to-r ${color.gradient} px-4 pt-[calc(env(safe-area-inset-top,0px)+3rem)] pb-6 rounded-b-3xl`}>
           <div className="flex items-center gap-3 mb-2">
             <button onClick={goBack} className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center">
               <ArrowLeft className="w-5 h-5 text-white" />
@@ -580,7 +580,7 @@ export default function ExamPrepApp() {
 
     return (
       <div className="pb-24">
-        <div className={`bg-gradient-to-r ${color.gradient} px-4 pt-12 pb-6 rounded-b-3xl`}>
+        <div className={`bg-gradient-to-r ${color.gradient} px-4 pt-[calc(env(safe-area-inset-top,0px)+3rem)] pb-6 rounded-b-3xl`}>
           <div className="flex items-center gap-3 mb-3">
             <button onClick={goBack} className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center">
               <ArrowLeft className="w-5 h-5 text-white" />
@@ -666,9 +666,9 @@ export default function ExamPrepApp() {
     const optionLetters = ['A', 'B', 'C', 'D']
 
     return (
-      <div className="min-h-screen bg-gray-50 flex flex-col">
+      <div className="min-h-screen min-h-dvh bg-gray-50 flex flex-col">
         {/* Test Header */}
-        <div className="bg-white border-b px-4 py-3">
+        <div className="bg-white border-b px-4 pt-[calc(env(safe-area-inset-top,0px)+0.75rem)] pb-3">
           <div className="flex items-center justify-between">
             <button
               onClick={() => setShowBackConfirm(true)}
@@ -892,7 +892,7 @@ export default function ExamPrepApp() {
 
     return (
       <div className="pb-20">
-        <div className="bg-gradient-to-r from-orange-500 to-red-500 px-4 pt-12 pb-8 rounded-b-3xl text-center">
+        <div className="bg-gradient-to-r from-orange-500 to-red-500 px-4 pt-[calc(env(safe-area-inset-top,0px)+3rem)] pb-8 rounded-b-3xl text-center">
           <div className="w-20 h-20 rounded-full bg-white/20 flex items-center justify-center mx-auto mb-4">
             {percentage >= 60 ? (
               <Trophy className="w-10 h-10 text-yellow-300" />
@@ -1043,7 +1043,7 @@ export default function ExamPrepApp() {
   function renderLeaderboard() {
     return (
       <div className="pb-20">
-        <div className="bg-gradient-to-r from-orange-500 to-red-500 px-4 pt-12 pb-6 rounded-b-3xl">
+        <div className="bg-gradient-to-r from-orange-500 to-red-500 px-4 pt-[calc(env(safe-area-inset-top,0px)+3rem)] pb-6 rounded-b-3xl">
           <div className="flex items-center gap-3">
             <button onClick={goBack} className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center">
               <ArrowLeft className="w-5 h-5 text-white" />
@@ -1101,7 +1101,7 @@ export default function ExamPrepApp() {
     return (
       <div className="pb-20">
         {/* Header with gradient */}
-        <div className="bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 px-5 pt-12 pb-10 rounded-b-[28px] relative overflow-hidden">
+        <div className="bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 px-5 pt-[calc(env(safe-area-inset-top,0px)+3rem)] pb-10 rounded-b-[28px] relative overflow-hidden">
           {/* Decorative circles */}
           <div className="absolute top-0 right-0 w-40 h-40 bg-orange-500/10 rounded-full -translate-y-1/2 translate-x-1/4" />
           <div className="absolute bottom-0 left-0 w-32 h-32 bg-orange-500/10 rounded-full translate-y-1/2 -translate-x-1/4" />
@@ -1488,7 +1488,7 @@ export default function ExamPrepApp() {
   }
 
   return (
-    <div className="min-h-screen min-h-dvh bg-gray-50 relative w-full">
+    <div className="min-h-screen min-h-dvh bg-gray-50 relative w-full overflow-x-hidden">
       {renderPage()}
       {renderBottomNav()}
 

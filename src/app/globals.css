@@ -117,12 +117,18 @@
     @apply border-border outline-ring/50;
     box-sizing: border-box;
   }
-  html, body {
-    @apply bg-background text-foreground;
+  html {
     width: 100%;
     overflow-x: hidden;
     -webkit-text-size-adjust: 100%;
+  }
+  body {
+    @apply bg-background text-foreground;
+    width: 100%;
+    overflow-x: hidden;
     -webkit-tap-highlight-color: transparent;
+    /* Prevent horizontal scroll on all devices */
+    position: relative;
   }
   /* Dynamic viewport height support */
   @supports (min-height: 100dvh) {
@@ -134,6 +140,11 @@
     html, body {
       min-height: 100vh;
     }
+  }
+  /* Make sure the root div fills the screen */
+  #__next, body > div:first-child {
+    width: 100%;
+    min-height: inherit;
   }
 }
 
@@ -200,5 +211,17 @@
 @media (min-width: 415px) {
   html {
     font-size: 16px;
+  }
+}
+
+/* Prevent any card or content from overflowing on narrow screens */
+@media (max-width: 400px) {
+  .rounded-b-3xl {
+    border-bottom-left-radius: 1.25rem;
+    border-bottom-right-radius: 1.25rem;
+  }
+  .rounded-b-\[28px\] {
+    border-bottom-left-radius: 1.25rem;
+    border-bottom-right-radius: 1.25rem;
   }
 }
