@@ -24,6 +24,7 @@ import {
 } from '@/lib/local-data'
 import { useFirebaseAuth } from '@/lib/use-firebase-auth'
 import LoginModal from '@/components/LoginModal'
+import { App } from '@capacitor/app'
 
 // ===== Types =====
 type Page = 'home' | 'exams' | 'tests' | 'test-info' | 'test-taking' | 'results' | 'leaderboard' | 'profile'
@@ -129,24 +130,81 @@ export default function ExamPrepApp() {
     }
   }, [])
 
-  // --- Handle mobile back button ---
+  // --- Handle mobile back button (Capacitor + Browser) ---
+  const handleBackButton = useCallback(() => {
+    // If back confirmation is showing, close it
+    if (showBackConfirm) {
+      setShowBackConfirm(false)
+      return
+    }
+    // If question nav panel is open, close it
+    if (showQuestionNav) {
+      setShowQuestionNav(false)
+      return
+    }
+    // If login modal is open, close it
+    if (showLoginModal) {
+      setShowLoginModal(false)
+      return
+    }
+    // If language sheet is open, close it
+    if (showLanguageSheet) {
+      setShowLanguageSheet(false)
+      return
+    }
+    // If about sheet is open, close it
+    if (showAboutSheet) {
+      setShowAboutSheet(false)
+      return
+    }
+    // If taking a test, show confirmation
+    if (currentPage === 'test-taking' && testActive) {
+      setShowBackConfirm(true)
+      return
+    }
+    // If on home page, minimize app (Android)
+    if (currentPage === 'home') {
+      App.exitApp?.()
+      return
+    }
+    // Otherwise go back
+    if (pageHistoryRef.current.length > 0) {
+      goBack()
+    } else {
+      setCurrentPage('home')
+    }
+  }, [currentPage, testActive, showBackConfirm, showQuestionNav, showLoginModal, showLanguageSheet, showAboutSheet, goBack])
+
+  // Capacitor hardware back button
   useEffect(() => {
-    const handlePopState = (e: PopStateEvent) => {
-      e.preventDefault()
-      if (currentPage === 'test-taking' && testActive) {
-        setShowBackConfirm(true)
-        window.history.pushState(null, '')
-        return
+    let handler: any
+    const setupBackButton = async () => {
+      try {
+        handler = await App.addListener('backButton', () => {
+          handleBackButton()
+        })
+      } catch (e) {
+        // Not running in Capacitor, ignore
       }
-      if (pageHistoryRef.current.length > 0) {
-        goBack()
-      }
+    }
+    setupBackButton()
+    return () => {
+      handler?.remove?.()
+    }
+  }, [handleBackButton])
+
+  // Browser popstate (for web/PWA)
+  useEffect(() => {
+    const handlePopState = () => {
+      handleBackButton()
+      // Re-push state so browser doesn't navigate away
+      window.history.pushState(null, '')
     }
     window.addEventListener('popstate', handlePopState)
     return () => window.removeEventListener('popstate', handlePopState)
-  }, [currentPage, testActive, goBack])
+  }, [handleBackButton])
 
-  // Push state on navigation for back button to work
+  // Push state on navigation so browser back button fires popstate
   useEffect(() => {
     window.history.pushState(null, '')
   }, [currentPage])
