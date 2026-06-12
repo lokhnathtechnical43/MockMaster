@@ -112,6 +112,7 @@ const translations: Record<Lang, Record<string, string>> = {
     'results.answerKey': 'Answer Key',
     'results.yourAnswer': '(Your Answer)',
     'results.backHome': 'Back to Home',
+    'results.sharePDF': 'Share as PDF',
 
     // === Leaderboard ===
     'leaderboard.title': 'Leaderboard',
@@ -437,6 +438,7 @@ const translations: Record<Lang, Record<string, string>> = {
     'results.answerKey': 'उत्तर कुंजी',
     'results.yourAnswer': '(आपका उत्तर)',
     'results.backHome': 'होम पर वापस',
+    'results.sharePDF': 'PDF के रूप में शेयर करें',
 
     // === Leaderboard ===
     'leaderboard.title': 'लीडरबोर्ड',
@@ -762,6 +764,7 @@ const translations: Record<Lang, Record<string, string>> = {
     'results.answerKey': 'উত্তর সংকেত',
     'results.yourAnswer': '(আপনার উত্তর)',
     'results.backHome': 'হোমে ফিরুন',
+    'results.sharePDF': 'PDF হিসেবে শেয়ার করুন',
 
     // === Leaderboard ===
     'leaderboard.title': 'লিডারবোর্ড',

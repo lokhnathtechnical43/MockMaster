@@ -519,6 +519,22 @@ export default function ExamPrepApp() {
     })
 
     setLastResult(result)
+
+    // Auto-save to performance report
+    try {
+      const perfData = localStorage.getItem('examprep_results')
+      const perfResults: any[] = perfData ? JSON.parse(perfData) : []
+      perfResults.push({
+        ...result,
+        testName: test.title,
+        examName: selectedExam?.name || '',
+        correctAnswers: correctCount,
+        wrongAnswers: wrongCount,
+        skipped: skippedCount,
+      })
+      localStorage.setItem('examprep_results', JSON.stringify(perfResults))
+    } catch (e) {}
+
     navigateTo('results')
   }
 
@@ -1393,146 +1409,211 @@ export default function ExamPrepApp() {
     const optionLetters = ['A', 'B', 'C', 'D']
 
     return (
-      <div className="min-h-screen min-h-dvh bg-gray-50 flex flex-col">
-        {/* Test Header */}
-        <div className="bg-white border-b px-4 pt-[calc(env(safe-area-inset-top,0px)+0.75rem)] pb-3">
-          <div className="flex items-center justify-between">
+      <div className="min-h-screen min-h-dvh bg-slate-50 flex flex-col">
+        {/* === Professional Exam Header === */}
+        <div className="bg-white shadow-sm">
+          {/* Top Bar: Back | Test Name | Timer */}
+          <div className="px-3 pt-[calc(env(safe-area-inset-top,0px)+0.5rem)] pb-2 flex items-center justify-between gap-2">
             <button
               onClick={() => setShowBackConfirm(true)}
-              className="w-8 h-8 rounded-full hover:bg-gray-100 flex items-center justify-center"
+              className="w-9 h-9 rounded-lg bg-gray-100 hover:bg-gray-200 flex items-center justify-center transition-colors flex-shrink-0"
             >
-              <ArrowLeft className="w-5 h-5" />
+              <ArrowLeft className="w-4 h-4 text-gray-700" />
             </button>
-            <div className="flex items-center gap-1 text-orange-600 font-bold">
-              <Timer className="w-4 h-4" />
-              <span className={timeLeft < 60 ? 'text-red-600' : ''}>{formatTime(timeLeft)}</span>
+            <h1 className="text-sm font-bold text-gray-800 truncate flex-1 text-center">{selectedTest.title}</h1>
+            {/* Prominent Timer Box */}
+            <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-mono font-bold text-sm flex-shrink-0 ${
+              timeLeft < 60 ? 'bg-red-100 text-red-700 ring-2 ring-red-300' :
+              timeLeft < 300 ? 'bg-amber-100 text-amber-700 ring-2 ring-amber-300' :
+              'bg-orange-100 text-orange-700'
+            }`}>
+              <Timer className="w-3.5 h-3.5" />
+              <span>{formatTime(timeLeft)}</span>
             </div>
-            <button
-              onClick={() => setShowQuestionNav(true)}
-              className="w-8 h-8 rounded-full hover:bg-gray-100 flex items-center justify-center"
-            >
-              <BookMarked className="w-5 h-5" />
-            </button>
           </div>
-          <Progress value={progressPercent} className="mt-2 h-1.5" />
-          <div className="flex items-center justify-between mt-2 text-xs text-gray-400">
-            <span>Q {currentQuestionIndex + 1} {_t('testTaking.of')} {questions.length}</span>
-            <span>{totalAnswered} {_t('testTaking.answered')} · {totalMarked} {_t('testTaking.marked')}</span>
+
+          {/* Info Bar: Question X of Y | Answered: A | Marked: M */}
+          <div className="px-3 pb-2 flex items-center justify-between text-xs">
+            <span className="text-gray-600 font-semibold">
+              {_t('testTaking.questionNav').includes('Navigator') ? 'Question' : _t('testTaking.questionNav').split(' ')[0]} {currentQuestionIndex + 1} {_t('testTaking.of')} {questions.length}
+            </span>
+            <div className="flex items-center gap-3 text-gray-500">
+              <span className="flex items-center gap-1">
+                <span className="w-2 h-2 rounded-full bg-orange-500" />
+                {_t('testTaking.answered')}: <strong className="text-gray-700">{totalAnswered}</strong>
+              </span>
+              <span className="flex items-center gap-1">
+                <span className="w-2 h-2 rounded-full bg-amber-400" />
+                {_t('testTaking.marked')}: <strong className="text-gray-700">{totalMarked}</strong>
+              </span>
+            </div>
+          </div>
+
+          {/* Thin Progress Bar */}
+          <div className="h-1 bg-gray-100">
+            <div
+              className="h-full bg-gradient-to-r from-orange-400 to-orange-600 transition-all duration-300"
+              style={{ width: `${progressPercent}%` }}
+            />
           </div>
         </div>
 
-        {/* Question */}
+        {/* === Question Section === */}
         <ScrollArea className="flex-1">
-          <div className="p-4">
-            <div className="bg-white rounded-2xl p-4 shadow-sm">
-              {question.subject && (
-                <Badge variant="secondary" className="mb-3 text-xs">{question.subject}</Badge>
-              )}
-              {markedForReview.has(question.id) && (
-                <Badge className="mb-3 ml-2 bg-amber-100 text-amber-700 text-xs border-0">
-                  <BookMarked className="w-3 h-3 mr-1" /> {_t('testTaking.markedReview')}
-                </Badge>
-              )}
-              <p className="text-sm font-medium leading-relaxed mt-2">{question.questionText}</p>
-            </div>
-
-            {/* Options */}
-            <div className="space-y-3 mt-4">
-              {optionLetters.map(letter => {
-                const isSelected = answers[question.id] === letter
-                return (
-                  <button
-                    key={letter}
-                    onClick={() => selectAnswer(question.id, letter)}
-                    className={`w-full text-left p-4 rounded-xl border-2 transition-all ${
-                      isSelected
-                        ? 'border-orange-500 bg-orange-50'
-                        : 'border-gray-200 bg-white hover:border-gray-300'
-                    }`}
-                  >
-                    <div className="flex items-start gap-3">
-                      <span className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 ${
-                        isSelected ? 'bg-orange-500 text-white' : 'bg-gray-100 text-gray-600'
-                      }`}>
-                        {letter}
-                      </span>
-                      <span className="text-sm pt-0.5">{optionLabels[letter]}</span>
+          <div className="p-4 pb-2">
+            {/* Question Card with Badge */}
+            <div className="bg-white rounded-xl p-5 shadow-sm border border-gray-100">
+              <div className="flex items-start gap-3">
+                {/* Question Number Badge */}
+                <div className="flex flex-col items-center gap-1 flex-shrink-0">
+                  <div className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-extrabold shadow-sm ${
+                    markedForReview.has(question.id)
+                      ? 'bg-amber-500 text-white ring-2 ring-amber-300'
+                      : 'bg-orange-500 text-white'
+                  }`}>
+                    {currentQuestionIndex + 1}
+                  </div>
+                  {markedForReview.has(question.id) && (
+                    <div className="flex items-center gap-0.5 text-[9px] text-amber-600 font-semibold">
+                      <BookMarked className="w-2.5 h-2.5" />
                     </div>
-                  </button>
-                )
-              })}
+                  )}
+                </div>
+                {/* Question Text */}
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 mb-2 flex-wrap">
+                    <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wide">Q.{currentQuestionIndex + 1}</span>
+                    {question.subject && (
+                      <Badge variant="secondary" className="text-[10px] px-2 py-0 h-5 bg-slate-100 text-slate-600">{question.subject}</Badge>
+                    )}
+                    {markedForReview.has(question.id) && (
+                      <Badge className="text-[10px] px-2 py-0 h-5 bg-amber-100 text-amber-700 border-0">
+                        {_t('testTaking.markedReview')}
+                      </Badge>
+                    )}
+                  </div>
+                  <p className="text-[15px] font-medium leading-relaxed text-gray-800">{question.questionText}</p>
+                </div>
+              </div>
             </div>
+          </div>
+
+          {/* === Options Section (OMR Style) === */}
+          <div className="px-4 pb-4 space-y-2.5">
+            {optionLetters.map(letter => {
+              const isSelected = answers[question.id] === letter
+              return (
+                <button
+                  key={letter}
+                  onClick={() => selectAnswer(question.id, letter)}
+                  className={`w-full text-left px-4 py-3.5 rounded-lg border-2 transition-all duration-150 active:scale-[0.99] ${
+                    isSelected
+                      ? 'border-orange-500 bg-orange-50 shadow-sm ring-1 ring-orange-200'
+                      : 'border-gray-200 bg-white hover:border-gray-300 hover:bg-gray-50'
+                  }`}
+                >
+                  <div className="flex items-center gap-3">
+                    {/* Radio-style circle */}
+                    <div className={`w-8 h-8 rounded-full border-2 flex items-center justify-center text-sm font-bold flex-shrink-0 transition-all ${
+                      isSelected
+                        ? 'border-orange-500 bg-orange-500 text-white shadow-sm'
+                        : 'border-gray-300 bg-white text-gray-500'
+                    }`}>
+                      {isSelected ? (
+                        <span className="text-xs">●</span>
+                      ) : (
+                        letter
+                      )}
+                    </div>
+                    <span className={`text-sm leading-relaxed ${isSelected ? 'text-gray-900 font-medium' : 'text-gray-700'}`}>
+                      <span className="font-semibold text-gray-500 mr-1.5">{letter}.</span>
+                      {optionLabels[letter]}
+                    </span>
+                  </div>
+                </button>
+              )
+            })}
           </div>
         </ScrollArea>
 
-        {/* Bottom Actions */}
-        <div className="bg-white border-t px-4 py-3 space-y-2">
-          <div className="flex items-center gap-2">
+        {/* === Bottom Action Bar (Professional Compact) === */}
+        <div className="bg-white border-t border-gray-200 shadow-[0_-2px_10px_rgba(0,0,0,0.05)]">
+          {/* Row 1: Action Buttons */}
+          <div className="px-2 pt-2 pb-1 flex items-center gap-1.5 overflow-x-auto">
             <Button
               size="sm"
-              className={`rounded-xl flex-1 font-semibold shadow-sm transition-all active:scale-95 ${
+              className="rounded-lg h-8 px-2.5 text-xs font-semibold bg-gray-100 text-gray-700 border-0 hover:bg-gray-200 transition-all active:scale-95 flex-shrink-0 disabled:opacity-40"
+              disabled={currentQuestionIndex === 0}
+              onClick={() => setCurrentQuestionIndex(prev => prev - 1)}
+            >
+              <ChevronLeft className="w-3.5 h-3.5 mr-0.5" /> {_t('testTaking.previous')}
+            </Button>
+            <Button
+              size="sm"
+              className={`rounded-lg h-8 px-2.5 text-xs font-semibold border-0 transition-all active:scale-95 flex-shrink-0 ${
                 bookmarkedQs.includes(question.id)
-                  ? 'bg-gradient-to-r from-amber-500 to-orange-500 text-white border-0 shadow-amber-200'
-                  : 'bg-amber-50 text-amber-700 border-2 border-amber-300 hover:bg-amber-100'
+                  ? 'bg-amber-500 text-white hover:bg-amber-600'
+                  : 'bg-amber-50 text-amber-700 hover:bg-amber-100'
               }`}
               onClick={() => toggleBookmark(question.id)}
             >
-              <BookmarkPlus className="w-4 h-4 mr-1" />
+              <BookmarkPlus className="w-3.5 h-3.5 mr-0.5" />
               {bookmarkedQs.includes(question.id) ? _t('testTaking.bookmarked') : _t('testTaking.bookmark')}
             </Button>
             <Button
               size="sm"
-              className={`rounded-xl flex-1 font-semibold shadow-sm transition-all active:scale-95 ${
+              className={`rounded-lg h-8 px-2.5 text-xs font-semibold border-0 transition-all active:scale-95 flex-shrink-0 ${
                 markedForReview.has(question.id)
-                  ? 'bg-gradient-to-r from-purple-500 to-violet-500 text-white border-0 shadow-purple-200'
-                  : 'bg-purple-50 text-purple-700 border-2 border-purple-300 hover:bg-purple-100'
+                  ? 'bg-purple-600 text-white hover:bg-purple-700'
+                  : 'bg-purple-50 text-purple-700 hover:bg-purple-100'
               }`}
               onClick={() => toggleReview(question.id)}
             >
-              <BookMarked className="w-4 h-4 mr-1" />
+              <BookMarked className="w-3.5 h-3.5 mr-0.5" />
               {markedForReview.has(question.id) ? _t('testTaking.unmark') : _t('testTaking.mark')}
             </Button>
             <Button
               size="sm"
-              className="rounded-xl flex-1 font-semibold shadow-sm transition-all active:scale-95 bg-red-50 text-red-600 border-2 border-red-300 hover:bg-red-100"
+              className="rounded-lg h-8 px-2.5 text-xs font-semibold bg-red-50 text-red-600 border-0 hover:bg-red-100 transition-all active:scale-95 flex-shrink-0"
               onClick={() => clearAnswer(question.id)}
             >
-              <RefreshCw className="w-4 h-4 mr-1" /> {_t('testTaking.clear')}
+              <RefreshCw className="w-3.5 h-3.5 mr-0.5" /> {_t('testTaking.clear')}
             </Button>
             <Button
               size="sm"
-              className="rounded-xl flex-1 font-semibold shadow-sm transition-all active:scale-95 bg-sky-50 text-sky-700 border-2 border-sky-300 hover:bg-sky-100"
+              className="rounded-lg h-8 px-2.5 text-xs font-semibold bg-sky-50 text-sky-700 border-0 hover:bg-sky-100 transition-all active:scale-95 flex-shrink-0"
               onClick={() => {
                 if (currentQuestionIndex < questions.length - 1) {
                   setCurrentQuestionIndex(prev => prev + 1)
                 }
               }}
             >
-              <SkipForward className="w-4 h-4 mr-1" /> {_t('testTaking.skip')}
+              <SkipForward className="w-3.5 h-3.5 mr-0.5" /> {_t('testTaking.skip')}
             </Button>
           </div>
-          <div className="flex items-center gap-2">
+          {/* Row 2: Save & Next + Submit */}
+          <div className="px-2 pb-2 flex items-center gap-2">
             <Button
               size="sm"
-              className="rounded-xl flex-1 font-semibold shadow-sm transition-all active:scale-95 bg-indigo-50 text-indigo-700 border-2 border-indigo-300 hover:bg-indigo-100 disabled:opacity-40 disabled:bg-gray-50 disabled:text-gray-400 disabled:border-gray-200"
-              disabled={currentQuestionIndex === 0}
-              onClick={() => setCurrentQuestionIndex(prev => prev - 1)}
-            >
-              <ChevronLeft className="w-4 h-4 mr-1" /> {_t('testTaking.previous')}
-            </Button>
-            <Button
-              className="rounded-xl font-bold shadow-md transition-all active:scale-95 bg-gradient-to-r from-red-500 to-rose-600 text-white px-4 hover:from-red-600 hover:to-rose-700"
-              onClick={handleFinishTest}
-            >
-              {_t('testTaking.submit')}
-            </Button>
-            <Button
-              size="sm"
-              className="rounded-xl flex-1 font-bold shadow-md transition-all active:scale-95 bg-gradient-to-r from-green-500 to-emerald-600 text-white border-0 hover:from-green-600 hover:to-emerald-700 disabled:opacity-40"
+              className="rounded-lg flex-1 h-9 font-bold text-sm bg-gradient-to-r from-green-500 to-emerald-600 text-white border-0 hover:from-green-600 hover:to-emerald-700 transition-all active:scale-95 disabled:opacity-40"
               disabled={currentQuestionIndex === questions.length - 1}
               onClick={() => setCurrentQuestionIndex(prev => prev + 1)}
             >
               {_t('testTaking.saveNext')} <ChevronRight className="w-4 h-4 ml-1" />
+            </Button>
+            <button
+              onClick={() => setShowQuestionNav(true)}
+              className="h-9 px-3 rounded-lg bg-slate-100 hover:bg-slate-200 text-gray-600 text-xs font-semibold transition-colors flex items-center gap-1 flex-shrink-0"
+            >
+              <BookMarked className="w-3.5 h-3.5" />
+              {questions.length}
+            </button>
+            <Button
+              size="sm"
+              className="rounded-lg h-9 px-4 font-bold text-sm bg-gradient-to-r from-red-500 to-rose-600 text-white border-0 hover:from-red-600 hover:to-rose-700 transition-all active:scale-95 flex-shrink-0"
+              onClick={handleFinishTest}
+            >
+              {_t('testTaking.submit')}
             </Button>
           </div>
         </div>
@@ -1622,6 +1703,39 @@ export default function ExamPrepApp() {
     )
   }
 
+  // ===== Share as PDF =====
+  function shareAsPDF() {
+    if (!lastResult || !selectedTest) return
+    const questions = selectedTest.questions
+    const percentage = Math.round((lastResult.score / lastResult.maxScore) * 100)
+    const date = new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })
+
+    let answerRows = questions.map((q, i) => {
+      const userAns = lastResult.answers[q.id] || '-'
+      const correctAns = q.correctAnswer
+      const status = !lastResult.answers[q.id] ? '⏭ Skipped' : userAns === correctAns ? '✓ Correct' : '✗ Wrong'
+      const statusColor = !lastResult.answers[q.id] ? '#9ca3af' : userAns === correctAns ? '#10b981' : '#ef4444'
+      return `<tr style="border-bottom:1px solid #e5e7eb"><td style="padding:8px;text-align:center;font-weight:600">${i+1}</td><td style="padding:8px;text-align:center">${userAns}</td><td style="padding:8px;text-align:center;font-weight:600;color:#10b981">${correctAns}</td><td style="padding:8px;text-align:center;color:${statusColor};font-weight:600">${status}</td></tr>`
+    }).join('')
+
+    const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>MockMaster Report</title><style>body{font-family:Arial,sans-serif;max-width:600px;margin:0 auto;padding:20px;color:#1f2937}h1{color:#ea580c;margin:0}h2{color:#374151;margin:20px 0 10px}.header{display:flex;justify-content:space-between;align-items:center;border-bottom:3px solid #ea580c;padding-bottom:15px;margin-bottom:20px}.score-box{background:linear-gradient(135deg,#ea580c,#dc2626);color:white;border-radius:12px;padding:20px;text-align:center;margin:15px 0}.score-big{font-size:48px;font-weight:bold}.stats{display:flex;justify-content:space-around;margin:15px 0;background:#f9fafb;border-radius:8px;padding:15px}.stat{text-align:center}.stat-value{font-size:20px;font-weight:bold}.stat-label{font-size:11px;color:#6b7280}table{width:100%;border-collapse:collapse;margin:10px 0}th{background:#f3f4f6;padding:10px;text-align:center;font-size:12px;text-transform:uppercase;letter-spacing:0.5px;color:#6b7280}.footer{text-align:center;margin-top:30px;padding-top:15px;border-top:2px solid #e5e7eb;color:#9ca3af;font-size:11px}</style></head><body>
+    <div class="header"><div><h1>MockMaster</h1><p style="color:#6b7280;font-size:12px;margin:4px 0 0">Exam Preparation Partner</p></div><div style="text-align:right"><p style="font-size:12px;color:#6b7280">${date}</p></div></div>
+    <h2 style="margin-top:0">${selectedTest.title}</h2>
+    <div class="score-box"><div class="score-big">${lastResult.score}/${lastResult.maxScore}</div><div style="font-size:18px;margin-top:5px">${percentage}% Score</div></div>
+    <div class="stats"><div class="stat"><div class="stat-value" style="color:#10b981">${lastResult.correctCount}</div><div class="stat-label">Correct</div></div><div class="stat"><div class="stat-value" style="color:#ef4444">${lastResult.wrongCount}</div><div class="stat-label">Wrong</div></div><div class="stat"><div class="stat-value" style="color:#9ca3af">${lastResult.skippedCount}</div><div class="stat-label">Skipped</div></div><div class="stat"><div class="stat-value" style="color:#ea580c">${formatTime(lastResult.timeTaken)}</div><div class="stat-label">Time</div></div></div>
+    <h2>Answer Key</h2>
+    <table><thead><tr><th>Q.No</th><th>Your Answer</th><th>Correct Answer</th><th>Status</th></tr></thead><tbody>${answerRows}</tbody></table>
+    <div class="footer">Generated by MockMaster • ${date}</div>
+    </body></html>`
+
+    const printWindow = window.open('', '_blank')
+    if (printWindow) {
+      printWindow.document.write(html)
+      printWindow.document.close()
+      printWindow.onload = () => { printWindow.print() }
+    }
+  }
+
   // ===== RENDER: Results Page =====
   function renderResults() {
     if (!lastResult || !selectedTest) return null
@@ -1698,6 +1812,12 @@ export default function ExamPrepApp() {
               onClick={() => openLeaderboard(lastResult.testId)}
             >
               <Trophy className="w-4 h-4 mr-2" /> {_t('results.leaderboard')}
+            </Button>
+            <Button
+              className="flex-1 rounded-xl bg-gradient-to-r from-green-500 to-emerald-600 text-white"
+              onClick={shareAsPDF}
+            >
+              <Download className="w-4 h-4 mr-2" /> {_t('results.sharePDF')}
             </Button>
             <Button
               className="flex-1 rounded-xl bg-gradient-to-r from-orange-500 to-red-500 text-white"
