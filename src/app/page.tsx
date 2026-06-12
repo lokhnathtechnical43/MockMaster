@@ -13,8 +13,10 @@ import {
   ChevronRight, ChevronLeft, Home, BarChart3, User, ArrowLeft,
   Play, Zap, Target, Award, Timer, RefreshCw,
   BookMarked, GraduationCap, Shield, Building, Train, ShieldCheck,
-  Swords
+  Swords, LogOut, Loader2
 } from 'lucide-react'
+import { useFirebaseAuth } from '@/lib/use-firebase-auth'
+import LoginModal from '@/components/LoginModal'
 
 // Types
 interface ExamCategory {
@@ -69,6 +71,10 @@ export default function ExamPrepBharat() {
   const [selectedTest, setSelectedTest] = useState<TestDetail | null>(null)
   const [loading, setLoading] = useState(false)
   const [seeded, setSeeded] = useState(false)
+  const [showLoginModal, setShowLoginModal] = useState(false)
+
+  // Firebase Auth
+  const { user, loading: authLoading, otpSent, error: authError, sendingOtp, verifyingOtp, sendOtp, verifyOtp, logout, resetOtp } = useFirebaseAuth()
 
   // Test taking state
   const [currentQuestion, setCurrentQuestion] = useState(0)
@@ -243,8 +249,8 @@ export default function ExamPrepBharat() {
               <h1 className="text-2xl font-bold">ExamPrep Bharat</h1>
               <p className="text-orange-100 text-sm">Mock Tests for Indian Exams</p>
             </div>
-            <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center">
-              <User className="w-5 h-5" />
+            <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center cursor-pointer" onClick={() => user ? setPage('profile') : setShowLoginModal(true)}>
+              {user ? <span className="text-sm font-bold">{user.phoneNumber?.slice(-2) || 'U'}</span> : <User className="w-5 h-5" />}
             </div>
           </div>
           <div className="bg-white/10 backdrop-blur-sm rounded-xl p-3 flex items-center gap-3">
@@ -870,9 +876,9 @@ export default function ExamPrepBharat() {
           </div>
           <div className="text-center">
             <div className="w-20 h-20 bg-white/20 rounded-full flex items-center justify-center mx-auto mb-3">
-              <User className="w-10 h-10" />
+              {user ? <span className="text-2xl font-bold">{user.phoneNumber?.slice(-2) || 'U'}</span> : <User className="w-10 h-10" />}
             </div>
-            <h2 className="text-xl font-bold">Guest User</h2>
+            <h2 className="text-xl font-bold">{user ? user.phoneNumber || 'User' : 'Guest User'}</h2>
             <p className="text-orange-100 text-sm">ExamPrep Bharat</p>
           </div>
         </div>
@@ -939,16 +945,35 @@ export default function ExamPrepBharat() {
           </CardContent>
         </Card>
 
-        {/* Login Card */}
-        <Card className="border-0 shadow-sm bg-gradient-to-r from-orange-500 to-red-500 text-white">
-          <CardContent className="p-4 text-center">
-            <p className="font-semibold">Login to save your progress</p>
-            <p className="text-sm text-orange-100 mb-3">Track your scores across devices</p>
-            <Button variant="outline" className="bg-white text-orange-600 hover:bg-orange-50 rounded-xl">
-              Login with Phone
-            </Button>
-          </CardContent>
-        </Card>
+        {/* Login/Logout Card */}
+        {user ? (
+          <Card className="border-0 shadow-sm">
+            <CardContent className="p-4 space-y-3">
+              <div className="flex items-center gap-3 p-3 bg-emerald-50 rounded-xl">
+                <div className="w-10 h-10 bg-emerald-100 rounded-full flex items-center justify-center">
+                  <CheckCircle2 className="w-5 h-5 text-emerald-600" />
+                </div>
+                <div>
+                  <p className="font-medium text-sm text-emerald-700">Logged In</p>
+                  <p className="text-xs text-emerald-600">{user.phoneNumber}</p>
+                </div>
+              </div>
+              <Button onClick={logout} variant="outline" className="w-full rounded-xl h-11 text-red-600 border-red-200 hover:bg-red-50">
+                <LogOut className="w-4 h-4 mr-2" /> Logout
+              </Button>
+            </CardContent>
+          </Card>
+        ) : (
+          <Card className="border-0 shadow-sm bg-gradient-to-r from-orange-500 to-red-500 text-white">
+            <CardContent className="p-4 text-center">
+              <p className="font-semibold">Login to save your progress</p>
+              <p className="text-sm text-orange-100 mb-3">Track your scores across devices</p>
+              <Button onClick={() => setShowLoginModal(true)} variant="outline" className="bg-white text-orange-600 hover:bg-orange-50 rounded-xl">
+                Login with Phone
+              </Button>
+            </CardContent>
+          </Card>
+        )}
       </div>
     </div>
   )
@@ -959,7 +984,7 @@ export default function ExamPrepBharat() {
   // MAIN RENDER
   return (
     <div className="relative">
-      <div className={showBottomNav ? 'pb-16' : ''}>
+      <div className={showBottomNav ? 'pb-20' : ''}>
         {page === 'home' && renderHome()}
         {page === 'exams' && renderExams()}
         {page === 'tests' && renderTests()}
@@ -996,6 +1021,19 @@ export default function ExamPrepBharat() {
             ))}
           </div>
         </div>
+      )}
+      {/* Login Modal */}
+      {showLoginModal && (
+        <LoginModal
+          otpSent={otpSent}
+          error={authError}
+          sendingOtp={sendingOtp}
+          verifyingOtp={verifyingOtp}
+          onSendOtp={sendOtp}
+          onVerifyOtp={verifyOtp}
+          onReset={resetOtp}
+          onClose={() => { setShowLoginModal(false); resetOtp() }}
+        />
       )}
     </div>
   )
