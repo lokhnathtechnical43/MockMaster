@@ -518,21 +518,6 @@ export default function ExamPrepApp() {
                 </div>
               </div>
             </div>
-
-            {/* Right: Notification */}
-            <button
-              onClick={() => setShowNotificationPanel(!showNotificationPanel)}
-              onTouchEnd={(e) => { e.preventDefault(); setShowNotificationPanel(!showNotificationPanel) }}
-              className="w-10 h-10 rounded-lg bg-white/20 backdrop-blur flex items-center justify-center active:bg-white/30 transition-colors relative"
-              style={{ touchAction: 'manipulation', WebkitTapHighlightColor: 'transparent' }}
-            >
-              <Bell className="w-4 h-4 text-white" />
-              {unreadCount > 0 && (
-                <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 rounded-full flex items-center justify-center text-white text-[8px] font-bold border border-orange-500">
-                  {unreadCount}
-                </span>
-              )}
-            </button>
           </div>
 
           {/* Moving Announcements Marquee */}
@@ -2155,9 +2140,11 @@ export default function ExamPrepApp() {
                   <button
                     key={item.page}
                     onClick={() => { handleBottomNav(item.page); setShowSideMenu(false) }}
+                    onTouchEnd={(e) => { e.preventDefault(); handleBottomNav(item.page); setShowSideMenu(false) }}
                     className={`w-full flex items-center gap-3 px-3 py-3 rounded-xl transition-colors ${
                       item.active ? 'bg-orange-50 text-orange-600' : 'text-gray-600 hover:bg-gray-50 active:bg-gray-100'
                     }`}
+                    style={{ touchAction: 'manipulation', WebkitTapHighlightColor: 'transparent' }}
                   >
                     <item.icon className={`w-5 h-5 ${item.active ? 'text-orange-500' : 'text-gray-400'}`} />
                     <span className={`font-medium text-sm ${item.active ? 'font-semibold' : ''}`}>{item.label}</span>
@@ -2187,8 +2174,10 @@ export default function ExamPrepApp() {
                 ].map((item, i) => (
                   <button
                     key={i}
-                    onClick={() => { item.action(); setShowSideMenu(false) }}
+                    onClick={() => { if (!item.soon) { item.action(); setShowSideMenu(false) } }}
+                    onTouchEnd={(e) => { e.preventDefault(); if (!item.soon) { item.action(); setShowSideMenu(false) } }}
                     className="w-full flex items-center gap-3 px-3 py-3 rounded-xl text-gray-600 hover:bg-gray-50 active:bg-gray-100 transition-colors"
+                    style={{ touchAction: 'manipulation', WebkitTapHighlightColor: 'transparent' }}
                   >
                     <item.icon className="w-5 h-5 text-gray-400" />
                     <span className="font-medium text-sm">{item.label}</span>
@@ -2219,7 +2208,9 @@ export default function ExamPrepApp() {
                   <button
                     key={i}
                     onClick={() => { item.action(); setShowSideMenu(false) }}
+                    onTouchEnd={(e) => { e.preventDefault(); item.action(); setShowSideMenu(false) }}
                     className="w-full flex items-center gap-3 px-3 py-3 rounded-xl text-gray-600 hover:bg-gray-50 active:bg-gray-100 transition-colors"
+                    style={{ touchAction: 'manipulation', WebkitTapHighlightColor: 'transparent' }}
                   >
                     <item.icon className="w-5 h-5 text-gray-400" />
                     <div className="flex-1 text-left">
@@ -2241,7 +2232,9 @@ export default function ExamPrepApp() {
               {auth.isLoggedIn ? (
                 <button
                   onClick={() => { auth.logout(); setShowSideMenu(false) }}
+                  onTouchEnd={(e) => { e.preventDefault(); auth.logout(); setShowSideMenu(false) }}
                   className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-red-500 hover:bg-red-50 active:bg-red-100 transition-colors"
+                  style={{ touchAction: 'manipulation', WebkitTapHighlightColor: 'transparent' }}
                 >
                   <LogOut className="w-5 h-5" />
                   <span className="font-medium text-sm">{_t('menu.logout')}</span>
@@ -2249,7 +2242,9 @@ export default function ExamPrepApp() {
               ) : (
                 <button
                   onClick={() => { setShowLoginModal(true); setShowSideMenu(false) }}
+                  onTouchEnd={(e) => { e.preventDefault(); setShowLoginModal(true); setShowSideMenu(false) }}
                   className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-gradient-to-r from-orange-500 to-red-500 text-white rounded-xl font-semibold text-sm"
+                  style={{ touchAction: 'manipulation', WebkitTapHighlightColor: 'transparent' }}
                 >
                   <Mail className="w-4 h-4" /> {_t('profile.login')}
                 </button>
