@@ -396,14 +396,14 @@ export default function ExamPrepApp() {
       }
     })
 
-    const score = correctCount * test.markingCorrect - wrongCount * Math.abs(test.markingWrong)
-    const maxScore = totalQuestions * test.markingCorrect
+    const score = correctCount * test.correctMarks - wrongCount * Math.abs(test.wrongMarks)
+    const maxScore = totalQuestions * test.correctMarks
     const timeTaken = test.duration * 60 - timeLeft
 
     const result = await storeResult({
       testId: test.id,
       testName: test.title,
-      examName: test.exam.name,
+      examName: selectedExam?.name || '',
       userId: auth.getUserId() || 'anonymous',
       correctCount,
       wrongCount,
@@ -1092,7 +1092,7 @@ export default function ExamPrepApp() {
             <h1 className="text-white text-lg font-bold flex-1 truncate">{_t('testInfo.details')}</h1>
           </div>
           <h2 className="text-white font-semibold">{selectedTest.title}</h2>
-          <p className="text-white/70 text-sm mt-1">{selectedTest.exam.name}</p>
+          <p className="text-white/70 text-sm mt-1">{selectedExam?.name || selectedCategory?.name || ''}</p>
         </div>
 
         <div className="px-4 mt-4 space-y-4">
@@ -1117,15 +1117,15 @@ export default function ExamPrepApp() {
               <Separator />
               <div className="flex justify-between text-sm">
                 <span className="text-gray-500">{_t('testInfo.correctAns')}</span>
-                <span className="font-semibold text-emerald-600">+{selectedTest.markingCorrect} {_t('testInfo.marks')}</span>
+                <span className="font-semibold text-emerald-600">+{selectedTest.correctMarks} {_t('testInfo.marks')}</span>
               </div>
               <div className="flex justify-between text-sm">
                 <span className="text-gray-500">{_t('testInfo.wrongAns')}</span>
-                <span className="font-semibold text-red-600">{selectedTest.markingWrong} {_t('testInfo.marks')}</span>
+                <span className="font-semibold text-red-600">{selectedTest.wrongMarks} {_t('testInfo.marks')}</span>
               </div>
               <div className="flex justify-between text-sm">
                 <span className="text-gray-500">{_t('testInfo.skipped')}</span>
-                <span className="font-semibold text-gray-400">{selectedTest.markingSkipped} {_t('testInfo.marks')}</span>
+                <span className="font-semibold text-gray-400">{selectedTest.skipMarks} {_t('testInfo.marks')}</span>
               </div>
             </CardContent>
           </Card>
@@ -1138,7 +1138,7 @@ export default function ExamPrepApp() {
               </div>
               <div>
                 <p className="text-xs text-gray-500">{_t('testInfo.maxScore')}</p>
-                <p className="font-bold text-lg">{selectedTest.totalQuestions * selectedTest.markingCorrect} {_t('testInfo.marks')}</p>
+                <p className="font-bold text-lg">{selectedTest.totalQuestions * selectedTest.correctMarks} {_t('testInfo.marks')}</p>
               </div>
             </CardContent>
           </Card>
