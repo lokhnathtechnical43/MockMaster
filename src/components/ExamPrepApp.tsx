@@ -1872,13 +1872,17 @@ export default function ExamPrepApp() {
                       <span className="text-orange-600 font-bold text-sm">{i + 1}</span>
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-gray-800 leading-relaxed">{item.question.text}</p>
+                      <p className="text-sm font-medium text-gray-800 leading-relaxed">{item.question.questionText}</p>
                       <div className="flex flex-wrap gap-1 mt-2">
-                        {item.question.options.map((opt, oi) => (
-                          <span key={oi} className={`text-[11px] px-2 py-0.5 rounded-full ${oi === item.question.correctAnswer ? 'bg-emerald-50 text-emerald-700 font-semibold' : 'bg-gray-100 text-gray-600'}`}>
-                            {String.fromCharCode(65 + oi)}. {opt}
-                          </span>
-                        ))}
+                        {['A', 'B', 'C', 'D'].map(letter => {
+                          const optionText = letter === 'A' ? item.question.optionA : letter === 'B' ? item.question.optionB : letter === 'C' ? item.question.optionC : item.question.optionD
+                          const isCorrect = item.question.correctAnswer === letter
+                          return (
+                            <span key={letter} className={`text-[11px] px-2 py-0.5 rounded-full ${isCorrect ? 'bg-emerald-50 text-emerald-700 font-semibold' : 'bg-gray-100 text-gray-600'}`}>
+                              {letter}. {optionText}
+                            </span>
+                          )
+                        })}
                       </div>
                       {item.question.explanation && (
                         <p className="text-[11px] text-blue-600 mt-2 bg-blue-50 rounded-lg p-2">{item.question.explanation}</p>
