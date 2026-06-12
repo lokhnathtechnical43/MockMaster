@@ -836,19 +836,23 @@ export default function ExamPrepApp() {
                 return (
                   <Card
                     key={cat.id}
-                    className="border-0 shadow-md cursor-pointer hover:shadow-lg transition-all active:scale-[0.97] overflow-hidden"
+                    className="border-0 shadow-md cursor-pointer hover:shadow-xl transition-all active:scale-[0.96] overflow-hidden"
                     onClick={() => { setSelectedCategory(cat); handleBottomNav('exams') }}
                   >
-                    <CardContent className="p-4 relative">
-                      <div className="absolute top-0 right-0 w-16 h-16 rounded-bl-[2rem] opacity-30" style={{ background: `linear-gradient(135deg, ${color.accent || '#f97316'}22, transparent)` }} />
-                      <div className={`w-11 h-11 rounded-2xl ${color.light} flex items-center justify-center ${color.text} mb-3 shadow-sm`}>
-                        {getCatIcon(cat.slug)}
+                    <div className={`bg-gradient-to-br ${color.gradient} p-4 pb-5`}>
+                      <div className="flex items-center justify-between">
+                        <div className="w-12 h-12 rounded-2xl bg-white/25 backdrop-blur-sm flex items-center justify-center shadow-sm">
+                          <div className="text-white">{getCatIcon(cat.slug)}</div>
+                        </div>
+                        <div className="w-7 h-7 rounded-full bg-white/20 flex items-center justify-center">
+                          <ChevronRight className="w-4 h-4 text-white/80" />
+                        </div>
                       </div>
-                      <p className="font-bold text-sm">{cat.name}</p>
-                      <div className="flex items-center gap-1 mt-1.5">
-                        <span className="text-[10px] text-gray-400 bg-gray-50 px-1.5 py-0.5 rounded-md font-medium">{cat.exams.length} {_t('home.exams')}</span>
+                      <p className="font-bold text-white text-sm mt-3">{cat.name}</p>
+                      <div className="flex items-center gap-1.5 mt-1.5">
+                        <span className="text-[10px] text-white/80 bg-white/20 px-2 py-0.5 rounded-full font-medium backdrop-blur-sm">{cat.exams.length} {_t('home.exams')}</span>
                       </div>
-                    </CardContent>
+                    </div>
                   </Card>
                 )
               })}
@@ -860,33 +864,39 @@ export default function ExamPrepApp() {
             <div className="flex items-center justify-between mb-3">
               <h2 className="font-bold text-lg">{_t('home.popularExams')}</h2>
             </div>
-            <div className="space-y-2">
+            <div className="space-y-2.5">
               {categories.slice(0, 3).flatMap(cat =>
                 cat.exams.slice(0, 2).map(exam => {
                   const color = getCatColor(cat.slug)
                   return (
                     <Card
                       key={exam.id}
-                      className="border-0 shadow-sm cursor-pointer hover:shadow-md transition-all active:scale-[0.98]"
+                      className="border-0 shadow-md cursor-pointer hover:shadow-lg transition-all active:scale-[0.98] overflow-hidden"
                       onClick={() => openExam(exam, cat)}
                     >
-                      <CardContent className="p-3 flex items-center gap-3">
-                        <div className={`w-11 h-11 rounded-2xl ${color.light} flex items-center justify-center ${color.text} shadow-sm`}>
-                          {getCatIcon(cat.slug)}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="font-semibold text-sm truncate">{exam.name}</p>
-                          <div className="flex items-center gap-2 mt-1">
-                            <span className="text-[10px] text-gray-400 flex items-center gap-0.5">
-                              <BookOpen className="w-2.5 h-2.5" /> {exam.totalQuestions} Qs
-                            </span>
-                            <span className="text-[10px] text-gray-400 flex items-center gap-0.5">
-                              <Clock className="w-2.5 h-2.5" /> {exam.duration}m
-                            </span>
+                      <CardContent className="p-0">
+                        <div className="flex items-center">
+                          {/* Left colored strip */}
+                          <div className={`w-1.5 self-stretch bg-gradient-to-b ${color.gradient}`} />
+                          <div className="flex items-center gap-3 p-3 flex-1">
+                            <div className={`w-12 h-12 rounded-2xl ${color.light} flex items-center justify-center ${color.text} shadow-sm`}>
+                              {getCatIcon(cat.slug)}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="font-bold text-sm truncate text-gray-800">{exam.name}</p>
+                              <div className="flex items-center gap-3 mt-1">
+                                <span className="text-[10px] text-gray-400 flex items-center gap-1 bg-gray-50 px-1.5 py-0.5 rounded-md">
+                                  <BookOpen className="w-2.5 h-2.5" /> {exam.totalQuestions} Qs
+                                </span>
+                                <span className="text-[10px] text-gray-400 flex items-center gap-1 bg-gray-50 px-1.5 py-0.5 rounded-md">
+                                  <Clock className="w-2.5 h-2.5" /> {exam.duration}m
+                                </span>
+                              </div>
+                            </div>
+                            <div className={`w-9 h-9 rounded-xl bg-gradient-to-br ${color.gradient} flex items-center justify-center shadow-sm`}>
+                              <ChevronRight className="w-4 h-4 text-white" />
+                            </div>
                           </div>
-                        </div>
-                        <div className="w-8 h-8 rounded-xl bg-orange-50 flex items-center justify-center">
-                          <ChevronRight className="w-4 h-4 text-orange-500" />
                         </div>
                       </CardContent>
                     </Card>
