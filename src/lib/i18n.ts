@@ -69,6 +69,8 @@ const translations: Record<Lang, Record<string, string>> = {
     'testTaking.markedReview': 'Marked for Review',
     'testTaking.unmark': 'Unmark',
     'testTaking.mark': 'Mark',
+    'testTaking.bookmark': 'Save',
+    'testTaking.bookmarked': 'Saved',
     'testTaking.clear': 'Clear',
     'testTaking.skip': 'Skip',
     'testTaking.submit': 'Submit Test',
@@ -180,6 +182,53 @@ const translations: Record<Lang, Record<string, string>> = {
     'faq.q7': 'How do I bookmark questions?',
     'faq.a7': 'Bookmarked questions feature is coming soon! Stay tuned for updates.',
 
+    // === Bookmarks Page ===
+    'bookmarks.title': 'Bookmarked Questions',
+    'bookmarks.subtitle': 'Questions you saved for later review',
+    'bookmarks.empty': 'No bookmarked questions yet',
+    'bookmarks.emptySub': 'Save questions during tests by tapping the Save button',
+
+    // === Performance Report ===
+    'perf.title': 'Performance Report',
+    'perf.testsTaken': 'Tests Taken',
+    'perf.accuracy': 'Accuracy',
+    'perf.avgTime': 'Avg Time',
+    'perf.scoreTrend': 'Score Trend (Last 5)',
+    'perf.recentTests': 'Recent Tests',
+    'perf.correct': 'correct',
+    'perf.noData': 'No test data yet',
+    'perf.noDataSub': 'Take some tests to see your performance report',
+
+    // === Daily Practice Routine ===
+    'routine.title': 'Daily Practice',
+    'routine.morning': 'Morning',
+    'routine.afternoon': 'Afternoon',
+    'routine.evening': 'Evening',
+    'routine.night': 'Night',
+    'routine.goalMet': 'Goal Achieved!',
+    'routine.todayProgress': "Today's Progress",
+    'routine.questions': 'questions',
+    'routine.selectExam': 'Select Exam',
+    'routine.dailyGoal': 'Daily Goal',
+    'routine.preferredTime': 'Preferred Time',
+    'routine.practiceFor': 'Practice for',
+
+    // === Previous Year Papers ===
+    'prevPapers.title': 'Previous Year Papers',
+    'prevPapers.subtitle': 'Practice with real exam-style papers',
+    'prevPapers.papers': 'papers',
+
+    // === Your Exam ===
+    'yourExam.title': 'Your Exam',
+    'yourExam.selectExam': 'Select Your Target Exam',
+    'yourExam.selectSub': 'Choose the exam you are preparing for',
+    'yourExam.attempts': 'Attempts',
+    'yourExam.avg': 'Average',
+    'yourExam.best': 'Best',
+    'yourExam.availableTests': 'Available Tests',
+    'yourExam.noExam': 'No exam selected',
+    'yourExam.noExamSub': 'Select your target exam to track your progress',
+
     // === Bottom Nav ===
     'nav.home': 'Home',
     'nav.practice': 'Practice',
@@ -197,6 +246,9 @@ const translations: Record<Lang, Record<string, string>> = {
     'menu.bookmarkedQ': 'Bookmarked Questions',
     'menu.offlineTests': 'Offline Tests',
     'menu.perfReport': 'Performance Report',
+    'menu.prevPapers': 'Previous Year Papers',
+    'menu.yourExam': 'Your Exam',
+    'menu.dailyRoutine': 'Daily Practice',
     'menu.soon': 'Soon',
     'menu.settings': 'Settings',
     'menu.notifications': 'Notifications',
@@ -292,6 +344,8 @@ const translations: Record<Lang, Record<string, string>> = {
     'testTaking.markedReview': 'समीक्षा के लिए चिन्हित',
     'testTaking.unmark': 'चिन्ह हटाएं',
     'testTaking.mark': 'चिन्हित करें',
+    'testTaking.bookmark': 'सेव करें',
+    'testTaking.bookmarked': 'सेव्ड',
     'testTaking.clear': 'हटाएं',
     'testTaking.skip': 'छोड़ें',
     'testTaking.submit': 'टेस्ट जमा करें',
@@ -403,6 +457,53 @@ const translations: Record<Lang, Record<string, string>> = {
     'faq.q7': 'सवाल बुकमार्क कैसे करें?',
     'faq.a7': 'बुकमार्क्ड सवाल फीचर जल्द आ रहा है! अपडेट के लिए बने रहें।',
 
+    // === Bookmarks Page ===
+    'bookmarks.title': 'बुकमार्क किए प्रश्न',
+    'bookmarks.subtitle': 'बाद में दोहराने के लिए सेव किए प्रश्न',
+    'bookmarks.empty': 'अभी कोई बुकमार्क नहीं',
+    'bookmarks.emptySub': 'टेस्ट के दौरान सेव बटन टैप करें',
+
+    // === Performance Report ===
+    'perf.title': 'प्रदर्शन रिपोर्ट',
+    'perf.testsTaken': 'टेस्ट दिए',
+    'perf.accuracy': 'सटीकता',
+    'perf.avgTime': 'औसत समय',
+    'perf.scoreTrend': 'स्कोर ट्रेंड (अंतिम 5)',
+    'perf.recentTests': 'हाल के टेस्ट',
+    'perf.correct': 'सही',
+    'perf.noData': 'अभी कोई डेटा नहीं',
+    'perf.noDataSub': 'रिपोर्ट देखने के लिए टेस्ट दें',
+
+    // === Daily Practice Routine ===
+    'routine.title': 'दैनिक अभ्यास',
+    'routine.morning': 'सुबह',
+    'routine.afternoon': 'दोपहर',
+    'routine.evening': 'शाम',
+    'routine.night': 'रात',
+    'routine.goalMet': 'लक्ष्य पूरा!',
+    'routine.todayProgress': 'आज की प्रगति',
+    'routine.questions': 'प्रश्न',
+    'routine.selectExam': 'परीक्षा चुनें',
+    'routine.dailyGoal': 'दैनिक लक्ष्य',
+    'routine.preferredTime': 'पसंदीदा समय',
+    'routine.practiceFor': 'अभ्यास करें',
+
+    // === Previous Year Papers ===
+    'prevPapers.title': 'पिछले वर्ष के पेपर',
+    'prevPapers.subtitle': 'असली परीक्षा शैली के पेपर से अभ्यास करें',
+    'prevPapers.papers': 'पेपर',
+
+    // === Your Exam ===
+    'yourExam.title': 'आपकी परीक्षा',
+    'yourExam.selectExam': 'अपनी लक्ष्य परीक्षा चुनें',
+    'yourExam.selectSub': 'जिस परीक्षा की तैयारी कर रहे हैं चुनें',
+    'yourExam.attempts': 'प्रयास',
+    'yourExam.avg': 'औसत',
+    'yourExam.best': 'सर्वश्रेष्ठ',
+    'yourExam.availableTests': 'उपलब्ध टेस्ट',
+    'yourExam.noExam': 'कोई परीक्षा चुनी नहीं',
+    'yourExam.noExamSub': 'प्रगति ट्रैक करने के लिए परीक्षा चुनें',
+
     // === Bottom Nav ===
     'nav.home': 'होम',
     'nav.practice': 'अभ्यास',
@@ -420,6 +521,9 @@ const translations: Record<Lang, Record<string, string>> = {
     'menu.bookmarkedQ': 'बुकमार्क किए प्रश्न',
     'menu.offlineTests': 'ऑफलाइन टेस्ट',
     'menu.perfReport': 'प्रदर्शन रिपोर्ट',
+    'menu.prevPapers': 'पिछले वर्ष के पेपर',
+    'menu.yourExam': 'आपकी परीक्षा',
+    'menu.dailyRoutine': 'दैनिक अभ्यास',
     'menu.soon': 'जल्द',
     'menu.settings': 'सेटिंग्स',
     'menu.notifications': 'सूचनाएं',
@@ -515,6 +619,8 @@ const translations: Record<Lang, Record<string, string>> = {
     'testTaking.markedReview': 'পর্যালোচনার জন্য চিহ্নিত',
     'testTaking.unmark': 'চিহ্ন সরান',
     'testTaking.mark': 'চিহ্নিত করুন',
+    'testTaking.bookmark': 'সেভ করুন',
+    'testTaking.bookmarked': 'সেভড',
     'testTaking.clear': 'মুছুন',
     'testTaking.skip': 'বাদ দিন',
     'testTaking.submit': 'টেস্ট জমা দিন',
@@ -626,6 +732,53 @@ const translations: Record<Lang, Record<string, string>> = {
     'faq.q7': 'প্রশ্ন বুকমার্ক কিভাবে করব?',
     'faq.a7': 'বুকমার্কড প্রশ্ন ফিচার শীঘ্রই আসছে! আপডেটের জন্য থাকুন।',
 
+    // === Bookmarks Page ===
+    'bookmarks.title': 'বুকমার্ক করা প্রশ্ন',
+    'bookmarks.subtitle': 'পরে পর্যালোচনার জন্য সেভ করা প্রশ্ন',
+    'bookmarks.empty': 'এখনো কোনো বুকমার্ক নেই',
+    'bookmarks.emptySub': 'টেস্টের সময় সেভ বাটন ট্যাপ করুন',
+
+    // === Performance Report ===
+    'perf.title': 'কর্মক্ষমতা রিপোর্ট',
+    'perf.testsTaken': 'টেস্ট দিয়েছেন',
+    'perf.accuracy': 'নির্ভুলতা',
+    'perf.avgTime': 'গড় সময়',
+    'perf.scoreTrend': 'স্কোর ট্রেন্ড (শেষ ৫)',
+    'perf.recentTests': 'সাম্প্রতিক টেস্ট',
+    'perf.correct': 'সঠিক',
+    'perf.noData': 'এখনো কোনো ডেটা নেই',
+    'perf.noDataSub': 'রিপোর্ট দেখতে টেস্ট দিন',
+
+    // === Daily Practice Routine ===
+    'routine.title': 'দৈনিক অনুশীলন',
+    'routine.morning': 'সকাল',
+    'routine.afternoon': 'দুপুর',
+    'routine.evening': 'সন্ধ্যা',
+    'routine.night': 'রাত',
+    'routine.goalMet': 'লক্ষ্য অর্জন!',
+    'routine.todayProgress': 'আজকের অগ্রগতি',
+    'routine.questions': 'প্রশ্ন',
+    'routine.selectExam': 'পরীক্ষা বেছে নিন',
+    'routine.dailyGoal': 'দৈনিক লক্ষ্য',
+    'routine.preferredTime': 'পছন্দের সময়',
+    'routine.practiceFor': 'অনুশীলন করুন',
+
+    // === Previous Year Papers ===
+    'prevPapers.title': 'পূর্ববর্তী বছরের প্রশ্নপত্র',
+    'prevPapers.subtitle': 'আসল পরীক্ষার ধাঁচে অনুশীলন করুন',
+    'prevPapers.papers': 'প্রশ্নপত্র',
+
+    // === Your Exam ===
+    'yourExam.title': 'আপনার পরীক্ষা',
+    'yourExam.selectExam': 'আপনার লক্ষ্য পরীক্ষা বেছে নিন',
+    'yourExam.selectSub': 'যে পরীক্ষার প্রস্তুতি নিচ্ছেন তা বেছে নিন',
+    'yourExam.attempts': 'প্রচেষ্টা',
+    'yourExam.avg': 'গড়',
+    'yourExam.best': 'সেরা',
+    'yourExam.availableTests': 'উপলব্ধ টেস্ট',
+    'yourExam.noExam': 'কোনো পরীক্ষা নির্বাচিত নেই',
+    'yourExam.noExamSub': 'অগ্রগতি ট্র্যাক করতে পরীক্ষা বেছে নিন',
+
     // === Bottom Nav ===
     'nav.home': 'হোম',
     'nav.practice': 'অনুশীলন',
@@ -643,6 +796,9 @@ const translations: Record<Lang, Record<string, string>> = {
     'menu.bookmarkedQ': 'বুকমার্ক করা প্রশ্ন',
     'menu.offlineTests': 'অফলাইন টেস্ট',
     'menu.perfReport': 'কর্মক্ষমতা রিপোর্ট',
+    'menu.prevPapers': 'পূর্ববর্তী বছরের প্রশ্নপত্র',
+    'menu.yourExam': 'আপনার পরীক্ষা',
+    'menu.dailyRoutine': 'দৈনিক অনুশীলন',
     'menu.soon': 'শীঘ্র',
     'menu.settings': 'সেটিংস',
     'menu.notifications': 'বিজ্ঞপ্তি',

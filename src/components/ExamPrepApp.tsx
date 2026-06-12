@@ -38,7 +38,7 @@ import { getAnnouncements as getLocalAnnouncements, getNotifications as getLocal
 import { t, type Lang } from '@/lib/i18n'
 
 // ===== Types =====
-type Page = 'home' | 'exams' | 'tests' | 'test-info' | 'test-taking' | 'results' | 'leaderboard' | 'profile' | 'practice'
+type Page = 'home' | 'exams' | 'tests' | 'test-info' | 'test-taking' | 'results' | 'leaderboard' | 'profile' | 'practice' | 'bookmarks' | 'perf-report' | 'daily-routine' | 'prev-papers' | 'your-exam'
 
 // ===== Unified Data Access (Firestore or Local) =====
 const isFirestore = () => getUseFirestore()
@@ -149,6 +149,42 @@ export default function ExamPrepApp() {
   const [showQuestionNav, setShowQuestionNav] = useState(false)
   const [showSideMenu, setShowSideMenu] = useState(false)
   const [showNotificationPanel, setShowNotificationPanel] = useState(false)
+
+  // --- Bookmarks & User Preferences (localStorage) ---
+  const [bookmarkedQs, setBookmarkedQs] = useState<string[]>([])
+  const [userExamId, setUserExamId] = useState<string>('')
+  const [dailyRoutine, setDailyRoutine] = useState<{ questionCount: number; preferredTime: string; examId: string }>({ questionCount: 10, preferredTime: 'morning', examId: '' })
+
+  // Load bookmarks & preferences from localStorage
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem('mockmaster_bookmarks')
+      if (saved) setBookmarkedQs(JSON.parse(saved))
+    } catch {}
+    try {
+      const saved = localStorage.getItem('mockmaster_user_exam')
+      if (saved) setUserExamId(saved)
+    } catch {}
+    try {
+      const saved = localStorage.getItem('mockmaster_daily_routine')
+      if (saved) setDailyRoutine(JSON.parse(saved))
+    } catch {}
+  }, [])
+
+  // Save bookmarks when changed
+  useEffect(() => {
+    try { localStorage.setItem('mockmaster_bookmarks', JSON.stringify(bookmarkedQs)) } catch {}
+  }, [bookmarkedQs])
+  useEffect(() => {
+    try { localStorage.setItem('mockmaster_user_exam', userExamId) } catch {}
+  }, [userExamId])
+  useEffect(() => {
+    try { localStorage.setItem('mockmaster_daily_routine', JSON.stringify(dailyRoutine)) } catch {}
+  }, [dailyRoutine])
+
+  function toggleBookmark(questionId: string) {
+    setBookmarkedQs(prev => prev.includes(questionId) ? prev.filter(id => id !== questionId) : [...prev, questionId])
+  }
 
   // i18n shorthand
   const lng = selectedLanguage
@@ -1248,6 +1284,15 @@ export default function ExamPrepApp() {
             <Button
               variant="outline"
               size="sm"
+              className={`rounded-xl flex-1 ${bookmarkedQs.includes(question.id) ? 'bg-orange-50 border-orange-300 text-orange-600' : ''}`}
+              onClick={() => toggleBookmark(question.id)}
+            >
+              <BookmarkPlus className="w-4 h-4 mr-1" />
+              {bookmarkedQs.includes(question.id) ? _t('testTaking.bookmarked') : _t('testTaking.bookmark')}
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
               className="rounded-xl flex-1"
               onClick={() => toggleReview(question.id)}
             >
@@ -1772,7 +1817,544 @@ export default function ExamPrepApp() {
     )
   }
 
-  // ===== RENDER: Profile Page =====
+  // ===== RENDER: Bookmarked Questions =====
+  function renderBookmarks() {
+    // Collect all bookmarked questions from all tests
+    const allBookmarkedQuestions: { question: LocalQuestion; testTitle: string; examName: string }[] = []
+    categories.forEach(cat => {
+      cat.exams.forEach(exam => {
+        // We need to get tests for each exam - use local data
+        const tests = getLocalTestsByExam(exam.id)
+        tests.forEach(test => {
+          test.questions.forEach(q => {
+            if (bookmarkedQs.includes(q.id)) {
+              allBookmarkedQuestions.push({ question: q, testTitle: test.title, examName: exam.name })
+            }
+          })
+        })
+      })
+    })
+
+    return (
+      <div className="min-h-screen bg-gray-50">
+        {/* Header */}
+        <div className="bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 px-4 pt-[calc(env(safe-area-inset-top,0px)+1rem)] pb-5">
+          <div className="flex items-center gap-3 mb-3">
+            <button onClick={goBack} className="w-9 h-9 rounded-full bg-white/10 flex items-center justify-center" style={{ touchAction: 'manipulation', WebkitTapHighlightColor: 'transparent' }}>
+              <ArrowLeft className="w-5 h-5 text-white" />
+            </button>
+            <h1 className="text-white text-lg font-bold">{_t('bookmarks.title')}</h1>
+            <Badge variant="secondary" className="ml-auto">{allBookmarkedQuestions.length}</Badge>
+          </div>
+          <p className="text-white/50 text-xs">{_t('bookmarks.subtitle')}</p>
+        </div>
+
+        <div className="px-4 mt-4 space-y-3 pb-24">
+          {allBookmarkedQuestions.length === 0 ? (
+            <Card className="border-0 shadow-sm">
+              <CardContent className="p-8 text-center">
+                <BookMarked className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+                <p className="font-semibold text-gray-600">{_t('bookmarks.empty')}</p>
+                <p className="text-gray-400 text-xs mt-1">{_t('bookmarks.emptySub')}</p>
+                <Button size="sm" className="mt-4 bg-gradient-to-r from-orange-500 to-red-500 text-white rounded-xl" onClick={() => handleBottomNav('practice')}>
+                  {_t('nav.practice')}
+                </Button>
+              </CardContent>
+            </Card>
+          ) : (
+            allBookmarkedQuestions.map((item, i) => (
+              <Card key={item.question.id} className="border-0 shadow-sm">
+                <CardContent className="p-4">
+                  <div className="flex items-start gap-3">
+                    <div className="w-8 h-8 rounded-lg bg-orange-50 flex items-center justify-center shrink-0">
+                      <span className="text-orange-600 font-bold text-sm">{i + 1}</span>
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-gray-800 leading-relaxed">{item.question.text}</p>
+                      <div className="flex flex-wrap gap-1 mt-2">
+                        {item.question.options.map((opt, oi) => (
+                          <span key={oi} className={`text-[11px] px-2 py-0.5 rounded-full ${oi === item.question.correctAnswer ? 'bg-emerald-50 text-emerald-700 font-semibold' : 'bg-gray-100 text-gray-600'}`}>
+                            {String.fromCharCode(65 + oi)}. {opt}
+                          </span>
+                        ))}
+                      </div>
+                      {item.question.explanation && (
+                        <p className="text-[11px] text-blue-600 mt-2 bg-blue-50 rounded-lg p-2">{item.question.explanation}</p>
+                      )}
+                      <div className="flex items-center gap-2 mt-2">
+                        <Badge variant="outline" className="text-[9px]">{item.testTitle}</Badge>
+                        <Badge variant="outline" className="text-[9px]">{item.examName}</Badge>
+                      </div>
+                    </div>
+                    <button onClick={() => toggleBookmark(item.question.id)} className="shrink-0 w-8 h-8 rounded-full bg-red-50 flex items-center justify-center" style={{ touchAction: 'manipulation', WebkitTapHighlightColor: 'transparent' }}>
+                      <X className="w-4 h-4 text-red-400" />
+                    </button>
+                  </div>
+                </CardContent>
+              </Card>
+            ))
+          )}
+        </div>
+      </div>
+    )
+  }
+
+  // ===== RENDER: Performance Report =====
+  function renderPerfReport() {
+    const stats = getUserStats()
+    let results: TestResult[] = []
+    try {
+      const stored = localStorage.getItem('mockmaster_results')
+      if (stored) results = JSON.parse(stored)
+      const userId = auth.getUserId()
+      if (userId) results = results.filter((r: TestResult) => r.userId === userId)
+    } catch {}
+
+    // Calculate analytics
+    const totalTests = results.length
+    const avgScore = stats.avgScore
+    const avgTime = totalTests > 0 ? Math.round(results.reduce((s, r) => s + r.timeTaken, 0) / totalTests / 60) : 0
+    const avgAccuracy = totalTests > 0 ? Math.round(results.reduce((s, r) => s + (r.correctAnswers / r.totalQuestions) * 100, 0) / totalTests) : 0
+    const last5 = results.slice(-5).reverse()
+    const scoreTrend = last5.map(r => Math.round((r.score / r.totalQuestions) * 100))
+
+    // Subject-wise performance
+    const examPerformance: Record<string, { count: number; avgPct: number }> = {}
+    results.forEach(r => {
+      const key = r.testId.split('-').slice(0, 3).join('-')
+      if (!examPerformance[key]) examPerformance[key] = { count: 0, avgPct: 0 }
+      examPerformance[key].count++
+      examPerformance[key].avgPct += (r.correctAnswers / r.totalQuestions) * 100
+    })
+    Object.keys(examPerformance).forEach(k => {
+      examPerformance[k].avgPct = Math.round(examPerformance[k].avgPct / examPerformance[k].count)
+    })
+
+    return (
+      <div className="min-h-screen bg-gray-50">
+        <div className="bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 px-4 pt-[calc(env(safe-area-inset-top,0px)+1rem)] pb-5">
+          <div className="flex items-center gap-3 mb-3">
+            <button onClick={goBack} className="w-9 h-9 rounded-full bg-white/10 flex items-center justify-center" style={{ touchAction: 'manipulation', WebkitTapHighlightColor: 'transparent' }}>
+              <ArrowLeft className="w-5 h-5 text-white" />
+            </button>
+            <h1 className="text-white text-lg font-bold">{_t('perf.title')}</h1>
+          </div>
+        </div>
+
+        <div className="px-4 mt-4 space-y-4 pb-24">
+          {/* Summary Cards */}
+          <div className="grid grid-cols-2 gap-3">
+            <Card className="border-0 shadow-sm">
+              <CardContent className="p-3 text-center">
+                <FileText className="w-5 h-5 text-orange-500 mx-auto mb-1" />
+                <p className="font-bold text-xl">{totalTests}</p>
+                <p className="text-gray-400 text-[10px]">{_t('perf.testsTaken')}</p>
+              </CardContent>
+            </Card>
+            <Card className="border-0 shadow-sm">
+              <CardContent className="p-3 text-center">
+                <Target className="w-5 h-5 text-emerald-500 mx-auto mb-1" />
+                <p className="font-bold text-xl">{avgAccuracy}%</p>
+                <p className="text-gray-400 text-[10px]">{_t('perf.accuracy')}</p>
+              </CardContent>
+            </Card>
+            <Card className="border-0 shadow-sm">
+              <CardContent className="p-3 text-center">
+                <Award className="w-5 h-5 text-blue-500 mx-auto mb-1" />
+                <p className="font-bold text-xl">#{stats.bestRank || '-'}</p>
+                <p className="text-gray-400 text-[10px]">{_t('home.bestRank')}</p>
+              </CardContent>
+            </Card>
+            <Card className="border-0 shadow-sm">
+              <CardContent className="p-3 text-center">
+                <Clock className="w-5 h-5 text-purple-500 mx-auto mb-1" />
+                <p className="font-bold text-xl">{avgTime}m</p>
+                <p className="text-gray-400 text-[10px]">{_t('perf.avgTime')}</p>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Score Trend */}
+          {scoreTrend.length > 1 && (
+            <Card className="border-0 shadow-sm">
+              <CardContent className="p-4">
+                <h3 className="font-semibold text-sm mb-3">{_t('perf.scoreTrend')}</h3>
+                <div className="flex items-end gap-2 h-24">
+                  {scoreTrend.map((score, i) => (
+                    <div key={i} className="flex-1 flex flex-col items-center gap-1">
+                      <span className="text-[9px] font-bold" style={{ color: score >= 60 ? '#10b981' : score >= 40 ? '#f59e0b' : '#ef4444' }}>{score}%</span>
+                      <div className="w-full rounded-t-md" style={{ height: `${Math.max(score, 5)}%`, background: score >= 60 ? '#10b981' : score >= 40 ? '#f59e0b' : '#ef4444' }} />
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Recent Results */}
+          {last5.length > 0 && (
+            <Card className="border-0 shadow-sm">
+              <CardContent className="p-4">
+                <h3 className="font-semibold text-sm mb-3">{_t('perf.recentTests')}</h3>
+                <div className="space-y-2">
+                  {last5.map(r => {
+                    const pct = Math.round((r.score / r.totalQuestions) * 100)
+                    return (
+                      <div key={r.id} className="flex items-center gap-3 py-2 border-b border-gray-50 last:border-0">
+                        <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${pct >= 60 ? 'bg-emerald-50' : pct >= 40 ? 'bg-yellow-50' : 'bg-red-50'}`}>
+                          <span className={`font-bold text-xs ${pct >= 60 ? 'text-emerald-600' : pct >= 40 ? 'text-yellow-600' : 'text-red-600'}`}>{pct}%</span>
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-xs font-medium truncate">{r.correctAnswers}/{r.totalQuestions} {_t('perf.correct')}</p>
+                          <p className="text-[10px] text-gray-400">{Math.round(r.timeTaken / 60)}m · {r.wrongAnswers} ✗ · {r.skipped} −</p>
+                        </div>
+                        <div className="w-16">
+                          <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                            <div className="h-full rounded-full" style={{ width: `${pct}%`, background: pct >= 60 ? '#10b981' : pct >= 40 ? '#f59e0b' : '#ef4444' }} />
+                          </div>
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {totalTests === 0 && (
+            <Card className="border-0 shadow-sm">
+              <CardContent className="p-8 text-center">
+                <BarChart3 className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+                <p className="font-semibold text-gray-600">{_t('perf.noData')}</p>
+                <p className="text-gray-400 text-xs mt-1">{_t('perf.noDataSub')}</p>
+                <Button size="sm" className="mt-4 bg-gradient-to-r from-orange-500 to-red-500 text-white rounded-xl" onClick={() => handleBottomNav('practice')}>
+                  {_t('nav.practice')}
+                </Button>
+              </CardContent>
+            </Card>
+          )}
+        </div>
+      </div>
+    )
+  }
+
+  // ===== RENDER: Daily Practice Routine =====
+  function renderDailyRoutine() {
+    const userExam = categories.flatMap(c => c.exams).find(e => e.id === userExamId)
+    const timeSlots = [
+      { id: 'morning', icon: '🌅', label: _t('routine.morning'), time: '6-9 AM' },
+      { id: 'afternoon', icon: '☀️', label: _t('routine.afternoon'), time: '12-3 PM' },
+      { id: 'evening', icon: '🌇', label: _t('routine.evening'), time: '5-8 PM' },
+      { id: 'night', icon: '🌙', label: _t('routine.night'), time: '9-11 PM' },
+    ]
+    const questionCounts = [5, 10, 15, 20, 25, 30]
+
+    // Check today's practice
+    const today = new Date().toDateString()
+    let todayResults: TestResult[] = []
+    try {
+      const stored = localStorage.getItem('mockmaster_results')
+      if (stored) {
+        const all: TestResult[] = JSON.parse(stored)
+        const userId = auth.getUserId()
+        todayResults = all.filter((r: TestResult) => {
+          const rDate = new Date(r.createdAt).toDateString()
+          return rDate === today && (!userId || r.userId === userId)
+        })
+      }
+    } catch {}
+    const todayQuestions = todayResults.reduce((s, r) => s + r.totalQuestions, 0)
+    const dailyGoal = dailyRoutine.questionCount
+    const goalMet = todayQuestions >= dailyGoal
+
+    return (
+      <div className="min-h-screen bg-gray-50">
+        <div className="bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 px-4 pt-[calc(env(safe-area-inset-top,0px)+1rem)] pb-5">
+          <div className="flex items-center gap-3 mb-3">
+            <button onClick={goBack} className="w-9 h-9 rounded-full bg-white/10 flex items-center justify-center" style={{ touchAction: 'manipulation', WebkitTapHighlightColor: 'transparent' }}>
+              <ArrowLeft className="w-5 h-5 text-white" />
+            </button>
+            <h1 className="text-white text-lg font-bold">{_t('routine.title')}</h1>
+          </div>
+        </div>
+
+        <div className="px-4 mt-4 space-y-4 pb-24">
+          {/* Today's Progress */}
+          <Card className={`border-0 shadow-sm ${goalMet ? 'bg-gradient-to-r from-emerald-50 to-green-50' : 'bg-gradient-to-r from-orange-50 to-red-50'}`}>
+            <CardContent className="p-4">
+              <div className="flex items-center gap-3 mb-2">
+                {goalMet ? <CheckCircle2 className="w-6 h-6 text-emerald-500" /> : <Zap className="w-6 h-6 text-orange-500" />}
+                <div>
+                  <p className="font-bold text-sm">{goalMet ? _t('routine.goalMet') : _t('routine.todayProgress')}</p>
+                  <p className="text-gray-500 text-xs">{todayQuestions} / {dailyGoal} {_t('routine.questions')}</p>
+                </div>
+              </div>
+              <div className="h-2 bg-white/60 rounded-full overflow-hidden">
+                <div className="h-full rounded-full transition-all" style={{ width: `${Math.min((todayQuestions / dailyGoal) * 100, 100)}%`, background: goalMet ? '#10b981' : '#f97316' }} />
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Select Exam */}
+          <Card className="border-0 shadow-sm">
+            <CardContent className="p-4">
+              <h3 className="font-semibold text-sm mb-3">{_t('routine.selectExam')}</h3>
+              <div className="grid grid-cols-2 gap-2">
+                {categories.flatMap(c => c.exams).map(exam => (
+                  <button key={exam.id} onClick={() => { setUserExamId(exam.id); setDailyRoutine(prev => ({ ...prev, examId: exam.id })) }}
+                    className={`p-2.5 rounded-xl text-xs font-medium transition-colors ${userExamId === exam.id ? 'bg-orange-500 text-white' : 'bg-gray-100 text-gray-600 active:bg-gray-200'}`}
+                    style={{ touchAction: 'manipulation', WebkitTapHighlightColor: 'transparent' }}
+                  >
+                    {exam.name}
+                  </button>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Daily Goal */}
+          <Card className="border-0 shadow-sm">
+            <CardContent className="p-4">
+              <h3 className="font-semibold text-sm mb-3">{_t('routine.dailyGoal')}</h3>
+              <div className="flex flex-wrap gap-2">
+                {questionCounts.map(n => (
+                  <button key={n} onClick={() => setDailyRoutine(prev => ({ ...prev, questionCount: n }))}
+                    className={`px-4 py-2 rounded-xl text-xs font-medium transition-colors ${dailyRoutine.questionCount === n ? 'bg-orange-500 text-white' : 'bg-gray-100 text-gray-600 active:bg-gray-200'}`}
+                    style={{ touchAction: 'manipulation', WebkitTapHighlightColor: 'transparent' }}
+                  >
+                    {n} Qs
+                  </button>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Preferred Time */}
+          <Card className="border-0 shadow-sm">
+            <CardContent className="p-4">
+              <h3 className="font-semibold text-sm mb-3">{_t('routine.preferredTime')}</h3>
+              <div className="grid grid-cols-2 gap-2">
+                {timeSlots.map(slot => (
+                  <button key={slot.id} onClick={() => setDailyRoutine(prev => ({ ...prev, preferredTime: slot.id }))}
+                    className={`p-3 rounded-xl text-left transition-colors ${dailyRoutine.preferredTime === slot.id ? 'bg-orange-50 border-2 border-orange-300' : 'bg-gray-50 border-2 border-transparent active:bg-gray-100'}`}
+                    style={{ touchAction: 'manipulation', WebkitTapHighlightColor: 'transparent' }}
+                  >
+                    <span className="text-lg">{slot.icon}</span>
+                    <p className="font-medium text-xs mt-1">{slot.label}</p>
+                    <p className="text-gray-400 text-[10px]">{slot.time}</p>
+                  </button>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Start Practice */}
+          <Button className="w-full bg-gradient-to-r from-orange-500 to-red-500 text-white rounded-xl h-12 font-bold" onClick={() => {
+            if (userExamId) {
+              const exam = categories.flatMap(c => c.exams).find(e => e.id === userExamId)
+              const cat = categories.find(c => c.exams.some(e => e.id === userExamId))
+              if (exam && cat) openExam(exam, cat)
+            } else {
+              handleBottomNav('practice')
+            }
+          }}>
+            {userExam ? `${_t('routine.practiceFor')} ${userExam.name}` : _t('nav.practice')}
+          </Button>
+        </div>
+      </div>
+    )
+  }
+
+  // ===== RENDER: Previous Year Papers =====
+  function renderPrevPapers() {
+    // Group tests by "year-like" naming or just show all tests as practice papers
+    const allTestsByExam: Record<string, { exam: LocalExam; cat: LocalExamCategory; tests: LocalTest[] }> = {}
+    categories.forEach(cat => {
+      cat.exams.forEach(exam => {
+        const tests = getLocalTestsByExam(exam.id)
+        if (tests.length > 0) {
+          allTestsByExam[exam.id] = { exam, cat, tests }
+        }
+      })
+    })
+
+    return (
+      <div className="min-h-screen bg-gray-50">
+        <div className="bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 px-4 pt-[calc(env(safe-area-inset-top,0px)+1rem)] pb-5">
+          <div className="flex items-center gap-3 mb-3">
+            <button onClick={goBack} className="w-9 h-9 rounded-full bg-white/10 flex items-center justify-center" style={{ touchAction: 'manipulation', WebkitTapHighlightColor: 'transparent' }}>
+              <ArrowLeft className="w-5 h-5 text-white" />
+            </button>
+            <h1 className="text-white text-lg font-bold">{_t('prevPapers.title')}</h1>
+          </div>
+          <p className="text-white/50 text-xs">{_t('prevPapers.subtitle')}</p>
+        </div>
+
+        <div className="px-4 mt-4 space-y-4 pb-24">
+          {Object.values(allTestsByExam).map(({ exam, cat, tests }) => (
+            <Card key={exam.id} className="border-0 shadow-sm">
+              <CardContent className="p-4">
+                <div className="flex items-center gap-3 mb-3">
+                  <div className={`w-10 h-10 rounded-xl ${getCatColor(cat.slug).light} flex items-center justify-center ${getCatColor(cat.slug).text}`}>
+                    {getCatIcon(cat.slug)}
+                  </div>
+                  <div className="flex-1">
+                    <p className="font-semibold text-sm">{exam.name}</p>
+                    <p className="text-gray-400 text-xs">{tests.length} {_t('prevPapers.papers')}</p>
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  {tests.map(test => (
+                    <button key={test.id} onClick={() => { setSelectedTest(test); setSelectedCategory(cat); setSelectedExam(exam); navigateTo('test-info') }}
+                      className="w-full flex items-center gap-3 p-3 bg-gray-50 rounded-xl hover:bg-gray-100 active:bg-gray-200 transition-colors"
+                      style={{ touchAction: 'manipulation', WebkitTapHighlightColor: 'transparent' }}
+                    >
+                      <FileText className="w-4 h-4 text-orange-500" />
+                      <div className="flex-1 text-left">
+                        <p className="font-medium text-xs">{test.title}</p>
+                        <p className="text-gray-400 text-[10px]">{test.totalQuestions} Qs · {test.duration}m · {test.difficulty}</p>
+                      </div>
+                      <ChevronRight className="w-4 h-4 text-gray-300" />
+                    </button>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      </div>
+    )
+  }
+
+  // ===== RENDER: Your Exam =====
+  function renderYourExam() {
+    const selectedExamData = userExamId ? categories.flatMap(c => c.exams).find(e => e.id === userExamId) : null
+    const selectedCatData = userExamId ? categories.find(c => c.exams.some(e => e.id === userExamId)) : null
+
+    // Get user's results for this exam
+    let examResults: TestResult[] = []
+    try {
+      const stored = localStorage.getItem('mockmaster_results')
+      if (stored && userExamId) {
+        const all: TestResult[] = JSON.parse(stored)
+        const userId = auth.getUserId()
+        const tests = getLocalTestsByExam(userExamId)
+        const testIds = tests.map(t => t.id)
+        examResults = all.filter((r: TestResult) => testIds.includes(r.testId) && (!userId || r.userId === userId))
+      }
+    } catch {}
+
+    const totalAttempts = examResults.length
+    const avgPct = totalAttempts > 0 ? Math.round(examResults.reduce((s, r) => s + (r.correctAnswers / r.totalQuestions) * 100, 0) / totalAttempts) : 0
+    const bestPct = totalAttempts > 0 ? Math.round(Math.max(...examResults.map(r => (r.correctAnswers / r.totalQuestions) * 100))) : 0
+
+    return (
+      <div className="min-h-screen bg-gray-50">
+        <div className="bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 px-4 pt-[calc(env(safe-area-inset-top,0px)+1rem)] pb-5">
+          <div className="flex items-center gap-3 mb-3">
+            <button onClick={goBack} className="w-9 h-9 rounded-full bg-white/10 flex items-center justify-center" style={{ touchAction: 'manipulation', WebkitTapHighlightColor: 'transparent' }}>
+              <ArrowLeft className="w-5 h-5 text-white" />
+            </button>
+            <h1 className="text-white text-lg font-bold">{_t('yourExam.title')}</h1>
+          </div>
+        </div>
+
+        <div className="px-4 mt-4 space-y-4 pb-24">
+          {/* Select Your Exam */}
+          <Card className="border-0 shadow-sm">
+            <CardContent className="p-4">
+              <h3 className="font-semibold text-sm mb-3">{_t('yourExam.selectExam')}</h3>
+              <p className="text-gray-400 text-xs mb-3">{_t('yourExam.selectSub')}</p>
+              <div className="space-y-2">
+                {categories.map(cat => (
+                  <div key={cat.id}>
+                    <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-1">{cat.name}</p>
+                    <div className="flex flex-wrap gap-2 mb-2">
+                      {cat.exams.map(exam => (
+                        <button key={exam.id} onClick={() => setUserExamId(exam.id)}
+                          className={`px-3 py-2 rounded-xl text-xs font-medium transition-colors ${userExamId === exam.id ? 'bg-orange-500 text-white shadow-lg shadow-orange-500/20' : 'bg-gray-100 text-gray-600 active:bg-gray-200'}`}
+                          style={{ touchAction: 'manipulation', WebkitTapHighlightColor: 'transparent' }}
+                        >
+                          {exam.name}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Selected Exam Stats */}
+          {selectedExamData && selectedCatData && (
+            <>
+              <Card className="border-0 shadow-sm bg-gradient-to-r from-orange-50 to-red-50">
+                <CardContent className="p-4">
+                  <div className="flex items-center gap-3 mb-3">
+                    <div className={`w-12 h-12 rounded-xl ${getCatColor(selectedCatData.slug).light} flex items-center justify-center ${getCatColor(selectedCatData.slug).text}`}>
+                      {getCatIcon(selectedCatData.slug)}
+                    </div>
+                    <div>
+                      <p className="font-bold">{selectedExamData.name}</p>
+                      <p className="text-gray-500 text-xs">{selectedExamData.description}</p>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-3 gap-2">
+                    <div className="text-center p-2 bg-white/60 rounded-lg">
+                      <p className="font-bold text-sm">{totalAttempts}</p>
+                      <p className="text-[9px] text-gray-500">{_t('yourExam.attempts')}</p>
+                    </div>
+                    <div className="text-center p-2 bg-white/60 rounded-lg">
+                      <p className="font-bold text-sm">{avgPct}%</p>
+                      <p className="text-[9px] text-gray-500">{_t('yourExam.avg')}</p>
+                    </div>
+                    <div className="text-center p-2 bg-white/60 rounded-lg">
+                      <p className="font-bold text-sm">{bestPct}%</p>
+                      <p className="text-[9px] text-gray-500">{_t('yourExam.best')}</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Available Tests */}
+              <Card className="border-0 shadow-sm">
+                <CardContent className="p-4">
+                  <h3 className="font-semibold text-sm mb-3">{_t('yourExam.availableTests')}</h3>
+                  <div className="space-y-2">
+                    {getLocalTestsByExam(userExamId).map(test => (
+                      <button key={test.id} onClick={() => { setSelectedTest(test); setSelectedCategory(selectedCatData); setSelectedExam(selectedExamData); navigateTo('test-info') }}
+                        className="w-full flex items-center gap-3 p-3 bg-gray-50 rounded-xl hover:bg-gray-100 active:bg-gray-200 transition-colors"
+                        style={{ touchAction: 'manipulation', WebkitTapHighlightColor: 'transparent' }}
+                      >
+                        <ClipboardList className="w-4 h-4 text-orange-500" />
+                        <div className="flex-1 text-left">
+                          <p className="font-medium text-xs">{test.title}</p>
+                          <p className="text-gray-400 text-[10px]">{test.totalQuestions} Qs · {test.duration}m</p>
+                        </div>
+                        <Button size="sm" variant="outline" className="rounded-xl text-orange-600 border-orange-200 text-[10px] h-7">
+                          {_t('home.start')}
+                        </Button>
+                      </button>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            </>
+          )}
+
+          {!userExamId && (
+            <Card className="border-0 shadow-sm">
+              <CardContent className="p-8 text-center">
+                <Target className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+                <p className="font-semibold text-gray-600">{_t('yourExam.noExam')}</p>
+                <p className="text-gray-400 text-xs mt-1">{_t('yourExam.noExamSub')}</p>
+              </CardContent>
+            </Card>
+          )}
+        </div>
+      </div>
+    )
+  }
   function renderProfile() {
     const stats = getUserStats()
     const userDisplay = auth.getUserDisplay()
@@ -2098,6 +2680,11 @@ export default function ExamPrepApp() {
       case 'leaderboard': return renderLeaderboard()
       case 'profile': return renderProfile()
       case 'practice': return renderPractice()
+      case 'bookmarks': return renderBookmarks()
+      case 'perf-report': return renderPerfReport()
+      case 'daily-routine': return renderDailyRoutine()
+      case 'prev-papers': return renderPrevPapers()
+      case 'your-exam': return renderYourExam()
       default: return renderHome()
     }
   }
@@ -2169,31 +2756,23 @@ export default function ExamPrepApp() {
               <div className="px-3 py-2">
                 <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider px-3 mb-1">{_t('menu.quickActions')}</p>
                 {[
-                  { icon: Zap, label: _t('menu.quickPractice'), soon: false, action: () => {
-                    const allCats = categories
-                    const allExams = allCats.flatMap(c => c.exams)
-                    if (allExams.length > 0) {
-                      const randomExam = allExams[Math.floor(Math.random() * allExams.length)]
-                      const randomCat = allCats.find(c => c.exams.some(e => e.id === randomExam.id))!
-                      openExam(randomExam, randomCat)
-                    }
-                  }},
-                  { icon: BookmarkPlus, label: _t('menu.bookmarkedQ'), soon: true, action: () => {} },
-                  { icon: Download, label: _t('menu.offlineTests'), soon: true, action: () => {} },
-                  { icon: BarChart3, label: _t('menu.perfReport'), soon: true, action: () => {} },
+                  { icon: Zap, label: _t('menu.quickPractice'), page: 'practice' as Page },
+                  { icon: BookmarkPlus, label: _t('menu.bookmarkedQ'), page: 'bookmarks' as Page },
+                  { icon: BarChart3, label: _t('menu.perfReport'), page: 'perf-report' as Page },
+                  { icon: FileText, label: _t('menu.prevPapers'), page: 'prev-papers' as Page },
+                  { icon: Target, label: _t('menu.yourExam'), page: 'your-exam' as Page },
+                  { icon: Clock, label: _t('menu.dailyRoutine'), page: 'daily-routine' as Page },
                 ].map((item, i) => (
                   <button
                     key={i}
-                    onClick={() => { if (!item.soon) { item.action(); setShowSideMenu(false) } }}
-                    onTouchEnd={(e) => { e.preventDefault(); if (!item.soon) { item.action(); setShowSideMenu(false) } }}
+                    onClick={() => { navigateTo(item.page); setShowSideMenu(false) }}
+                    onTouchEnd={(e) => { e.preventDefault(); navigateTo(item.page); setShowSideMenu(false) }}
                     className="w-full flex items-center gap-3 px-3 py-3 rounded-xl text-gray-600 hover:bg-gray-50 active:bg-gray-100 transition-colors"
                     style={{ touchAction: 'manipulation', WebkitTapHighlightColor: 'transparent' }}
                   >
                     <item.icon className="w-5 h-5 text-gray-400" />
                     <span className="font-medium text-sm">{item.label}</span>
-                    {item.soon && (
-                      <Badge variant="secondary" className="text-[9px] ml-auto">{_t('menu.soon')}</Badge>
-                    )}
+                    {currentPage === item.page && <div className="ml-auto w-1.5 h-1.5 rounded-full bg-orange-500" />}
                   </button>
                 ))}
               </div>
