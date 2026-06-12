@@ -110,6 +110,17 @@ export default function ExamPrepApp() {
   const [selectedLanguage, setSelectedLanguage] = useState('en')
   const [showQuestionNav, setShowQuestionNav] = useState(false)
   const [showSideMenu, setShowSideMenu] = useState(false)
+  const [showNotificationPanel, setShowNotificationPanel] = useState(false)
+
+  // --- Notifications ---
+  const [notifications, setNotifications] = useState<
+    { id: string; title: string; message: string; time: string; read: boolean; type: 'update' | 'alert' | 'info' }[]
+  >([
+    { id: '1', title: 'Welcome to ExamPrep Bharat!', message: 'Start your exam preparation journey today. Explore all available tests and practice mock exams.', time: 'Just now', read: false, type: 'info' },
+    { id: '2', title: 'New SSC CGL Test Available', message: 'A new mock test for SSC CGL 2025 has been added. Try it now and check your preparation level!', time: '2h ago', read: false, type: 'update' },
+    { id: '3', title: 'Weekly Maintenance Notice', message: 'App maintenance scheduled this Sunday 2AM-4AM. Some features may be temporarily unavailable.', time: '1d ago', read: true, type: 'alert' },
+  ])
+  const unreadCount = notifications.filter(n => !n.read).length
 
   // --- Load categories on mount ---
   useEffect(() => {
@@ -136,6 +147,11 @@ export default function ExamPrepApp() {
     // If back confirmation is showing, close it
     if (showBackConfirm) {
       setShowBackConfirm(false)
+      return
+    }
+    // If notification panel is open, close it
+    if (showNotificationPanel) {
+      setShowNotificationPanel(false)
       return
     }
     // If side menu is open, close it
@@ -375,30 +391,49 @@ export default function ExamPrepApp() {
       <div className="pb-20">
         {/* Header */}
         <div className="bg-gradient-to-r from-orange-500 to-red-500 px-4 pt-[calc(env(safe-area-inset-top,0px)+3rem)] pb-8 rounded-b-3xl">
-          <div className="flex items-center justify-between mb-6">
-            <div className="flex items-center gap-3">
-              {/* Menu Button */}
-              <button
-                onClick={() => setShowSideMenu(true)}
-                className="w-10 h-10 rounded-xl bg-white/20 backdrop-blur flex items-center justify-center active:bg-white/30 transition-colors"
-              >
-                <Menu className="w-5 h-5 text-white" />
-              </button>
-              <div>
-                <h1 className="text-white text-xl font-bold">ExamPrep Bharat</h1>
-                <p className="text-orange-100 text-xs">Prepare for government exams</p>
-              </div>
-            </div>
+          {/* Top Row: Menu, Notification, Profile */}
+          <div className="flex items-center justify-between mb-4">
+            {/* Menu Button */}
             <button
-              onClick={() => auth.isLoggedIn ? handleBottomNav('profile') : setShowLoginModal(true)}
-              className="w-10 h-10 rounded-full bg-white/20 backdrop-blur flex items-center justify-center"
+              onClick={() => setShowSideMenu(true)}
+              className="w-10 h-10 rounded-xl bg-white/20 backdrop-blur flex items-center justify-center active:bg-white/30 transition-colors"
             >
-              {auth.isLoggedIn ? (
-                <span className="text-white font-bold text-sm">{getAvatarDisplay()}</span>
-              ) : (
-                <User className="w-5 h-5 text-white" />
-              )}
+              <Menu className="w-5 h-5 text-white" />
             </button>
+
+            {/* Right side: Notification + Profile */}
+            <div className="flex items-center gap-2">
+              {/* Notification Bell */}
+              <button
+                onClick={() => setShowNotificationPanel(!showNotificationPanel)}
+                className="w-10 h-10 rounded-xl bg-white/20 backdrop-blur flex items-center justify-center active:bg-white/30 transition-colors relative"
+              >
+                <Bell className="w-5 h-5 text-white" />
+                {unreadCount > 0 && (
+                  <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 rounded-full flex items-center justify-center text-white text-[10px] font-bold border-2 border-orange-500">
+                    {unreadCount}
+                  </span>
+                )}
+              </button>
+
+              {/* Profile Button */}
+              <button
+                onClick={() => auth.isLoggedIn ? handleBottomNav('profile') : setShowLoginModal(true)}
+                className="w-10 h-10 rounded-full bg-white/20 backdrop-blur flex items-center justify-center"
+              >
+                {auth.isLoggedIn ? (
+                  <span className="text-white font-bold text-sm">{getAvatarDisplay()}</span>
+                ) : (
+                  <User className="w-5 h-5 text-white" />
+                )}
+              </button>
+            </div>
+          </div>
+
+          {/* App Name Row */}
+          <div className="mb-4">
+            <h1 className="text-white text-xl font-bold">ExamPrep Bharat</h1>
+            <p className="text-orange-100 text-xs">Prepare for government exams</p>
           </div>
 
           {/* Quick Stats */}
@@ -421,6 +456,84 @@ export default function ExamPrepApp() {
             </div>
           )}
         </div>
+
+        {/* Notification Panel */}
+        {showNotificationPanel && (
+          <div className="px-4 -mt-4 mb-2 relative z-40">
+            <div className="bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden">
+              {/* Panel Header */}
+              <div className="flex items-center justify-between px-4 py-3 bg-gradient-to-r from-orange-50 to-red-50 border-b border-gray-100">
+                <div className="flex items-center gap-2">
+                  <Bell className="w-4 h-4 text-orange-500" />
+                  <h3 className="font-bold text-sm text-gray-800">Notifications</h3>
+                  {unreadCount > 0 && (
+                    <Badge className="bg-orange-500 text-white text-[10px] px-1.5 py-0">{unreadCount} new</Badge>
+                  )}
+                </div>
+                <div className="flex items-center gap-2">
+                  {unreadCount > 0 && (
+                    <button
+                      onClick={() => setNotifications(prev => prev.map(n => ({ ...n, read: true })))}
+                      className="text-[11px] text-orange-500 font-semibold hover:text-orange-600"
+                    >
+                      Mark all read
+                    </button>
+                  )}
+                  <button
+                    onClick={() => setShowNotificationPanel(false)}
+                    className="w-6 h-6 rounded-full bg-gray-100 flex items-center justify-center"
+                  >
+                    <X className="w-3 h-3 text-gray-500" />
+                  </button>
+                </div>
+              </div>
+
+              {/* Notification List */}
+              <div className="max-h-[300px] overflow-y-auto">
+                {notifications.length === 0 ? (
+                  <div className="py-8 text-center">
+                    <Bell className="w-8 h-8 text-gray-200 mx-auto mb-2" />
+                    <p className="text-gray-400 text-sm">No notifications yet</p>
+                  </div>
+                ) : (
+                  notifications.map(notification => (
+                    <div
+                      key={notification.id}
+                      onClick={() => setNotifications(prev => prev.map(n => n.id === notification.id ? { ...n, read: true } : n))}
+                      className={`px-4 py-3 border-b border-gray-50 last:border-b-0 active:bg-gray-50 transition-colors cursor-pointer ${
+                        !notification.read ? 'bg-orange-50/50' : ''
+                      }`}
+                    >
+                      <div className="flex items-start gap-3">
+                        <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 ${
+                          notification.type === 'update' ? 'bg-blue-100' :
+                          notification.type === 'alert' ? 'bg-amber-100' :
+                          'bg-green-100'
+                        }`}>
+                          {notification.type === 'update' ? <Zap className="w-4 h-4 text-blue-500" /> :
+                           notification.type === 'alert' ? <AlertTriangle className="w-4 h-4 text-amber-500" /> :
+                           <Gift className="w-4 h-4 text-green-500" />}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2">
+                            <p className={`text-sm ${!notification.read ? 'font-bold text-gray-900' : 'font-medium text-gray-700'}`}>
+                              {notification.title}
+                            </p>
+                            {!notification.read && (
+                              <div className="w-2 h-2 rounded-full bg-orange-500 flex-shrink-0" />
+                            )}
+                          </div>
+                          <p className="text-xs text-gray-500 mt-0.5 line-clamp-2">{notification.message}</p>
+                          <p className="text-[10px] text-gray-400 mt-1">{notification.time}</p>
+                        </div>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+          </div>
+        )}
 
         <div className="px-4 mt-6 space-y-6">
           {/* Search / Quick Start */}
@@ -1657,7 +1770,7 @@ export default function ExamPrepApp() {
                 <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider px-3 mb-1">Settings</p>
                 {[
                   { icon: BookOpen, label: 'Language', sub: selectedLanguage === 'en' ? 'English' : selectedLanguage === 'hi' ? 'Hindi' : 'Bengali', action: () => setShowLanguageSheet(true) },
-                  { icon: Bell, label: 'Notifications', sub: 'Manage alerts', action: () => {} },
+                  { icon: Bell, label: 'Notifications', sub: unreadCount > 0 ? `${unreadCount} unread` : 'Manage alerts', action: () => { setShowSideMenu(false); setCurrentPage('home'); setTimeout(() => setShowNotificationPanel(true), 300) } },
                   { icon: Wifi, label: 'Offline Mode', sub: 'Download tests', action: () => {} },
                   { icon: HelpCircle, label: 'Help & FAQ', sub: 'Get support', action: () => setShowAboutSheet(true) },
                   { icon: Share2, label: 'Share App', sub: 'Tell your friends', action: () => {
@@ -1677,7 +1790,11 @@ export default function ExamPrepApp() {
                       <span className="font-medium text-sm block">{item.label}</span>
                       {item.sub && <span className="text-gray-400 text-[11px]">{item.sub}</span>}
                     </div>
-                    <ChevronRight className="w-4 h-4 text-gray-300" />
+                    {item.label === 'Notifications' && unreadCount > 0 ? (
+                      <span className="w-5 h-5 bg-orange-500 rounded-full flex items-center justify-center text-white text-[10px] font-bold">{unreadCount}</span>
+                    ) : (
+                      <ChevronRight className="w-4 h-4 text-gray-300" />
+                    )}
                   </button>
                 ))}
               </div>
