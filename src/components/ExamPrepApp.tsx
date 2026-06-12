@@ -2184,6 +2184,20 @@ export default function ExamPrepApp() {
               <CardContent className="p-0">
                 <button
                   className="w-full flex items-center gap-3 p-4 hover:bg-gray-50/80 transition-colors active:bg-gray-100"
+                  onClick={() => navigateTo('admin')}
+                >
+                  <div className="w-9 h-9 rounded-xl bg-slate-100 flex items-center justify-center">
+                    <Shield className="w-4 h-4 text-slate-600" />
+                  </div>
+                  <div className="flex-1 text-left">
+                    <p className="font-semibold text-[13px]">Admin Panel</p>
+                    <p className="text-gray-400 text-[11px]">Manage announcements & notifications</p>
+                  </div>
+                  <ChevronRight className="w-4 h-4 text-gray-300" />
+                </button>
+                <div className="mx-4 border-t border-gray-100" />
+                <button
+                  className="w-full flex items-center gap-3 p-4 hover:bg-gray-50/80 transition-colors active:bg-gray-100"
                   onClick={() => setShowAboutSheet(true)}
                 >
                   <div className="w-9 h-9 rounded-xl bg-teal-50 flex items-center justify-center">
