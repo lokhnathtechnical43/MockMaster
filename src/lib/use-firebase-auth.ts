@@ -5,9 +5,8 @@ import { auth } from '@/lib/firebase'
 import {
   RecaptchaVerifier,
   signInWithPhoneNumber,
-  signInAnonymously,
   onAuthStateChanged,
-  signOut,
+  signOut as firebaseSignOut,
   User
 } from 'firebase/auth'
 
@@ -15,6 +14,8 @@ interface AuthState {
   user: User | null
   loading: boolean
 }
+
+const GUEST_USER_KEY = 'examprep_guest_user'
 
 export function useFirebaseAuth() {
   const [authState, setAuthState] = useState<AuthState>({ user: null, loading: true })
@@ -24,8 +25,17 @@ export function useFirebaseAuth() {
   const [sendingOtp, setSendingOtp] = useState(false)
   const [verifyingOtp, setVerifyingOtp] = useState(false)
   const [guestLoading, setGuestLoading] = useState(false)
+  const [isLocalGuest, setIsLocalGuest] = useState(false)
 
   useEffect(() => {
+    // Check for local guest user first
+    const localGuest = localStorage.getItem(GUEST_USER_KEY)
+    if (localGuest) {
+      setIsLocalGuest(true)
+      setAuthState({ user: null, loading: false })
+      return
+    }
+
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       setAuthState({ user, loading: false })
     })
@@ -34,7 +44,6 @@ export function useFirebaseAuth() {
 
   const setupRecaptcha = () => {
     if (typeof window === 'undefined') return null
-    // Check if recaptcha already exists
     if ((window as any).recaptchaVerifier) {
       return (window as any).recaptchaVerifier
     }
@@ -55,9 +64,7 @@ export function useFirebaseAuth() {
     setError('')
     setSendingOtp(true)
     try {
-      // Format phone number with +91 for India
       const formattedPhone = phoneNumber.startsWith('+') ? phoneNumber : `+91${phoneNumber}`
-      
       const recaptchaVerifier = setupRecaptcha()
       if (!recaptchaVerifier) {
         setError('Failed to setup verification. Please refresh the page.')
@@ -77,10 +84,10 @@ export function useFirebaseAuth() {
         setError('Too many requests. Please try again later.')
       } else if (err.code === 'auth/quota-exceeded') {
         setError('SMS quota exceeded. Please try again later.')
-      } else if (err.code === 'auth/operation-not-allowed') {
+      } else if (err.code === 'auth/operation-not-allowed' || err.code === 'auth/admin-restricted-operation') {
         setError('Phone login not available yet. Please use Guest mode instead.')
       } else {
-        setError('Failed to send OTP. Please try again or use Guest mode.')
+        setError('Failed to send OTP. Please try Guest mode instead.')
       }
     }
     setSendingOtp(false)
@@ -97,6 +104,9 @@ export function useFirebaseAuth() {
         return
       }
       await confirmationResult.confirm(otp)
+      // Clear local guest if phone login succeeds
+      localStorage.removeItem(GUEST_USER_KEY)
+      setIsLocalGuest(false)
       setOtpSent(false)
     } catch (err: any) {
       console.error('Verify OTP error:', err)
@@ -115,21 +125,32 @@ export function useFirebaseAuth() {
     setError('')
     setGuestLoading(true)
     try {
-      await signInAnonymously(auth)
+      // Create a local guest user (no Firebase needed)
+      const guestId = 'guest_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8)
+      const guestData = {
+        id: guestId,
+        name: 'Guest User',
+        createdAt: new Date().toISOString()
+      }
+      localStorage.setItem(GUEST_USER_KEY, JSON.stringify(guestData))
+      setIsLocalGuest(true)
+      setAuthState({ user: null, loading: false })
     } catch (err: any) {
       console.error('Guest login error:', err)
-      if (err.code === 'auth/operation-not-allowed') {
-        setError('Guest login is not enabled. Please enable Anonymous Auth in Firebase Console.')
-      } else {
-        setError('Failed to login as guest. Please try again.')
-      }
+      setError('Failed to login as guest. Please try again.')
     }
     setGuestLoading(false)
   }
 
   const logout = async () => {
     try {
-      await signOut(auth)
+      // Clear local guest
+      localStorage.removeItem(GUEST_USER_KEY)
+      setIsLocalGuest(false)
+      // Also sign out from Firebase if logged in
+      if (authState.user) {
+        await firebaseSignOut(auth)
+      }
     } catch (err) {
       console.error('Logout error:', err)
     }
@@ -139,14 +160,34 @@ export function useFirebaseAuth() {
     setOtpSent(false)
     setVerificationId('')
     setError('')
-    // Reset recaptcha
     if ((window as any).recaptchaVerifier) {
       ;(window as any).recaptchaVerifier = null
     }
   }
 
-  // Check if user is a guest (anonymous)
-  const isGuest = authState.user?.isAnonymous ?? false
+  // User is logged in if either Firebase user exists OR local guest
+  const isLoggedIn = !!authState.user || isLocalGuest
+  const isGuest = isLocalGuest || (authState.user?.isAnonymous ?? false)
+
+  // Get display name/phone
+  const getUserDisplay = () => {
+    if (authState.user?.phoneNumber) return authState.user.phoneNumber
+    if (isLocalGuest) return 'Guest User'
+    return null
+  }
+
+  // Get user ID for results
+  const getUserId = () => {
+    if (authState.user) return authState.user.uid
+    if (isLocalGuest) {
+      const localGuest = localStorage.getItem(GUEST_USER_KEY)
+      if (localGuest) {
+        const data = JSON.parse(localGuest)
+        return data.id
+      }
+    }
+    return null
+  }
 
   return {
     user: authState.user,
@@ -156,7 +197,10 @@ export function useFirebaseAuth() {
     sendingOtp,
     verifyingOtp,
     guestLoading,
+    isLoggedIn,
     isGuest,
+    getUserDisplay,
+    getUserId,
     sendOtp,
     verifyOtp,
     loginAsGuest,

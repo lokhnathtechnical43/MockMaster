@@ -74,7 +74,7 @@ export default function ExamPrepBharat() {
   const [showLoginModal, setShowLoginModal] = useState(false)
 
   // Firebase Auth
-  const { user, loading: authLoading, otpSent, error: authError, sendingOtp, verifyingOtp, guestLoading, isGuest, sendOtp, verifyOtp, loginAsGuest, logout, resetOtp } = useFirebaseAuth()
+  const { user, loading: authLoading, otpSent, error: authError, sendingOtp, verifyingOtp, guestLoading, isGuest, isLoggedIn, getUserDisplay, getUserId, sendOtp, verifyOtp, loginAsGuest, logout, resetOtp } = useFirebaseAuth()
 
   // Test taking state
   const [currentQuestion, setCurrentQuestion] = useState(0)
@@ -249,8 +249,8 @@ export default function ExamPrepBharat() {
               <h1 className="text-2xl font-bold">ExamPrep Bharat</h1>
               <p className="text-orange-100 text-sm">Mock Tests for Indian Exams</p>
             </div>
-            <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center cursor-pointer" onClick={() => user ? setPage('profile') : setShowLoginModal(true)}>
-              {user ? <span className="text-sm font-bold">{isGuest ? 'G' : (user.phoneNumber?.slice(-2) || 'U')}</span> : <User className="w-5 h-5" />}
+            <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center cursor-pointer" onClick={() => isLoggedIn ? setPage('profile') : setShowLoginModal(true)}>
+              {isLoggedIn ? <span className="text-sm font-bold">{isGuest ? 'G' : (user?.phoneNumber?.slice(-2) || 'U')}</span> : <User className="w-5 h-5" />}
             </div>
           </div>
           <div className="bg-white/10 backdrop-blur-sm rounded-xl p-3 flex items-center gap-3">
@@ -876,9 +876,9 @@ export default function ExamPrepBharat() {
           </div>
           <div className="text-center">
             <div className="w-20 h-20 bg-white/20 rounded-full flex items-center justify-center mx-auto mb-3">
-              {user ? <span className="text-2xl font-bold">{user.phoneNumber?.slice(-2) || 'U'}</span> : <User className="w-10 h-10" />}
+              {isLoggedIn ? <span className="text-2xl font-bold">{isGuest ? 'G' : (user?.phoneNumber?.slice(-2) || 'U')}</span> : <User className="w-10 h-10" />}
             </div>
-            <h2 className="text-xl font-bold">{user ? user.phoneNumber || 'User' : 'Guest User'}</h2>
+            <h2 className="text-xl font-bold">{getUserDisplay() || 'Guest User'}</h2>
             <p className="text-orange-100 text-sm">ExamPrep Bharat</p>
           </div>
         </div>
@@ -946,7 +946,7 @@ export default function ExamPrepBharat() {
         </Card>
 
         {/* Login/Logout Card */}
-        {user ? (
+        {isLoggedIn ? (
           <Card className="border-0 shadow-sm">
             <CardContent className="p-4 space-y-3">
               {isGuest ? (
@@ -975,7 +975,7 @@ export default function ExamPrepBharat() {
                     </div>
                     <div>
                       <p className="font-medium text-sm text-emerald-700">Logged In</p>
-                      <p className="text-xs text-emerald-600">{user.phoneNumber}</p>
+                      <p className="text-xs text-emerald-600">{user?.phoneNumber}</p>
                     </div>
                   </div>
                   <Button onClick={logout} variant="outline" className="w-full rounded-xl h-11 text-red-600 border-red-200 hover:bg-red-50">
