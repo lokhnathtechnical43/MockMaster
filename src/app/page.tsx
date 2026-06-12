@@ -17,28 +17,14 @@ import {
 } from 'lucide-react'
 import { useFirebaseAuth } from '@/lib/use-firebase-auth'
 import LoginModal from '@/components/LoginModal'
+import { getCategories, getTestsByExam, getTestById, saveResult, getLeaderboard as getLocalLeaderboard, type LocalExamCategory, type LocalExam, type LocalTest, type LocalQuestion, type TestResult } from '@/lib/local-data'
 
-// Types
-interface ExamCategory {
-  id: string; name: string; slug: string; icon: string | null; description: string | null; order: number;
-  exams: ExamWithCount[]
-}
-interface ExamWithCount {
-  id: string; name: string; slug: string; description: string | null; totalQuestions: number | null; duration: number | null; markingScheme: string | null;
-  _count: { tests: number }
-}
-interface TestWithExam {
-  id: string; title: string; slug: string; description: string | null; totalQuestions: number; duration: number; markingCorrect: number; markingWrong: number; difficulty: string; isFree: boolean; isLive: boolean;
-  exam: { id: string; name: string; slug: string }
-}
-interface Question {
-  id: string; questionText: string; questionImage: string | null; optionA: string; optionB: string; optionC: string; optionD: string; correctAnswer: string; explanation: string | null; subject: string | null; order: number;
-}
-interface TestDetail {
-  id: string; title: string; totalQuestions: number; duration: number; markingCorrect: number; markingWrong: number; markingSkipped: number;
-  exam: { id: string; name: string };
-  questions: Question[]
-}
+// Types (using local data types)
+type ExamCategory = LocalExamCategory
+type ExamWithCount = LocalExam
+type TestWithExam = Omit<LocalTest, 'questions'>
+type Question = LocalQuestion
+type TestDetail = LocalTest
 
 type PageView = 'home' | 'exams' | 'tests' | 'test-info' | 'test-taking' | 'results' | 'leaderboard' | 'profile'
 
@@ -88,55 +74,39 @@ export default function ExamPrepBharat() {
   const [leaderboard, setLeaderboard] = useState<any[]>([])
   const timerRef = useRef<NodeJS.Timeout | null>(null)
 
-  // Seed database on first load
+  // Load local data on first load
   useEffect(() => {
     if (!seeded) {
-      fetch('/api/seed').then(r => r.json()).then(() => {
-        setSeeded(true)
-        fetchCategories()
-      }).catch(() => {
-        setSeeded(true)
-        fetchCategories()
-      })
+      setSeeded(true)
+      fetchCategories()
     }
   }, [seeded])
 
-  const fetchCategories = async () => {
+  const fetchCategories = () => {
     setLoading(true)
-    try {
-      const res = await fetch('/api/exams')
-      const data = await res.json()
-      setCategories(data)
-    } catch (e) { console.error(e) }
+    setCategories(getCategories())
     setLoading(false)
   }
 
-  const fetchTests = async (examId: string) => {
+  const fetchTests = (examId: string) => {
     setLoading(true)
-    try {
-      const res = await fetch(`/api/tests?examId=${examId}`)
-      const data = await res.json()
-      setTests(data)
-    } catch (e) { console.error(e) }
+    const localTests = getTestsByExam(examId).map(t => {
+      const { questions, ...rest } = t
+      return rest
+    })
+    setTests(localTests as any)
     setLoading(false)
   }
 
-  const fetchTestDetail = async (testId: string) => {
+  const fetchTestDetail = (testId: string) => {
     setLoading(true)
-    try {
-      const res = await fetch(`/api/tests?testId=${testId}`)
-      const data = await res.json()
-      setSelectedTest(data)
-    } catch (e) { console.error(e) }
+    const test = getTestById(testId)
+    if (test) setSelectedTest(test)
     setLoading(false)
   }
 
-  const fetchLeaderboard = async (testId: string) => {
-    try {
-      const res = await fetch(`/api/results?testId=${testId}`)
-      const data = await res.json()
-      setLeaderboard(data)
-    } catch (e) { console.error(e) }
+  const fetchLeaderboard = (testId: string) => {
+    setLeaderboard(getLocalLeaderboard(testId) as any)
   }
 
   // Navigation helpers
@@ -188,12 +158,21 @@ export default function ExamPrepBharat() {
     setResultData({ correct, wrong, skipped, score, maxScore, timeTaken, total: questions.length })
     setTestCompleted(true)
 
-    // Save result
-    fetch('/api/results', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ testId: selectedTest.id, correctCount: correct, wrongCount: wrong, skippedCount: skipped, score, maxScore, timeTaken, answers, totalQuestions: questions.length })
-    }).catch(console.error)
+    // Save result to localStorage
+    saveResult({
+      testId: selectedTest.id,
+      testName: selectedTest.title,
+      examName: selectedTest.exam.name,
+      userId: getUserId() || 'guest',
+      correctCount: correct,
+      wrongCount: wrong,
+      skippedCount: skipped,
+      score,
+      maxScore,
+      timeTaken,
+      totalQuestions: questions.length,
+      answers
+    })
 
     setPage('results')
   }, [selectedTest, answers, timeLeft])
@@ -334,7 +313,7 @@ export default function ExamPrepBharat() {
                     </div>
                     <div>
                       <p className="font-medium text-sm">{exam.name}</p>
-                      <p className="text-xs text-gray-500">{exam._count.tests} tests available</p>
+                      <p className="text-xs text-gray-500">{exam.testCount} tests available</p>
                     </div>
                   </div>
                   <ChevronRight className="w-4 h-4 text-gray-400" />
@@ -404,7 +383,7 @@ export default function ExamPrepBharat() {
                     <p className="font-semibold truncate">{exam.name}</p>
                     <p className="text-xs text-gray-500">{exam.description}</p>
                     <div className="flex items-center gap-3 mt-1">
-                      <span className="text-xs text-gray-400 flex items-center gap-1"><BookOpen className="w-3 h-3" />{exam._count.tests} tests</span>
+                      <span className="text-xs text-gray-400 flex items-center gap-1"><BookOpen className="w-3 h-3" />{exam.testCount} tests</span>
                       {exam.duration && <span className="text-xs text-gray-400 flex items-center gap-1"><Clock className="w-3 h-3" />{exam.duration}min</span>}
                     </div>
                   </div>

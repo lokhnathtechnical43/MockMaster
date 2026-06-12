@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">ExamPrep Bharat</string>
+    <string name="title_activity_main">ExamPrep Bharat</string>
+    <string name="package_name">com.examprep.bharat</string>
+    <string name="custom_url_scheme">com.examprep.bharat</string>
+</resources>
