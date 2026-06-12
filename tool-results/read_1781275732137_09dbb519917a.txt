@@ -1,0 +1,502 @@
+   501→   501→                onClick={() => setShowSideMenu(true)}
+   502→   502→                onTouchEnd={(e) => { e.preventDefault(); setShowSideMenu(true) }}
+   503→   503→                className="w-10 h-10 rounded-lg bg-white/20 backdrop-blur flex items-center justify-center active:bg-white/30 transition-colors"
+   504→   504→                style={{ touchAction: 'manipulation', WebkitTapHighlightColor: 'transparent' }}
+   505→   505→              >
+   506→   506→                <Menu className="w-5 h-5 text-white" />
+   507→   507→              </button>
+   508→   508→              <div>
+   509→   509→                <h1 className="text-white text-base font-bold leading-tight">ExamPrep Bharat</h1>
+   510→   510→                <p className="text-orange-100 text-[10px] leading-tight">Prepare for government exams</p>
+   511→   511→              </div>
+   512→   512→            </div>
+   513→   513→
+   514→   514→            {/* Right: Notification */}
+   515→   515→            <button
+   516→   516→              onClick={() => setShowNotificationPanel(!showNotificationPanel)}
+   517→   517→              onTouchEnd={(e) => { e.preventDefault(); setShowNotificationPanel(!showNotificationPanel) }}
+   518→   518→              className="w-10 h-10 rounded-lg bg-white/20 backdrop-blur flex items-center justify-center active:bg-white/30 transition-colors relative"
+   519→   519→              style={{ touchAction: 'manipulation', WebkitTapHighlightColor: 'transparent' }}
+   520→   520→            >
+   521→   521→              <Bell className="w-4 h-4 text-white" />
+   522→   522→              {unreadCount > 0 && (
+   523→   523→                <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 rounded-full flex items-center justify-center text-white text-[8px] font-bold border border-orange-500">
+   524→   524→                  {unreadCount}
+   525→   525→                </span>
+   526→   526→              )}
+   527→   527→            </button>
+   528→   528→          </div>
+   529→   529→
+   530→   530→          {/* Moving Announcements Marquee */}
+   531→   531→          <div className="bg-white/10 backdrop-blur rounded-lg mt-2.5 overflow-hidden">
+   532→   532→            <div className="flex items-center">
+   533→   533→              <div className="bg-white/15 px-2 py-1.5 flex items-center flex-shrink-0">
+   534→   534→                <Flame className="w-3.5 h-3.5 text-yellow-300" />
+   535→   535→              </div>
+   536→   536→              <div className="overflow-hidden flex-1 py-1.5">
+   537→   537→                <div className="flex animate-marquee whitespace-nowrap">
+   538→   538→                  {announcements.map(a => (
+   539→   539→                    <button
+   540→   540→                      key={a.id}
+   541→   541→                      onClick={() => handleBottomNav(a.action)}
+   542→   542→                      className="mx-6 text-[11px] font-medium text-white/90 active:text-white"
+   543→   543→                    >
+   544→   544→                      {a.title} — {a.subtitle}
+   545→   545→                    </button>
+   546→   546→                  ))}
+   547→   547→                  {/* Duplicate for seamless loop */}
+   548→   548→                  {announcements.map(a => (
+   549→   549→                    <button
+   550→   550→                      key={`dup-${a.id}`}
+   551→   551→                      onClick={() => handleBottomNav(a.action)}
+   552→   552→                      className="mx-6 text-[11px] font-medium text-white/90 active:text-white"
+   553→   553→                    >
+   554→   554→                      {a.title} — {a.subtitle}
+   555→   555→                    </button>
+   556→   556→                  ))}
+   557→   557→                </div>
+   558→   558→              </div>
+   559→   559→            </div>
+   560→   560→          </div>
+   561→   561→        </div>
+   562→   562→
+   563→   563→        {/* Notification Panel */}
+   564→   564→        {showNotificationPanel && (
+   565→   565→          <div className="px-4 -mt-4 mb-2 relative z-40">
+   566→   566→            <div className="bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden">
+   567→   567→              {/* Panel Header */}
+   568→   568→              <div className="flex items-center justify-between px-4 py-3 bg-gradient-to-r from-orange-50 to-red-50 border-b border-gray-100">
+   569→   569→                <div className="flex items-center gap-2">
+   570→   570→                  <Bell className="w-4 h-4 text-orange-500" />
+   571→   571→                  <h3 className="font-bold text-sm text-gray-800">Notifications</h3>
+   572→   572→                  {unreadCount > 0 && (
+   573→   573→                    <Badge className="bg-orange-500 text-white text-[10px] px-1.5 py-0">{unreadCount} new</Badge>
+   574→   574→                  )}
+   575→   575→                </div>
+   576→   576→                <div className="flex items-center gap-2">
+   577→   577→                  {unreadCount > 0 && (
+   578→   578→                    <button
+   579→   579→                      onClick={() => setNotifications(prev => prev.map(n => ({ ...n, read: true })))}
+   580→   580→                      className="text-[11px] text-orange-500 font-semibold hover:text-orange-600"
+   581→   581→                    >
+   582→   582→                      Mark all read
+   583→   583→                    </button>
+   584→   584→                  )}
+   585→   585→                  <button
+   586→   586→                    onClick={() => setShowNotificationPanel(false)}
+   587→   587→                    className="w-6 h-6 rounded-full bg-gray-100 flex items-center justify-center"
+   588→   588→                  >
+   589→   589→                    <X className="w-3 h-3 text-gray-500" />
+   590→   590→                  </button>
+   591→   591→                </div>
+   592→   592→              </div>
+   593→   593→
+   594→   594→              {/* Notification List */}
+   595→   595→              <div className="max-h-[300px] overflow-y-auto">
+   596→   596→                {notifications.length === 0 ? (
+   597→   597→                  <div className="py-8 text-center">
+   598→   598→                    <Bell className="w-8 h-8 text-gray-200 mx-auto mb-2" />
+   599→   599→                    <p className="text-gray-400 text-sm">No notifications yet</p>
+   600→   600→                  </div>
+   601→   601→                ) : (
+   602→   602→                  notifications.map(notification => (
+   603→   603→                    <div
+   604→   604→                      key={notification.id}
+   605→   605→                      onClick={() => setNotifications(prev => prev.map(n => n.id === notification.id ? { ...n, read: true } : n))}
+   606→   606→                      className={`px-4 py-3 border-b border-gray-50 last:border-b-0 active:bg-gray-50 transition-colors cursor-pointer ${
+   607→   607→                        !notification.read ? 'bg-orange-50/50' : ''
+   608→   608→                      }`}
+   609→   609→                    >
+   610→   610→                      <div className="flex items-start gap-3">
+   611→   611→                        <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 ${
+   612→   612→                          notification.type === 'update' ? 'bg-blue-100' :
+   613→   613→                          notification.type === 'alert' ? 'bg-amber-100' :
+   614→   614→                          'bg-green-100'
+   615→   615→                        }`}>
+   616→   616→                          {notification.type === 'update' ? <Zap className="w-4 h-4 text-blue-500" /> :
+   617→   617→                           notification.type === 'alert' ? <AlertTriangle className="w-4 h-4 text-amber-500" /> :
+   618→   618→                           <Gift className="w-4 h-4 text-green-500" />}
+   619→   619→                        </div>
+   620→   620→                        <div className="flex-1 min-w-0">
+   621→   621→                          <div className="flex items-center gap-2">
+   622→   622→                            <p className={`text-sm ${!notification.read ? 'font-bold text-gray-900' : 'font-medium text-gray-700'}`}>
+   623→   623→                              {notification.title}
+   624→   624→                            </p>
+   625→   625→                            {!notification.read && (
+   626→   626→                              <div className="w-2 h-2 rounded-full bg-orange-500 flex-shrink-0" />
+   627→   627→                            )}
+   628→   628→                          </div>
+   629→   629→                          <p className="text-xs text-gray-500 mt-0.5 line-clamp-2">{notification.message}</p>
+   630→   630→                          <p className="text-[10px] text-gray-400 mt-1">{notification.time}</p>
+   631→   631→                        </div>
+   632→   632→                      </div>
+   633→   633→                    </div>
+   634→   634→                  ))
+   635→   635→                )}
+   636→   636→              </div>
+   637→   637→            </div>
+   638→   638→          </div>
+   639→   639→        )}
+   640→   640→
+   641→   641→        {/* Announcements - Image Banner Carousel */}
+   642→   642→        <div className="px-4 mt-3 mb-1">
+   643→   643→          <div className="relative">
+   644→   644→            {/* Banner Cards - Full Width Single Item */}
+   645→   645→            <div
+   646→   646→              ref={carouselRef}
+   647→   647→              onScroll={() => {
+   648→   648→                if (carouselRef.current) {
+   649→   649→                  const cardWidth = carouselRef.current.children[0]?.getBoundingClientRect().width || 300
+   650→   650→                  const scrollPos = carouselRef.current.scrollLeft
+   651→   651→                  const newIndex = Math.round(scrollPos / cardWidth)
+   652→   652→                  if (newIndex !== activeAnnouncement && newIndex >= 0 && newIndex < announcements.length) {
+   653→   653→                    setActiveAnnouncement(newIndex)
+   654→   654→                  }
+   655→   655→                }
+   656→   656→              }}
+   657→   657→              onTouchStart={() => { if (carouselTimerRef.current) clearInterval(carouselTimerRef.current) }}
+   658→   658→              onTouchEnd={() => {
+   659→   659→                carouselTimerRef.current = setInterval(() => {
+   660→   660→                  setActiveAnnouncement(prev => {
+   661→   661→                    const next = (prev + 1) % announcements.length
+   662→   662→                    if (carouselRef.current) {
+   663→   663→                      const cardWidth = carouselRef.current.children[0]?.getBoundingClientRect().width || 300
+   664→   664→                      carouselRef.current.scrollTo({ left: next * cardWidth, behavior: 'smooth' })
+   665→   665→                    }
+   666→   666→                    return next
+   667→   667→                  })
+   668→   668→                }, 3000)
+   669→   669→              }}
+   670→   670→              className="flex overflow-x-auto scrollbar-hide snap-x snap-mandatory"
+   671→   671→            >
+   672→   672→              {announcements.map((a, index) => (
+   673→   673→                <button
+   674→   674→                  key={a.id}
+   675→   675→                  onClick={() => handleBottomNav(a.action)}
+   676→   676→                  className="flex-shrink-0 w-full snap-center px-1"
+   677→   677→                >
+   678→   678→                  <div className={`bg-gradient-to-br ${a.gradient} rounded-2xl overflow-hidden shadow-md active:scale-[0.98] transition-transform`}>
+   679→   679→                    {/* Image Area */}
+   680→   680→                    <div className="h-32 relative flex items-center justify-center overflow-hidden">
+   681→   681→                      {/* Background Pattern */}
+   682→   682→                      <div className="absolute inset-0 opacity-10">
+   683→   683→                        <div className="absolute top-3 left-6 w-24 h-24 rounded-full border-4 border-white" />
+   684→   684→                        <div className="absolute bottom-2 right-8 w-20 h-20 rounded-full border-4 border-white" />
+   685→   685→                        <div className="absolute top-10 right-16 w-10 h-10 rounded-full bg-white" />
+   686→   686→                        <div className="absolute bottom-4 left-20 w-6 h-6 rounded-full bg-white" />
+   687→   687→                      </div>
+   688→   688→                      {/* Icon + Text */}
+   689→   689→                      <div className="relative z-10 flex items-center gap-4 px-4">
+   690→   690→                        <div className="w-16 h-16 bg-white/20 backdrop-blur rounded-2xl flex items-center justify-center flex-shrink-0">
+   691→   691→                          {a.image === 'ssc' && <BookOpen className="w-8 h-8 text-white" />}
+   692→   692→                          {a.image === 'banking' && <Building className="w-8 h-8 text-white" />}
+   693→   693→                          {a.image === 'leaderboard' && <Trophy className="w-8 h-8 text-white" />}
+   694→   694→                          {a.image === 'practice' && <Zap className="w-8 h-8 text-white" />}
+   695→   695→                        </div>
+   696→   696→                        <div className="flex-1 min-w-0">
+   697→   697→                          <p className="text-white font-bold text-base leading-tight">{a.title}</p>
+   698→   698→                          <p className="text-white/80 text-xs mt-1">{a.subtitle}</p>
+   699→   699→                          <div className="flex items-center gap-1 mt-2">
+   700→   700→                            <span className="text-white/50 text-[10px]">Tap to explore</span>
+   701→   701→                            <ChevronRight className="w-3 h-3 text-white/50" />
+   702→   702→                          </div>
+   703→   703→                        </div>
+   704→   704→                      </div>
+   705→   705→                    </div>
+   706→   706→                  </div>
+   707→   707→                </button>
+   708→   708→              ))}
+   709→   709→            </div>
+   710→   710→
+   711→   711→            {/* Dots Indicator */}
+   712→   712→            <div className="flex items-center justify-center gap-1.5 mt-1">
+   713→   713→              {announcements.map((_, i) => (
+   714→   714→                <button
+   715→   715→                  key={i}
+   716→   716→                  onClick={() => {
+   717→   717→                    setActiveAnnouncement(i)
+   718→   718→                    if (carouselRef.current) {
+   719→   719→                      const cardWidth = carouselRef.current.children[0]?.getBoundingClientRect().width || 250
+   720→   720→                      const gap = 12
+   721→   721→                      carouselRef.current.scrollTo({ left: i * (cardWidth + gap), behavior: 'smooth' })
+   722→   722→                    }
+   723→   723→                  }}
+   724→   724→                  className={`h-1.5 rounded-full transition-all duration-300 ${
+   725→   725→                    i === activeAnnouncement ? 'w-4 bg-orange-500' : 'w-1.5 bg-gray-300'
+   726→   726→                  }`}
+   727→   727→                />
+   728→   728→              ))}
+   729→   729→            </div>
+   730→   730→          </div>
+   731→   731→        </div>
+   732→   732→
+   733→   733→        <div className="px-4 mt-4 space-y-6">
+   734→   734→          {/* Quick Practice Card */}
+   735→   735→          <Card className="border-0 shadow-md">
+   736→   736→            <CardContent className="p-4">
+   737→   737→              <div className="flex items-center gap-3">
+   738→   738→                <div className="w-10 h-10 rounded-xl bg-gradient-to-r from-orange-500 to-red-500 flex items-center justify-center">
+   739→   739→                  <Zap className="w-5 h-5 text-white" />
+   740→   740→                </div>
+   741→   741→                <div className="flex-1">
+   742→   742→                  <p className="font-semibold text-sm">Quick Practice</p>
+   743→   743→                  <p className="text-gray-500 text-xs">Jump into a random test</p>
+   744→   744→                </div>
+   745→   745→                <Button
+   746→   746→                  size="sm"
+   747→   747→                  className="bg-gradient-to-r from-orange-500 to-red-500 text-white rounded-xl"
+   748→   748→                  onClick={() => {
+   749→   749→                    const allCats = categories
+   750→   750→                    const allExams = allCats.flatMap(c => c.exams)
+   751→   751→                    if (allExams.length > 0) {
+   752→   752→                      const randomExam = allExams[Math.floor(Math.random() * allExams.length)]
+   753→   753→                      const randomCat = allCats.find(c => c.exams.some(e => e.id === randomExam.id))!
+   754→   754→                      openExam(randomExam, randomCat)
+   755→   755→                    }
+   756→   756→                  }}
+   757→   757→                >
+   758→   758→                  <Play className="w-4 h-4 mr-1" /> Start
+   759→   759→                </Button>
+   760→   760→              </div>
+   761→   761→            </CardContent>
+   762→   762→          </Card>
+   763→   763→
+   764→   764→          {/* Exam Categories */}
+   765→   765→          <div>
+   766→   766→            <div className="flex items-center justify-between mb-3">
+   767→   767→              <h2 className="font-bold text-lg">Exam Categories</h2>
+   768→   768→              <button onClick={() => handleBottomNav('exams')} className="text-orange-600 text-sm font-medium flex items-center">
+   769→   769→                View All <ChevronRight className="w-4 h-4" />
+   770→   770→              </button>
+   771→   771→            </div>
+   772→   772→            <div className="grid grid-cols-2 gap-3">
+   773→   773→              {categories.map(cat => {
+   774→   774→                const color = getCatColor(cat.slug)
+   775→   775→                return (
+   776→   776→                  <Card
+   777→   777→                    key={cat.id}
+   778→   778→                    className="border-0 shadow-sm cursor-pointer hover:shadow-md transition-shadow"
+   779→   779→                    onClick={() => {
+   780→   780→                      setSelectedCategory(cat)
+   781→   781→                      handleBottomNav('exams')
+   782→   782→                    }}
+   783→   783→                  >
+   784→   784→                    <CardContent className="p-4">
+   785→   785→                      <div className={`w-10 h-10 rounded-xl ${color.light} flex items-center justify-center ${color.text} mb-2`}>
+   786→   786→                        {getCatIcon(cat.slug)}
+   787→   787→                      </div>
+   788→   788→                      <p className="font-semibold text-sm">{cat.name}</p>
+   789→   789→                      <p className="text-gray-400 text-xs mt-1">{cat.exams.length} exams</p>
+   790→   790→                    </CardContent>
+   791→   791→                  </Card>
+   792→   792→                )
+   793→   793→              })}
+   794→   794→            </div>
+   795→   795→          </div>
+   796→   796→
+   797→   797→          {/* Popular Exams */}
+   798→   798→          <div>
+   799→   799→            <h2 className="font-bold text-lg mb-3">Popular Exams</h2>
+   800→   800→            <div className="space-y-2">
+   801→   801→              {categories.slice(0, 3).flatMap(cat =>
+   802→   802→                cat.exams.slice(0, 2).map(exam => (
+   803→   803→                  <Card
+   804→   804→                    key={exam.id}
+   805→   805→                    className="border-0 shadow-sm cursor-pointer hover:shadow-md transition-shadow"
+   806→   806→                    onClick={() => openExam(exam, cat)}
+   807→   807→                  >
+   808→   808→                    <CardContent className="p-3 flex items-center gap-3">
+   809→   809→                      <div className={`w-10 h-10 rounded-xl ${getCatColor(cat.slug).light} flex items-center justify-center ${getCatColor(cat.slug).text}`}>
+   810→   810→                        {getCatIcon(cat.slug)}
+   811→   811→                      </div>
+   812→   812→                      <div className="flex-1 min-w-0">
+   813→   813→                        <p className="font-semibold text-sm truncate">{exam.name}</p>
+   814→   814→                        <p className="text-gray-400 text-xs">{exam.testCount} tests · {exam.totalQuestions} Qs</p>
+   815→   815→                      </div>
+   816→   816→                      <ChevronRight className="w-4 h-4 text-gray-400" />
+   817→   817→                    </CardContent>
+   818→   818→                  </Card>
+   819→   819→                ))
+   820→   820→              )}
+   821→   821→            </div>
+   822→   822→          </div>
+   823→   823→
+   824→   824→          {/* Daily Tips Section */}
+   825→   825→          <div>
+   826→   826→            <div className="flex items-center gap-2 mb-3">
+   827→   827→              <Star className="w-5 h-5 text-amber-500" />
+   828→   828→              <h2 className="font-bold text-lg">Daily Tips</h2>
+   829→   829→            </div>
+   830→   830→            <Card className="border-0 shadow-sm border-l-4 border-l-orange-400">
+   831→   831→              <CardContent className="p-4">
+   832→   832→                <p className="text-sm text-gray-700 leading-relaxed">💡 <strong>Pro Tip:</strong> Solve at least 50 questions daily from different topics. Consistency beats intensity in exam preparation!</p>
+   833→   833→              </CardContent>
+   834→   834→            </Card>
+   835→   835→          </div>
+   836→   836→
+   837→   837→          {/* Upcoming Exams Section */}
+   838→   838→          <div>
+   839→   839→            <div className="flex items-center gap-2 mb-3">
+   840→   840→              <Calendar className="w-5 h-5 text-blue-500" />
+   841→   841→              <h2 className="font-bold text-lg">Upcoming Exams</h2>
+   842→   842→            </div>
+   843→   843→            <div className="space-y-2">
+   844→   844→              {[
+   845→   845→                { name: 'SSC CGL 2025 Tier-I', date: 'Jul 2025', status: 'Registration Open' },
+   846→   846→                { name: 'IBPS PO 2025 Prelims', date: 'Aug 2025', status: 'Coming Soon' },
+   847→   847→                { name: 'RRB NTPC CBT-2', date: 'Sep 2025', status: 'Admit Card Soon' },
+   848→   848→              ].map((exam, i) => (
+   849→   849→                <Card key={i} className="border-0 shadow-sm">
+   850→   850→                  <CardContent className="p-3 flex items-center gap-3">
+   851→   851→                    <div className="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center">
+   852→   852→                      <Calendar className="w-5 h-5 text-blue-500" />
+   853→   853→                    </div>
+   854→   854→                    <div className="flex-1 min-w-0">
+   855→   855→                      <p className="font-semibold text-sm truncate">{exam.name}</p>
+   856→   856→                      <p className="text-gray-400 text-xs">{exam.date}</p>
+   857→   857→                    </div>
+   858→   858→                    <Badge variant={exam.status === 'Registration Open' ? 'default' : 'secondary'} className={`text-[10px] ${
+   859→   859→                      exam.status === 'Registration Open' ? 'bg-green-100 text-green-700' :
+   860→   860→                      exam.status === 'Admit Card Soon' ? 'bg-amber-100 text-amber-700' :
+   861→   861→                      'bg-gray-100 text-gray-600'
+   862→   862→                    }`}>
+   863→   863→                      {exam.status}
+   864→   864→                    </Badge>
+   865→   865→                  </CardContent>
+   866→   866→                </Card>
+   867→   867→              ))}
+   868→   868→            </div>
+   869→   869→          </div>
+   870→   870→
+   871→   871→          {/* Study Stats / Motivation */}
+   872→   872→          <div>
+   873→   873→            <div className="flex items-center gap-2 mb-3">
+   874→   874→              <TrendingUp className="w-5 h-5 text-green-500" />
+   875→   875→              <h2 className="font-bold text-lg">Your Progress</h2>
+   876→   876→            </div>
+   877→   877→            {auth.isLoggedIn ? (
+   878→   878→              <div className="grid grid-cols-3 gap-2">
+   879→   879→                <Card className="border-0 shadow-sm">
+   880→   880→                  <CardContent className="p-3 text-center">
+   881→   881→                    <Flame className="w-6 h-6 text-orange-500 mx-auto mb-1" />
+   882→   882→                    <p className="font-bold text-lg">{stats.testsTaken}</p>
+   883→   883→                    <p className="text-gray-400 text-[10px]">Tests Done</p>
+   884→   884→                  </CardContent>
+   885→   885→                </Card>
+   886→   886→                <Card className="border-0 shadow-sm">
+   887→   887→                  <CardContent className="p-3 text-center">
+   888→   888→                    <Target className="w-6 h-6 text-green-500 mx-auto mb-1" />
+   889→   889→                    <p className="font-bold text-lg">{stats.avgScore}%</p>
+   890→   890→                    <p className="text-gray-400 text-[10px]">Accuracy</p>
+   891→   891→                  </CardContent>
+   892→   892→                </Card>
+   893→   893→                <Card className="border-0 shadow-sm">
+   894→   894→                  <CardContent className="p-3 text-center">
+   895→   895→                    <Award className="w-6 h-6 text-blue-500 mx-auto mb-1" />
+   896→   896→                    <p className="font-bold text-lg">#{stats.bestRank}</p>
+   897→   897→                    <p className="text-gray-400 text-[10px]">Best Rank</p>
+   898→   898→                  </CardContent>
+   899→   899→                </Card>
+   900→   900→              </div>
+   901→   901→            ) : (
+   902→   902→              <Card className="border-0 shadow-sm bg-gradient-to-r from-orange-50 to-red-50">
+   903→   903→                <CardContent className="p-4 text-center">
+   904→   904→                  <TrendingUp className="w-8 h-8 text-orange-400 mx-auto mb-2" />
+   905→   905→                  <p className="font-semibold text-sm text-gray-700">Login to track your progress</p>
+   906→   906→                  <p className="text-gray-500 text-xs mt-1 mb-3">See your scores, ranks and improvement over time</p>
+   907→   907→                  <Button size="sm" className="bg-gradient-to-r from-orange-500 to-red-500 text-white rounded-xl" onClick={() => setShowLoginModal(true)}>
+   908→   908→                    Login Now
+   909→   909→                  </Button>
+   910→   910→                </CardContent>
+   911→   911→              </Card>
+   912→   912→            )}
+   913→   913→          </div>
+   914→   914→        </div>
+   915→   915→      </div>
+   916→   916→    )
+   917→   917→  }
+   918→   918→
+   919→   919→  // ===== RENDER: Exams Page =====
+   920→   920→  function renderExams() {
+   921→   921→    return (
+   922→   922→      <div className="pb-20">
+   923→   923→        <div className="bg-gradient-to-r from-orange-500 to-red-500 px-4 pt-[calc(env(safe-area-inset-top,0px)+3rem)] pb-6 rounded-b-3xl">
+   924→   924→          <div className="flex items-center gap-3 mb-4">
+   925→   925→            <button onClick={goBack} className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center">
+   926→   926→              <ArrowLeft className="w-5 h-5 text-white" />
+   927→   927→            </button>
+   928→   928→            <h1 className="text-white text-xl font-bold">All Exams</h1>
+   929→   929→          </div>
+   930→   930→        </div>
+   931→   931→
+   932→   932→        <div className="px-4 mt-4 space-y-6">
+   933→   933→          {categories.map(cat => {
+   934→   934→            const color = getCatColor(cat.slug)
+   935→   935→            return (
+   936→   936→              <div key={cat.id}>
+   937→   937→                <div className="flex items-center gap-2 mb-3">
+   938→   938→                  <div className={`w-8 h-8 rounded-lg ${color.light} flex items-center justify-center ${color.text}`}>
+   939→   939→                    {getCatIcon(cat.slug)}
+   940→   940→                  </div>
+   941→   941→                  <h2 className="font-bold text-base">{cat.name}</h2>
+   942→   942→                  <Badge variant="secondary" className="text-xs">{cat.exams.length}</Badge>
+   943→   943→                </div>
+   944→   944→                <div className="space-y-2">
+   945→   945→                  {cat.exams.map(exam => (
+   946→   946→                    <Card
+   947→   947→                      key={exam.id}
+   948→   948→                      className="border-0 shadow-sm cursor-pointer hover:shadow-md transition-shadow"
+   949→   949→                      onClick={() => openExam(exam, cat)}
+   950→   950→                    >
+   951→   951→                      <CardContent className="p-3 flex items-center gap-3">
+   952→   952→                        <div className="flex-1 min-w-0">
+   953→   953→                          <p className="font-semibold text-sm">{exam.name}</p>
+   954→   954→                          <p className="text-gray-400 text-xs">{exam.testCount} tests · {exam.totalQuestions} Qs · {exam.duration} min</p>
+   955→   955→                        </div>
+   956→   956→                        <div className="flex items-center gap-1">
+   957→   957→                          <Badge className={`bg-gradient-to-r ${color.gradient} text-white text-xs border-0`}>
+   958→   958→                            {exam.testCount} Tests
+   959→   959→                          </Badge>
+   960→   960→                          <ChevronRight className="w-4 h-4 text-gray-400" />
+   961→   961→                        </div>
+   962→   962→                      </CardContent>
+   963→   963→                    </Card>
+   964→   964→                  ))}
+   965→   965→                </div>
+   966→   966→              </div>
+   967→   967→            )
+   968→   968→          })}
+   969→   969→        </div>
+   970→   970→      </div>
+   971→   971→    )
+   972→   972→  }
+   973→   973→
+   974→   974→  // ===== RENDER: Tests Page =====
+   975→   975→  function renderTests() {
+   976→   976→    if (!selectedExam || !selectedCategory) return null
+   977→   977→    const color = getCatColor(selectedCategory.slug)
+   978→   978→    return (
+   979→   979→      <div className="pb-20">
+   980→   980→        <div className={`bg-gradient-to-r ${color.gradient} px-4 pt-[calc(env(safe-area-inset-top,0px)+3rem)] pb-6 rounded-b-3xl`}>
+   981→   981→          <div className="flex items-center gap-3 mb-2">
+   982→   982→            <button onClick={goBack} className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center">
+   983→   983→              <ArrowLeft className="w-5 h-5 text-white" />
+   984→   984→            </button>
+   985→   985→            <div className="flex-1 min-w-0">
+   986→   986→              <h1 className="text-white text-lg font-bold truncate">{selectedExam.name}</h1>
+   987→   987→              <p className="text-white/70 text-xs">{selectedCategory.name}</p>
+   988→   988→            </div>
+   989→   989→          </div>
+   990→   990→          <div className="flex items-center gap-4 mt-3">
+   991→   991→            <div className="flex items-center gap-1 text-white/80 text-xs">
+   992→   992→              <BookOpen className="w-3 h-3" /> {selectedExam.totalQuestions} Qs
+   993→   993→            </div>
+   994→   994→            <div className="flex items-center gap-1 text-white/80 text-xs">
+   995→   995→              <Clock className="w-3 h-3" /> {selectedExam.duration} min
+   996→   996→            </div>
+   997→   997→            <div className="flex items-center gap-1 text-white/80 text-xs">
+   998→   998→              <FileText className="w-3 h-3" /> {examTests.length} tests
+   999→   999→            </div>
+  1000→  1000→          </div>
+
+[showing lines 501-1000 of 2002; use offset=1001 with limit to continue reading]

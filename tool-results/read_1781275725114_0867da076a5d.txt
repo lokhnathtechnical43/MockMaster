@@ -1,0 +1,2002 @@
+     1→'use client'
+     2→
+     3→import React, { useState, useEffect, useRef, useCallback } from 'react'
+     4→import { Button } from '@/components/ui/button'
+     5→import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+     6→import { Badge } from '@/components/ui/badge'
+     7→import { Progress } from '@/components/ui/progress'
+     8→import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+     9→import { ScrollArea } from '@/components/ui/scroll-area'
+    10→import { Separator } from '@/components/ui/separator'
+    11→import {
+    12→  BookOpen, Trophy, Clock, CheckCircle2, XCircle, SkipForward,
+    13→  ChevronRight, ChevronLeft, Home, User, ArrowLeft, X,
+    14→  Play, Zap, Target, Award, Timer, RefreshCw, BookMarked,
+    15→  GraduationCap, Shield, Building, Train, ShieldCheck, Swords,
+    16→  LogOut, Loader2, Mail, AlertTriangle, Settings, Bell,
+    17→  ChevronDown, Star, Flame, TrendingUp, Calendar, Gift,
+    18→  HelpCircle, Share2, MessageCircle, Crown,
+    19→  Menu, BookmarkPlus, Download, BarChart3, Wifi,
+    20→  ClipboardList, PenTool
+    21→} from 'lucide-react'
+    22→import {
+    23→  getCategories as getLocalCategories, getTestsByExam as getLocalTestsByExam,
+    24→  getTestById as getLocalTestById, saveResult as saveLocalResult,
+    25→  getLeaderboard as getLocalLeaderboard,
+    26→  type LocalExamCategory, type LocalExam, type LocalTest, type LocalQuestion, type TestResult
+    27→} from '@/lib/local-data'
+    28→import {
+    29→  getCategories as getFsCategories, getTests as getFsTests,
+    30→  getTestById as getFsTestById, saveResult as saveFsResult,
+    31→  getLeaderboard as getFsLeaderboard, getUseFirestore,
+    32→  getAnnouncements as getFsAnnouncements, getNotifications as getFsNotifications,
+    33→} from '@/lib/firestore-service'
+    34→import { useFirebaseAuth } from '@/lib/use-firebase-auth'
+    35→import LoginModal from '@/components/LoginModal'
+    36→import { App } from '@capacitor/app'
+    37→import { getAnnouncements as getLocalAnnouncements, getNotifications as getLocalNotifications } from '@/lib/admin-data'
+    38→
+    39→// ===== Types =====
+    40→type Page = 'home' | 'exams' | 'tests' | 'test-info' | 'test-taking' | 'results' | 'leaderboard' | 'profile' | 'practice'
+    41→
+    42→// ===== Unified Data Access (Firestore or Local) =====
+    43→const isFirestore = () => getUseFirestore()
+    44→
+    45→async function fetchCategories(): Promise<LocalExamCategory[]> {
+    46→  if (isFirestore()) return getFsCategories()
+    47→  return getLocalCategories()
+    48→}
+    49→async function fetchTestsByExam(examId: string): Promise<LocalTest[]> {
+    50→  if (isFirestore()) return getFsTests(examId)
+    51→  return getLocalTestsByExam(examId)
+    52→}
+    53→async function fetchTestById(testId: string): Promise<LocalTest | undefined> {
+    54→  if (isFirestore()) return getFsTestById(testId) as Promise<LocalTest | undefined>
+    55→  return getLocalTestById(testId)
+    56→}
+    57→async function fetchLeaderboard(testId: string): Promise<TestResult[]> {
+    58→  if (isFirestore()) return getFsLeaderboard(testId) as Promise<TestResult[]>
+    59→  return getLocalLeaderboard(testId)
+    60→}
+    61→async function storeResult(data: Omit<TestResult, 'id' | 'createdAt'>): Promise<TestResult> {
+    62→  if (isFirestore()) return saveFsResult(data) as Promise<TestResult>
+    63→  return saveLocalResult(data)
+    64→}
+    65→
+    66→interface CategoryColor {
+    67→  bg: string
+    68→  text: string
+    69→  border: string
+    70→  light: string
+    71→  gradient: string
+    72→}
+    73→
+    74→// ===== Constants =====
+    75→const CATEGORY_COLORS: Record<string, CategoryColor> = {
+    76→  ssc: { bg: 'bg-orange-500', text: 'text-orange-600', border: 'border-orange-300', light: 'bg-orange-50', gradient: 'from-orange-500 to-orange-600' },
+    77→  banking: { bg: 'bg-emerald-500', text: 'text-emerald-600', border: 'border-emerald-300', light: 'bg-emerald-50', gradient: 'from-emerald-500 to-emerald-600' },
+    78→  railways: { bg: 'bg-blue-500', text: 'text-blue-600', border: 'border-blue-300', light: 'bg-blue-50', gradient: 'from-blue-500 to-blue-600' },
+    79→  'state-govt': { bg: 'bg-purple-500', text: 'text-purple-600', border: 'border-purple-300', light: 'bg-purple-50', gradient: 'from-purple-500 to-purple-600' },
+    80→  teaching: { bg: 'bg-pink-500', text: 'text-pink-600', border: 'border-pink-300', light: 'bg-pink-50', gradient: 'from-pink-500 to-pink-600' },
+    81→  defence: { bg: 'bg-amber-500', text: 'text-amber-600', border: 'border-amber-300', light: 'bg-amber-50', gradient: 'from-amber-500 to-amber-600' },
+    82→  police: { bg: 'bg-red-500', text: 'text-red-600', border: 'border-red-300', light: 'bg-red-50', gradient: 'from-red-500 to-red-600' },
+    83→}
+    84→
+    85→const CATEGORY_ICONS: Record<string, React.ReactNode> = {
+    86→  ssc: <BookOpen className="w-5 h-5" />,
+    87→  banking: <Building className="w-5 h-5" />,
+    88→  railways: <Train className="w-5 h-5" />,
+    89→  'state-govt': <Shield className="w-5 h-5" />,
+    90→  teaching: <GraduationCap className="w-5 h-5" />,
+    91→  defence: <Swords className="w-5 h-5" />,
+    92→  police: <ShieldCheck className="w-5 h-5" />,
+    93→}
+    94→
+    95→// ===== Helper Functions =====
+    96→function formatTime(seconds: number): string {
+    97→  const m = Math.floor(seconds / 60)
+    98→  const s = seconds % 60
+    99→  return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`
+   100→}
+   101→
+   102→function getCatColor(slug: string): CategoryColor {
+   103→  return CATEGORY_COLORS[slug] || CATEGORY_COLORS.ssc
+   104→}
+   105→
+   106→function getCatIcon(slug: string): React.ReactNode {
+   107→  return CATEGORY_ICONS[slug] || <BookOpen className="w-5 h-5" />
+   108→}
+   109→
+   110→// ===== Main Component =====
+   111→export default function ExamPrepApp() {
+   112→  // --- Auth ---
+   113→  const auth = useFirebaseAuth()
+   114→
+   115→  // --- Page / Navigation ---
+   116→  const [currentPage, setCurrentPage] = useState<Page>('home')
+   117→  const pageHistoryRef = useRef<Page[]>([])
+   118→
+   119→  // --- Data ---
+   120→  const [categories, setCategories] = useState<LocalExamCategory[]>([])
+   121→  const [selectedCategory, setSelectedCategory] = useState<LocalExamCategory | null>(null)
+   122→  const [selectedExam, setSelectedExam] = useState<LocalExam | null>(null)
+   123→  const [examTests, setExamTests] = useState<LocalTest[]>([])
+   124→  const [selectedTest, setSelectedTest] = useState<LocalTest | null>(null)
+   125→
+   126→  // --- Test Taking ---
+   127→  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0)
+   128→  const [answers, setAnswers] = useState<Record<string, string>>({})
+   129→  const [markedForReview, setMarkedForReview] = useState<Set<string>>(new Set())
+   130→  const [timeLeft, setTimeLeft] = useState(0)
+   131→  const [testActive, setTestActive] = useState(false)
+   132→  const timerRef = useRef<NodeJS.Timeout | null>(null)
+   133→  const carouselRef = useRef<HTMLDivElement | null>(null)
+   134→  const carouselTimerRef = useRef<NodeJS.Timeout | null>(null)
+   135→
+   136→  // --- Results ---
+   137→  const [lastResult, setLastResult] = useState<TestResult | null>(null)
+   138→  const [leaderboardData, setLeaderboardData] = useState<TestResult[]>([])
+   139→  const [leaderboardTestId, setLeaderboardTestId] = useState<string>('')
+   140→
+   141→  // --- UI State ---
+   142→  const [showLoginModal, setShowLoginModal] = useState(false)
+   143→  const [showBackConfirm, setShowBackConfirm] = useState(false)
+   144→  const [showLanguageSheet, setShowLanguageSheet] = useState(false)
+   145→  const [showAboutSheet, setShowAboutSheet] = useState(false)
+   146→  const [selectedLanguage, setSelectedLanguage] = useState('en')
+   147→  const [showQuestionNav, setShowQuestionNav] = useState(false)
+   148→  const [showSideMenu, setShowSideMenu] = useState(false)
+   149→  const [showNotificationPanel, setShowNotificationPanel] = useState(false)
+   150→
+   151→  // --- Notifications (loaded from shared admin storage) ---
+   152→  const [notifications, setNotifications] = useState<
+   153→    { id: string; title: string; message: string; time: string; read: boolean; type: 'update' | 'alert' | 'info' }[]
+   154→  >([])
+   155→  const unreadCount = notifications.filter(n => !n.read).length
+   156→
+   157→  // --- Announcements (loaded from shared admin storage) ---
+   158→  const [announcements, setAnnouncements] = useState<
+   159→    { id: string; image: string; title: string; subtitle: string; action: Page; gradient: string }[]
+   160→  >([])
+   161→  const [activeAnnouncement, setActiveAnnouncement] = useState(0)
+   162→
+   163→  // (Admin state removed - admin panel is now at /admin route)
+   164→
+   165→  // --- Load categories + admin data on mount ---
+   166→  useEffect(() => {
+   167→    const loadData = async () => {
+   168→      try {
+   169→        const cats = await fetchCategories()
+   170→        setCategories(cats)
+   171→        if (isFirestore()) {
+   172→          const anns = await getFsAnnouncements()
+   173→          setAnnouncements(anns.map(a => ({ ...a, action: a.action as Page })))
+   174→          const notifs = await getFsNotifications()
+   175→          setNotifications(notifs)
+   176→        } else {
+   177→          setAnnouncements(getLocalAnnouncements().map(a => ({ ...a, action: a.action as Page })))
+   178→          setNotifications(getLocalNotifications())
+   179→        }
+   180→      } catch (e) {
+   181→        console.error('Data load failed, using local fallback:', e)
+   182→        setCategories(getLocalCategories())
+   183→        setAnnouncements(getLocalAnnouncements().map(a => ({ ...a, action: a.action as Page })))
+   184→        setNotifications(getLocalNotifications())
+   185→      }
+   186→    }
+   187→    loadData()
+   188→  }, [])
+   189→
+   190→  // --- Listen for admin data changes (when admin panel updates localStorage) ---
+   191→  useEffect(() => {
+   192→    const handleStorageChange = () => {
+   193→      setAnnouncements(getLocalAnnouncements().map(a => ({ ...a, action: a.action as Page })))
+   194→      setNotifications(getLocalNotifications())
+   195→    }
+   196→    window.addEventListener('storage', handleStorageChange)
+   197→    const interval = setInterval(handleStorageChange, 5000)
+   198→    return () => {
+   199→      window.removeEventListener('storage', handleStorageChange)
+   200→      clearInterval(interval)
+   201→    }
+   202→  }, [])
+   203→
+   204→  // --- Auto-scroll carousel ---
+   205→  useEffect(() => {
+   206→    const startCarousel = () => {
+   207→      carouselTimerRef.current = setInterval(() => {
+   208→        setActiveAnnouncement(prev => {
+   209→          const next = (prev + 1) % announcements.length
+   210→          // Scroll the carousel container
+   211→          if (carouselRef.current) {
+   212→            const cardWidth = carouselRef.current.children[0]?.getBoundingClientRect().width || 250
+   213→            const gap = 12 // gap-3 = 12px
+   214→            carouselRef.current.scrollTo({
+   215→              left: next * (cardWidth + gap),
+   216→              behavior: 'smooth'
+   217→            })
+   218→          }
+   219→          return next
+   220→        })
+   221→      }, 3000) // 3 seconds interval
+   222→    }
+   223→    startCarousel()
+   224→    return () => {
+   225→      if (carouselTimerRef.current) clearInterval(carouselTimerRef.current)
+   226→    }
+   227→  }, [announcements.length])
+   228→
+   229→  // --- Navigation ---
+   230→  const navigateTo = useCallback((page: Page) => {
+   231→    pageHistoryRef.current.push(currentPage)
+   232→    setCurrentPage(page)
+   233→  }, [currentPage])
+   234→
+   235→  const goBack = useCallback(() => {
+   236→    const prev = pageHistoryRef.current.pop()
+   237→    if (prev) {
+   238→      setCurrentPage(prev)
+   239→    } else {
+   240→      setCurrentPage('home')
+   241→    }
+   242→  }, [])
+   243→
+   244→  // --- Handle mobile back button (Capacitor + Browser) ---
+   245→  const handleBackButton = useCallback(() => {
+   246→    // If back confirmation is showing, close it
+   247→    if (showBackConfirm) {
+   248→      setShowBackConfirm(false)
+   249→      return
+   250→    }
+   251→    // If notification panel is open, close it
+   252→    if (showNotificationPanel) {
+   253→      setShowNotificationPanel(false)
+   254→      return
+   255→    }
+   256→    // If side menu is open, close it
+   257→    if (showSideMenu) {
+   258→      setShowSideMenu(false)
+   259→      return
+   260→    }
+   261→    // If question nav panel is open, close it
+   262→    if (showQuestionNav) {
+   263→      setShowQuestionNav(false)
+   264→      return
+   265→    }
+   266→    // If login modal is open, close it
+   267→    if (showLoginModal) {
+   268→      setShowLoginModal(false)
+   269→      return
+   270→    }
+   271→    // If language sheet is open, close it
+   272→    if (showLanguageSheet) {
+   273→      setShowLanguageSheet(false)
+   274→      return
+   275→    }
+   276→    // If about sheet is open, close it
+   277→    if (showAboutSheet) {
+   278→      setShowAboutSheet(false)
+   279→      return
+   280→    }
+   281→    // If taking a test, show confirmation
+   282→    if (currentPage === 'test-taking' && testActive) {
+   283→      setShowBackConfirm(true)
+   284→      return
+   285→    }
+   286→    // If on home page, minimize app (Android)
+   287→    if (currentPage === 'home') {
+   288→      App.exitApp?.()
+   289→      return
+   290→    }
+   291→    // Otherwise go back
+   292→    if (pageHistoryRef.current.length > 0) {
+   293→      goBack()
+   294→    } else {
+   295→      setCurrentPage('home')
+   296→    }
+   297→  }, [currentPage, testActive, showBackConfirm, showSideMenu, showQuestionNav, showLoginModal, showLanguageSheet, showAboutSheet, goBack])
+   298→
+   299→  // Capacitor hardware back button
+   300→  useEffect(() => {
+   301→    let handler: any
+   302→    const setupBackButton = async () => {
+   303→      try {
+   304→        handler = await App.addListener('backButton', () => {
+   305→          handleBackButton()
+   306→        })
+   307→      } catch (e) {
+   308→        // Not running in Capacitor, ignore
+   309→      }
+   310→    }
+   311→    setupBackButton()
+   312→    return () => {
+   313→      handler?.remove?.()
+   314→    }
+   315→  }, [handleBackButton])
+   316→
+   317→  // Browser popstate (for web/PWA)
+   318→  useEffect(() => {
+   319→    const handlePopState = () => {
+   320→      handleBackButton()
+   321→      // Re-push state so browser doesn't navigate away
+   322→      window.history.pushState(null, '')
+   323→    }
+   324→    window.addEventListener('popstate', handlePopState)
+   325→    return () => window.removeEventListener('popstate', handlePopState)
+   326→  }, [handleBackButton])
+   327→
+   328→  // Push state on navigation so browser back button fires popstate
+   329→  useEffect(() => {
+   330→    window.history.pushState(null, '')
+   331→  }, [currentPage])
+   332→
+   333→  // --- Timer ---
+   334→  useEffect(() => {
+   335→    if (testActive && timeLeft > 0) {
+   336→      timerRef.current = setInterval(() => {
+   337→        setTimeLeft(prev => {
+   338→          if (prev <= 1) {
+   339→            clearInterval(timerRef.current!)
+   340→            handleFinishTest()
+   341→            return 0
+   342→          }
+   343→          return prev - 1
+   344→        })
+   345→      }, 1000)
+   346→      return () => {
+   347→        if (timerRef.current) clearInterval(timerRef.current)
+   348→      }
+   349→    }
+   350→  }, [testActive])
+   351→
+   352→  // --- Test Functions ---
+   353→  async function startTest(test: LocalTest) {
+   354→    const fullTest = await fetchTestById(test.id)
+   355→    if (!fullTest) return
+   356→    setSelectedTest(fullTest)
+   357→    setAnswers({})
+   358→    setMarkedForReview(new Set())
+   359→    setCurrentQuestionIndex(0)
+   360→    setTimeLeft(fullTest.duration * 60)
+   361→    setTestActive(true)
+   362→    navigateTo('test-taking')
+   363→  }
+   364→
+   365→  async function handleFinishTest() {
+   366→    if (timerRef.current) clearInterval(timerRef.current)
+   367→    setTestActive(false)
+   368→
+   369→    if (!selectedTest) return
+   370→
+   371→    const test = selectedTest
+   372→    const totalQuestions = test.questions.length
+   373→    let correctCount = 0
+   374→    let wrongCount = 0
+   375→    let skippedCount = 0
+   376→
+   377→    test.questions.forEach(q => {
+   378→      const userAnswer = answers[q.id]
+   379→      if (!userAnswer) {
+   380→        skippedCount++
+   381→      } else if (userAnswer === q.correctAnswer) {
+   382→        correctCount++
+   383→      } else {
+   384→        wrongCount++
+   385→      }
+   386→    })
+   387→
+   388→    const score = correctCount * test.markingCorrect - wrongCount * Math.abs(test.markingWrong)
+   389→    const maxScore = totalQuestions * test.markingCorrect
+   390→    const timeTaken = test.duration * 60 - timeLeft
+   391→
+   392→    const result = await storeResult({
+   393→      testId: test.id,
+   394→      testName: test.title,
+   395→      examName: test.exam.name,
+   396→      userId: auth.getUserId() || 'anonymous',
+   397→      correctCount,
+   398→      wrongCount,
+   399→      skippedCount,
+   400→      score,
+   401→      maxScore,
+   402→      timeTaken,
+   403→      totalQuestions,
+   404→      answers,
+   405→    })
+   406→
+   407→    setLastResult(result)
+   408→    navigateTo('results')
+   409→  }
+   410→
+   411→  function selectAnswer(questionId: string, option: string) {
+   412→    setAnswers(prev => ({ ...prev, [questionId]: option }))
+   413→  }
+   414→
+   415→  function clearAnswer(questionId: string) {
+   416→    setAnswers(prev => {
+   417→      const copy = { ...prev }
+   418→      delete copy[questionId]
+   419→      return copy
+   420→    })
+   421→  }
+   422→
+   423→  function toggleReview(questionId: string) {
+   424→    setMarkedForReview(prev => {
+   425→      const next = new Set(prev)
+   426→      if (next.has(questionId)) next.delete(questionId)
+   427→      else next.add(questionId)
+   428→      return next
+   429→    })
+   430→  }
+   431→
+   432→  // --- Stats from localStorage ---
+   433→  function getUserStats() {
+   434→    try {
+   435→      const data = localStorage.getItem('examprep_results')
+   436→      if (!data) return { testsTaken: 0, avgScore: 0, bestRank: 0 }
+   437→      const results: TestResult[] = JSON.parse(data)
+   438→      const userId = auth.getUserId()
+   439→      const userResults = userId ? results.filter((r: TestResult) => r.userId === userId) : results
+   440→      const testsTaken = userResults.length
+   441→      const avgScore = testsTaken > 0 ? Math.round(userResults.reduce((sum: number, r: TestResult) => sum + (r.score / r.maxScore) * 100, 0) / testsTaken) : 0
+   442→      const bestRank = 1 // simplified
+   443→      return { testsTaken, avgScore, bestRank }
+   444→    } catch {
+   445→      return { testsTaken: 0, avgScore: 0, bestRank: 0 }
+   446→    }
+   447→  }
+   448→
+   449→  // --- Bottom nav handler ---
+   450→  function handleBottomNav(page: Page) {
+   451→    pageHistoryRef.current = []
+   452→    setCurrentPage(page)
+   453→  }
+   454→
+   455→  // --- Exam select handler ---
+   456→  async function openExam(exam: LocalExam, category: LocalExamCategory) {
+   457→    setSelectedExam(exam)
+   458→    setSelectedCategory(category)
+   459→    const tests = await fetchTestsByExam(exam.id)
+   460→    setExamTests(tests)
+   461→    navigateTo('tests')
+   462→  }
+   463→
+   464→  async function openTestInfo(test: LocalTest) {
+   465→    const fullTest = await fetchTestById(test.id)
+   466→    if (fullTest) {
+   467→      setSelectedTest(fullTest)
+   468→      navigateTo('test-info')
+   469→    }
+   470→  }
+   471→
+   472→  async function openLeaderboard(testId: string) {
+   473→    setLeaderboardTestId(testId)
+   474→    setLeaderboardData(await fetchLeaderboard(testId))
+   475→    navigateTo('leaderboard')
+   476→  }
+   477→
+   478→  // --- Avatar display ---
+   479→  function getAvatarDisplay() {
+   480→    if (auth.isGuest) return 'G'
+   481→    const display = auth.getUserDisplay()
+   482→    if (display) {
+   483→      // For email: first letter before @, for name: first letter
+   484→      if (display.includes('@')) return display.charAt(0).toUpperCase()
+   485→      return display.charAt(0).toUpperCase()
+   486→    }
+   487→    return 'G'
+   488→  }
+   489→
+   490→  // ===== RENDER: Home Page =====
+   491→  function renderHome() {
+   492→    const stats = getUserStats()
+   493→    return (
+   494→      <div className="pb-20">
+   495→        {/* Compact Header */}
+   496→        <div className="bg-gradient-to-r from-orange-500 to-red-500 px-4 pt-[calc(env(safe-area-inset-top,0px)+0.75rem)] pb-3 rounded-b-2xl">
+   497→          <div className="flex items-center justify-between">
+   498→            {/* Left: Menu + App Name */}
+   499→            <div className="flex items-center gap-2.5">
+   500→              <button
+   501→                onClick={() => setShowSideMenu(true)}
+   502→                onTouchEnd={(e) => { e.preventDefault(); setShowSideMenu(true) }}
+   503→                className="w-10 h-10 rounded-lg bg-white/20 backdrop-blur flex items-center justify-center active:bg-white/30 transition-colors"
+   504→                style={{ touchAction: 'manipulation', WebkitTapHighlightColor: 'transparent' }}
+   505→              >
+   506→                <Menu className="w-5 h-5 text-white" />
+   507→              </button>
+   508→              <div>
+   509→                <h1 className="text-white text-base font-bold leading-tight">ExamPrep Bharat</h1>
+   510→                <p className="text-orange-100 text-[10px] leading-tight">Prepare for government exams</p>
+   511→              </div>
+   512→            </div>
+   513→
+   514→            {/* Right: Notification */}
+   515→            <button
+   516→              onClick={() => setShowNotificationPanel(!showNotificationPanel)}
+   517→              onTouchEnd={(e) => { e.preventDefault(); setShowNotificationPanel(!showNotificationPanel) }}
+   518→              className="w-10 h-10 rounded-lg bg-white/20 backdrop-blur flex items-center justify-center active:bg-white/30 transition-colors relative"
+   519→              style={{ touchAction: 'manipulation', WebkitTapHighlightColor: 'transparent' }}
+   520→            >
+   521→              <Bell className="w-4 h-4 text-white" />
+   522→              {unreadCount > 0 && (
+   523→                <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 rounded-full flex items-center justify-center text-white text-[8px] font-bold border border-orange-500">
+   524→                  {unreadCount}
+   525→                </span>
+   526→              )}
+   527→            </button>
+   528→          </div>
+   529→
+   530→          {/* Moving Announcements Marquee */}
+   531→          <div className="bg-white/10 backdrop-blur rounded-lg mt-2.5 overflow-hidden">
+   532→            <div className="flex items-center">
+   533→              <div className="bg-white/15 px-2 py-1.5 flex items-center flex-shrink-0">
+   534→                <Flame className="w-3.5 h-3.5 text-yellow-300" />
+   535→              </div>
+   536→              <div className="overflow-hidden flex-1 py-1.5">
+   537→                <div className="flex animate-marquee whitespace-nowrap">
+   538→                  {announcements.map(a => (
+   539→                    <button
+   540→                      key={a.id}
+   541→                      onClick={() => handleBottomNav(a.action)}
+   542→                      className="mx-6 text-[11px] font-medium text-white/90 active:text-white"
+   543→                    >
+   544→                      {a.title} — {a.subtitle}
+   545→                    </button>
+   546→                  ))}
+   547→                  {/* Duplicate for seamless loop */}
+   548→                  {announcements.map(a => (
+   549→                    <button
+   550→                      key={`dup-${a.id}`}
+   551→                      onClick={() => handleBottomNav(a.action)}
+   552→                      className="mx-6 text-[11px] font-medium text-white/90 active:text-white"
+   553→                    >
+   554→                      {a.title} — {a.subtitle}
+   555→                    </button>
+   556→                  ))}
+   557→                </div>
+   558→              </div>
+   559→            </div>
+   560→          </div>
+   561→        </div>
+   562→
+   563→        {/* Notification Panel */}
+   564→        {showNotificationPanel && (
+   565→          <div className="px-4 -mt-4 mb-2 relative z-40">
+   566→            <div className="bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden">
+   567→              {/* Panel Header */}
+   568→              <div className="flex items-center justify-between px-4 py-3 bg-gradient-to-r from-orange-50 to-red-50 border-b border-gray-100">
+   569→                <div className="flex items-center gap-2">
+   570→                  <Bell className="w-4 h-4 text-orange-500" />
+   571→                  <h3 className="font-bold text-sm text-gray-800">Notifications</h3>
+   572→                  {unreadCount > 0 && (
+   573→                    <Badge className="bg-orange-500 text-white text-[10px] px-1.5 py-0">{unreadCount} new</Badge>
+   574→                  )}
+   575→                </div>
+   576→                <div className="flex items-center gap-2">
+   577→                  {unreadCount > 0 && (
+   578→                    <button
+   579→                      onClick={() => setNotifications(prev => prev.map(n => ({ ...n, read: true })))}
+   580→                      className="text-[11px] text-orange-500 font-semibold hover:text-orange-600"
+   581→                    >
+   582→                      Mark all read
+   583→                    </button>
+   584→                  )}
+   585→                  <button
+   586→                    onClick={() => setShowNotificationPanel(false)}
+   587→                    className="w-6 h-6 rounded-full bg-gray-100 flex items-center justify-center"
+   588→                  >
+   589→                    <X className="w-3 h-3 text-gray-500" />
+   590→                  </button>
+   591→                </div>
+   592→              </div>
+   593→
+   594→              {/* Notification List */}
+   595→              <div className="max-h-[300px] overflow-y-auto">
+   596→                {notifications.length === 0 ? (
+   597→                  <div className="py-8 text-center">
+   598→                    <Bell className="w-8 h-8 text-gray-200 mx-auto mb-2" />
+   599→                    <p className="text-gray-400 text-sm">No notifications yet</p>
+   600→                  </div>
+   601→                ) : (
+   602→                  notifications.map(notification => (
+   603→                    <div
+   604→                      key={notification.id}
+   605→                      onClick={() => setNotifications(prev => prev.map(n => n.id === notification.id ? { ...n, read: true } : n))}
+   606→                      className={`px-4 py-3 border-b border-gray-50 last:border-b-0 active:bg-gray-50 transition-colors cursor-pointer ${
+   607→                        !notification.read ? 'bg-orange-50/50' : ''
+   608→                      }`}
+   609→                    >
+   610→                      <div className="flex items-start gap-3">
+   611→                        <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 ${
+   612→                          notification.type === 'update' ? 'bg-blue-100' :
+   613→                          notification.type === 'alert' ? 'bg-amber-100' :
+   614→                          'bg-green-100'
+   615→                        }`}>
+   616→                          {notification.type === 'update' ? <Zap className="w-4 h-4 text-blue-500" /> :
+   617→                           notification.type === 'alert' ? <AlertTriangle className="w-4 h-4 text-amber-500" /> :
+   618→                           <Gift className="w-4 h-4 text-green-500" />}
+   619→                        </div>
+   620→                        <div className="flex-1 min-w-0">
+   621→                          <div className="flex items-center gap-2">
+   622→                            <p className={`text-sm ${!notification.read ? 'font-bold text-gray-900' : 'font-medium text-gray-700'}`}>
+   623→                              {notification.title}
+   624→                            </p>
+   625→                            {!notification.read && (
+   626→                              <div className="w-2 h-2 rounded-full bg-orange-500 flex-shrink-0" />
+   627→                            )}
+   628→                          </div>
+   629→                          <p className="text-xs text-gray-500 mt-0.5 line-clamp-2">{notification.message}</p>
+   630→                          <p className="text-[10px] text-gray-400 mt-1">{notification.time}</p>
+   631→                        </div>
+   632→                      </div>
+   633→                    </div>
+   634→                  ))
+   635→                )}
+   636→              </div>
+   637→            </div>
+   638→          </div>
+   639→        )}
+   640→
+   641→        {/* Announcements - Image Banner Carousel */}
+   642→        <div className="px-4 mt-3 mb-1">
+   643→          <div className="relative">
+   644→            {/* Banner Cards - Full Width Single Item */}
+   645→            <div
+   646→              ref={carouselRef}
+   647→              onScroll={() => {
+   648→                if (carouselRef.current) {
+   649→                  const cardWidth = carouselRef.current.children[0]?.getBoundingClientRect().width || 300
+   650→                  const scrollPos = carouselRef.current.scrollLeft
+   651→                  const newIndex = Math.round(scrollPos / cardWidth)
+   652→                  if (newIndex !== activeAnnouncement && newIndex >= 0 && newIndex < announcements.length) {
+   653→                    setActiveAnnouncement(newIndex)
+   654→                  }
+   655→                }
+   656→              }}
+   657→              onTouchStart={() => { if (carouselTimerRef.current) clearInterval(carouselTimerRef.current) }}
+   658→              onTouchEnd={() => {
+   659→                carouselTimerRef.current = setInterval(() => {
+   660→                  setActiveAnnouncement(prev => {
+   661→                    const next = (prev + 1) % announcements.length
+   662→                    if (carouselRef.current) {
+   663→                      const cardWidth = carouselRef.current.children[0]?.getBoundingClientRect().width || 300
+   664→                      carouselRef.current.scrollTo({ left: next * cardWidth, behavior: 'smooth' })
+   665→                    }
+   666→                    return next
+   667→                  })
+   668→                }, 3000)
+   669→              }}
+   670→              className="flex overflow-x-auto scrollbar-hide snap-x snap-mandatory"
+   671→            >
+   672→              {announcements.map((a, index) => (
+   673→                <button
+   674→                  key={a.id}
+   675→                  onClick={() => handleBottomNav(a.action)}
+   676→                  className="flex-shrink-0 w-full snap-center px-1"
+   677→                >
+   678→                  <div className={`bg-gradient-to-br ${a.gradient} rounded-2xl overflow-hidden shadow-md active:scale-[0.98] transition-transform`}>
+   679→                    {/* Image Area */}
+   680→                    <div className="h-32 relative flex items-center justify-center overflow-hidden">
+   681→                      {/* Background Pattern */}
+   682→                      <div className="absolute inset-0 opacity-10">
+   683→                        <div className="absolute top-3 left-6 w-24 h-24 rounded-full border-4 border-white" />
+   684→                        <div className="absolute bottom-2 right-8 w-20 h-20 rounded-full border-4 border-white" />
+   685→                        <div className="absolute top-10 right-16 w-10 h-10 rounded-full bg-white" />
+   686→                        <div className="absolute bottom-4 left-20 w-6 h-6 rounded-full bg-white" />
+   687→                      </div>
+   688→                      {/* Icon + Text */}
+   689→                      <div className="relative z-10 flex items-center gap-4 px-4">
+   690→                        <div className="w-16 h-16 bg-white/20 backdrop-blur rounded-2xl flex items-center justify-center flex-shrink-0">
+   691→                          {a.image === 'ssc' && <BookOpen className="w-8 h-8 text-white" />}
+   692→                          {a.image === 'banking' && <Building className="w-8 h-8 text-white" />}
+   693→                          {a.image === 'leaderboard' && <Trophy className="w-8 h-8 text-white" />}
+   694→                          {a.image === 'practice' && <Zap className="w-8 h-8 text-white" />}
+   695→                        </div>
+   696→                        <div className="flex-1 min-w-0">
+   697→                          <p className="text-white font-bold text-base leading-tight">{a.title}</p>
+   698→                          <p className="text-white/80 text-xs mt-1">{a.subtitle}</p>
+   699→                          <div className="flex items-center gap-1 mt-2">
+   700→                            <span className="text-white/50 text-[10px]">Tap to explore</span>
+   701→                            <ChevronRight className="w-3 h-3 text-white/50" />
+   702→                          </div>
+   703→                        </div>
+   704→                      </div>
+   705→                    </div>
+   706→                  </div>
+   707→                </button>
+   708→              ))}
+   709→            </div>
+   710→
+   711→            {/* Dots Indicator */}
+   712→            <div className="flex items-center justify-center gap-1.5 mt-1">
+   713→              {announcements.map((_, i) => (
+   714→                <button
+   715→                  key={i}
+   716→                  onClick={() => {
+   717→                    setActiveAnnouncement(i)
+   718→                    if (carouselRef.current) {
+   719→                      const cardWidth = carouselRef.current.children[0]?.getBoundingClientRect().width || 250
+   720→                      const gap = 12
+   721→                      carouselRef.current.scrollTo({ left: i * (cardWidth + gap), behavior: 'smooth' })
+   722→                    }
+   723→                  }}
+   724→                  className={`h-1.5 rounded-full transition-all duration-300 ${
+   725→                    i === activeAnnouncement ? 'w-4 bg-orange-500' : 'w-1.5 bg-gray-300'
+   726→                  }`}
+   727→                />
+   728→              ))}
+   729→            </div>
+   730→          </div>
+   731→        </div>
+   732→
+   733→        <div className="px-4 mt-4 space-y-6">
+   734→          {/* Quick Practice Card */}
+   735→          <Card className="border-0 shadow-md">
+   736→            <CardContent className="p-4">
+   737→              <div className="flex items-center gap-3">
+   738→                <div className="w-10 h-10 rounded-xl bg-gradient-to-r from-orange-500 to-red-500 flex items-center justify-center">
+   739→                  <Zap className="w-5 h-5 text-white" />
+   740→                </div>
+   741→                <div className="flex-1">
+   742→                  <p className="font-semibold text-sm">Quick Practice</p>
+   743→                  <p className="text-gray-500 text-xs">Jump into a random test</p>
+   744→                </div>
+   745→                <Button
+   746→                  size="sm"
+   747→                  className="bg-gradient-to-r from-orange-500 to-red-500 text-white rounded-xl"
+   748→                  onClick={() => {
+   749→                    const allCats = categories
+   750→                    const allExams = allCats.flatMap(c => c.exams)
+   751→                    if (allExams.length > 0) {
+   752→                      const randomExam = allExams[Math.floor(Math.random() * allExams.length)]
+   753→                      const randomCat = allCats.find(c => c.exams.some(e => e.id === randomExam.id))!
+   754→                      openExam(randomExam, randomCat)
+   755→                    }
+   756→                  }}
+   757→                >
+   758→                  <Play className="w-4 h-4 mr-1" /> Start
+   759→                </Button>
+   760→              </div>
+   761→            </CardContent>
+   762→          </Card>
+   763→
+   764→          {/* Exam Categories */}
+   765→          <div>
+   766→            <div className="flex items-center justify-between mb-3">
+   767→              <h2 className="font-bold text-lg">Exam Categories</h2>
+   768→              <button onClick={() => handleBottomNav('exams')} className="text-orange-600 text-sm font-medium flex items-center">
+   769→                View All <ChevronRight className="w-4 h-4" />
+   770→              </button>
+   771→            </div>
+   772→            <div className="grid grid-cols-2 gap-3">
+   773→              {categories.map(cat => {
+   774→                const color = getCatColor(cat.slug)
+   775→                return (
+   776→                  <Card
+   777→                    key={cat.id}
+   778→                    className="border-0 shadow-sm cursor-pointer hover:shadow-md transition-shadow"
+   779→                    onClick={() => {
+   780→                      setSelectedCategory(cat)
+   781→                      handleBottomNav('exams')
+   782→                    }}
+   783→                  >
+   784→                    <CardContent className="p-4">
+   785→                      <div className={`w-10 h-10 rounded-xl ${color.light} flex items-center justify-center ${color.text} mb-2`}>
+   786→                        {getCatIcon(cat.slug)}
+   787→                      </div>
+   788→                      <p className="font-semibold text-sm">{cat.name}</p>
+   789→                      <p className="text-gray-400 text-xs mt-1">{cat.exams.length} exams</p>
+   790→                    </CardContent>
+   791→                  </Card>
+   792→                )
+   793→              })}
+   794→            </div>
+   795→          </div>
+   796→
+   797→          {/* Popular Exams */}
+   798→          <div>
+   799→            <h2 className="font-bold text-lg mb-3">Popular Exams</h2>
+   800→            <div className="space-y-2">
+   801→              {categories.slice(0, 3).flatMap(cat =>
+   802→                cat.exams.slice(0, 2).map(exam => (
+   803→                  <Card
+   804→                    key={exam.id}
+   805→                    className="border-0 shadow-sm cursor-pointer hover:shadow-md transition-shadow"
+   806→                    onClick={() => openExam(exam, cat)}
+   807→                  >
+   808→                    <CardContent className="p-3 flex items-center gap-3">
+   809→                      <div className={`w-10 h-10 rounded-xl ${getCatColor(cat.slug).light} flex items-center justify-center ${getCatColor(cat.slug).text}`}>
+   810→                        {getCatIcon(cat.slug)}
+   811→                      </div>
+   812→                      <div className="flex-1 min-w-0">
+   813→                        <p className="font-semibold text-sm truncate">{exam.name}</p>
+   814→                        <p className="text-gray-400 text-xs">{exam.testCount} tests · {exam.totalQuestions} Qs</p>
+   815→                      </div>
+   816→                      <ChevronRight className="w-4 h-4 text-gray-400" />
+   817→                    </CardContent>
+   818→                  </Card>
+   819→                ))
+   820→              )}
+   821→            </div>
+   822→          </div>
+   823→
+   824→          {/* Daily Tips Section */}
+   825→          <div>
+   826→            <div className="flex items-center gap-2 mb-3">
+   827→              <Star className="w-5 h-5 text-amber-500" />
+   828→              <h2 className="font-bold text-lg">Daily Tips</h2>
+   829→            </div>
+   830→            <Card className="border-0 shadow-sm border-l-4 border-l-orange-400">
+   831→              <CardContent className="p-4">
+   832→                <p className="text-sm text-gray-700 leading-relaxed">💡 <strong>Pro Tip:</strong> Solve at least 50 questions daily from different topics. Consistency beats intensity in exam preparation!</p>
+   833→              </CardContent>
+   834→            </Card>
+   835→          </div>
+   836→
+   837→          {/* Upcoming Exams Section */}
+   838→          <div>
+   839→            <div className="flex items-center gap-2 mb-3">
+   840→              <Calendar className="w-5 h-5 text-blue-500" />
+   841→              <h2 className="font-bold text-lg">Upcoming Exams</h2>
+   842→            </div>
+   843→            <div className="space-y-2">
+   844→              {[
+   845→                { name: 'SSC CGL 2025 Tier-I', date: 'Jul 2025', status: 'Registration Open' },
+   846→                { name: 'IBPS PO 2025 Prelims', date: 'Aug 2025', status: 'Coming Soon' },
+   847→                { name: 'RRB NTPC CBT-2', date: 'Sep 2025', status: 'Admit Card Soon' },
+   848→              ].map((exam, i) => (
+   849→                <Card key={i} className="border-0 shadow-sm">
+   850→                  <CardContent className="p-3 flex items-center gap-3">
+   851→                    <div className="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center">
+   852→                      <Calendar className="w-5 h-5 text-blue-500" />
+   853→                    </div>
+   854→                    <div className="flex-1 min-w-0">
+   855→                      <p className="font-semibold text-sm truncate">{exam.name}</p>
+   856→                      <p className="text-gray-400 text-xs">{exam.date}</p>
+   857→                    </div>
+   858→                    <Badge variant={exam.status === 'Registration Open' ? 'default' : 'secondary'} className={`text-[10px] ${
+   859→                      exam.status === 'Registration Open' ? 'bg-green-100 text-green-700' :
+   860→                      exam.status === 'Admit Card Soon' ? 'bg-amber-100 text-amber-700' :
+   861→                      'bg-gray-100 text-gray-600'
+   862→                    }`}>
+   863→                      {exam.status}
+   864→                    </Badge>
+   865→                  </CardContent>
+   866→                </Card>
+   867→              ))}
+   868→            </div>
+   869→          </div>
+   870→
+   871→          {/* Study Stats / Motivation */}
+   872→          <div>
+   873→            <div className="flex items-center gap-2 mb-3">
+   874→              <TrendingUp className="w-5 h-5 text-green-500" />
+   875→              <h2 className="font-bold text-lg">Your Progress</h2>
+   876→            </div>
+   877→            {auth.isLoggedIn ? (
+   878→              <div className="grid grid-cols-3 gap-2">
+   879→                <Card className="border-0 shadow-sm">
+   880→                  <CardContent className="p-3 text-center">
+   881→                    <Flame className="w-6 h-6 text-orange-500 mx-auto mb-1" />
+   882→                    <p className="font-bold text-lg">{stats.testsTaken}</p>
+   883→                    <p className="text-gray-400 text-[10px]">Tests Done</p>
+   884→                  </CardContent>
+   885→                </Card>
+   886→                <Card className="border-0 shadow-sm">
+   887→                  <CardContent className="p-3 text-center">
+   888→                    <Target className="w-6 h-6 text-green-500 mx-auto mb-1" />
+   889→                    <p className="font-bold text-lg">{stats.avgScore}%</p>
+   890→                    <p className="text-gray-400 text-[10px]">Accuracy</p>
+   891→                  </CardContent>
+   892→                </Card>
+   893→                <Card className="border-0 shadow-sm">
+   894→                  <CardContent className="p-3 text-center">
+   895→                    <Award className="w-6 h-6 text-blue-500 mx-auto mb-1" />
+   896→                    <p className="font-bold text-lg">#{stats.bestRank}</p>
+   897→                    <p className="text-gray-400 text-[10px]">Best Rank</p>
+   898→                  </CardContent>
+   899→                </Card>
+   900→              </div>
+   901→            ) : (
+   902→              <Card className="border-0 shadow-sm bg-gradient-to-r from-orange-50 to-red-50">
+   903→                <CardContent className="p-4 text-center">
+   904→                  <TrendingUp className="w-8 h-8 text-orange-400 mx-auto mb-2" />
+   905→                  <p className="font-semibold text-sm text-gray-700">Login to track your progress</p>
+   906→                  <p className="text-gray-500 text-xs mt-1 mb-3">See your scores, ranks and improvement over time</p>
+   907→                  <Button size="sm" className="bg-gradient-to-r from-orange-500 to-red-500 text-white rounded-xl" onClick={() => setShowLoginModal(true)}>
+   908→                    Login Now
+   909→                  </Button>
+   910→                </CardContent>
+   911→              </Card>
+   912→            )}
+   913→          </div>
+   914→        </div>
+   915→      </div>
+   916→    )
+   917→  }
+   918→
+   919→  // ===== RENDER: Exams Page =====
+   920→  function renderExams() {
+   921→    return (
+   922→      <div className="pb-20">
+   923→        <div className="bg-gradient-to-r from-orange-500 to-red-500 px-4 pt-[calc(env(safe-area-inset-top,0px)+3rem)] pb-6 rounded-b-3xl">
+   924→          <div className="flex items-center gap-3 mb-4">
+   925→            <button onClick={goBack} className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center">
+   926→              <ArrowLeft className="w-5 h-5 text-white" />
+   927→            </button>
+   928→            <h1 className="text-white text-xl font-bold">All Exams</h1>
+   929→          </div>
+   930→        </div>
+   931→
+   932→        <div className="px-4 mt-4 space-y-6">
+   933→          {categories.map(cat => {
+   934→            const color = getCatColor(cat.slug)
+   935→            return (
+   936→              <div key={cat.id}>
+   937→                <div className="flex items-center gap-2 mb-3">
+   938→                  <div className={`w-8 h-8 rounded-lg ${color.light} flex items-center justify-center ${color.text}`}>
+   939→                    {getCatIcon(cat.slug)}
+   940→                  </div>
+   941→                  <h2 className="font-bold text-base">{cat.name}</h2>
+   942→                  <Badge variant="secondary" className="text-xs">{cat.exams.length}</Badge>
+   943→                </div>
+   944→                <div className="space-y-2">
+   945→                  {cat.exams.map(exam => (
+   946→                    <Card
+   947→                      key={exam.id}
+   948→                      className="border-0 shadow-sm cursor-pointer hover:shadow-md transition-shadow"
+   949→                      onClick={() => openExam(exam, cat)}
+   950→                    >
+   951→                      <CardContent className="p-3 flex items-center gap-3">
+   952→                        <div className="flex-1 min-w-0">
+   953→                          <p className="font-semibold text-sm">{exam.name}</p>
+   954→                          <p className="text-gray-400 text-xs">{exam.testCount} tests · {exam.totalQuestions} Qs · {exam.duration} min</p>
+   955→                        </div>
+   956→                        <div className="flex items-center gap-1">
+   957→                          <Badge className={`bg-gradient-to-r ${color.gradient} text-white text-xs border-0`}>
+   958→                            {exam.testCount} Tests
+   959→                          </Badge>
+   960→                          <ChevronRight className="w-4 h-4 text-gray-400" />
+   961→                        </div>
+   962→                      </CardContent>
+   963→                    </Card>
+   964→                  ))}
+   965→                </div>
+   966→              </div>
+   967→            )
+   968→          })}
+   969→        </div>
+   970→      </div>
+   971→    )
+   972→  }
+   973→
+   974→  // ===== RENDER: Tests Page =====
+   975→  function renderTests() {
+   976→    if (!selectedExam || !selectedCategory) return null
+   977→    const color = getCatColor(selectedCategory.slug)
+   978→    return (
+   979→      <div className="pb-20">
+   980→        <div className={`bg-gradient-to-r ${color.gradient} px-4 pt-[calc(env(safe-area-inset-top,0px)+3rem)] pb-6 rounded-b-3xl`}>
+   981→          <div className="flex items-center gap-3 mb-2">
+   982→            <button onClick={goBack} className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center">
+   983→              <ArrowLeft className="w-5 h-5 text-white" />
+   984→            </button>
+   985→            <div className="flex-1 min-w-0">
+   986→              <h1 className="text-white text-lg font-bold truncate">{selectedExam.name}</h1>
+   987→              <p className="text-white/70 text-xs">{selectedCategory.name}</p>
+   988→            </div>
+   989→          </div>
+   990→          <div className="flex items-center gap-4 mt-3">
+   991→            <div className="flex items-center gap-1 text-white/80 text-xs">
+   992→              <BookOpen className="w-3 h-3" /> {selectedExam.totalQuestions} Qs
+   993→            </div>
+   994→            <div className="flex items-center gap-1 text-white/80 text-xs">
+   995→              <Clock className="w-3 h-3" /> {selectedExam.duration} min
+   996→            </div>
+   997→            <div className="flex items-center gap-1 text-white/80 text-xs">
+   998→              <FileText className="w-3 h-3" /> {examTests.length} tests
+   999→            </div>
+  1000→          </div>
+  1001→        </div>
+  1002→
+  1003→        <div className="px-4 mt-4">
+  1004→          <h2 className="font-bold text-base mb-3">Available Tests</h2>
+  1005→          <div className="space-y-3">
+  1006→            {examTests.map(test => (
+  1007→              <Card key={test.id} className="border-0 shadow-sm">
+  1008→                <CardContent className="p-4">
+  1009→                  <div className="flex items-start justify-between mb-2">
+  1010→                    <div className="flex-1 min-w-0 mr-2">
+  1011→                      <p className="font-semibold text-sm">{test.title}</p>
+  1012→                      <p className="text-gray-400 text-xs mt-1">{test.description}</p>
+  1013→                    </div>
+  1014→                    {test.isFree && <Badge className="bg-emerald-100 text-emerald-700 text-xs border-0">FREE</Badge>}
+  1015→                  </div>
+  1016→                  <div className="flex items-center gap-3 mt-3 text-xs text-gray-500">
+  1017→                    <span className="flex items-center gap-1"><BookOpen className="w-3 h-3" /> {test.totalQuestions} Qs</span>
+  1018→                    <span className="flex items-center gap-1"><Clock className="w-3 h-3" /> {test.duration} min</span>
+  1019→                    <span className="flex items-center gap-1"><Target className="w-3 h-3" /> {test.difficulty}</span>
+  1020→                  </div>
+  1021→                  <div className="flex items-center gap-2 mt-3">
+  1022→                    <Button
+  1023→                      size="sm"
+  1024→                      className={`bg-gradient-to-r ${color.gradient} text-white rounded-xl flex-1`}
+  1025→                      onClick={() => openTestInfo(test)}
+  1026→                    >
+  1027→                      <Play className="w-4 h-4 mr-1" /> Start Test
+  1028→                    </Button>
+  1029→                    <Button
+  1030→                      size="sm"
+  1031→                      variant="outline"
+  1032→                      className="rounded-xl"
+  1033→                      onClick={() => openLeaderboard(test.id)}
+  1034→                    >
+  1035→                      <Trophy className="w-4 h-4" />
+  1036→                    </Button>
+  1037→                  </div>
+  1038→                </CardContent>
+  1039→              </Card>
+  1040→            ))}
+  1041→          </div>
+  1042→        </div>
+  1043→      </div>
+  1044→    )
+  1045→  }
+  1046→
+  1047→  // ===== RENDER: Test Info Page =====
+  1048→  function renderTestInfo() {
+  1049→    if (!selectedTest) return null
+  1050→    const cat = selectedCategory || categories[0]
+  1051→    const color = getCatColor(cat.slug)
+  1052→
+  1053→    return (
+  1054→      <div className="pb-24">
+  1055→        <div className={`bg-gradient-to-r ${color.gradient} px-4 pt-[calc(env(safe-area-inset-top,0px)+3rem)] pb-6 rounded-b-3xl`}>
+  1056→          <div className="flex items-center gap-3 mb-3">
+  1057→            <button onClick={goBack} className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center">
+  1058→              <ArrowLeft className="w-5 h-5 text-white" />
+  1059→            </button>
+  1060→            <h1 className="text-white text-lg font-bold flex-1 truncate">Test Details</h1>
+  1061→          </div>
+  1062→          <h2 className="text-white font-semibold">{selectedTest.title}</h2>
+  1063→          <p className="text-white/70 text-sm mt-1">{selectedTest.exam.name}</p>
+  1064→        </div>
+  1065→
+  1066→        <div className="px-4 mt-4 space-y-4">
+  1067→          {/* Marking Scheme */}
+  1068→          <Card className="border-0 shadow-sm">
+  1069→            <CardHeader className="pb-2 pt-4 px-4">
+  1070→              <CardTitle className="text-base">Test Information</CardTitle>
+  1071→            </CardHeader>
+  1072→            <CardContent className="px-4 pb-4 space-y-3">
+  1073→              <div className="flex justify-between text-sm">
+  1074→                <span className="text-gray-500">Total Questions</span>
+  1075→                <span className="font-semibold">{selectedTest.totalQuestions}</span>
+  1076→              </div>
+  1077→              <div className="flex justify-between text-sm">
+  1078→                <span className="text-gray-500">Duration</span>
+  1079→                <span className="font-semibold">{selectedTest.duration} minutes</span>
+  1080→              </div>
+  1081→              <div className="flex justify-between text-sm">
+  1082→                <span className="text-gray-500">Difficulty</span>
+  1083→                <Badge variant="secondary">{selectedTest.difficulty}</Badge>
+  1084→              </div>
+  1085→              <Separator />
+  1086→              <div className="flex justify-between text-sm">
+  1087→                <span className="text-gray-500">Correct Answer</span>
+  1088→                <span className="font-semibold text-emerald-600">+{selectedTest.markingCorrect} marks</span>
+  1089→              </div>
+  1090→              <div className="flex justify-between text-sm">
+  1091→                <span className="text-gray-500">Wrong Answer</span>
+  1092→                <span className="font-semibold text-red-600">{selectedTest.markingWrong} marks</span>
+  1093→              </div>
+  1094→              <div className="flex justify-between text-sm">
+  1095→                <span className="text-gray-500">Skipped</span>
+  1096→                <span className="font-semibold text-gray-400">{selectedTest.markingSkipped} marks</span>
+  1097→              </div>
+  1098→            </CardContent>
+  1099→          </Card>
+  1100→
+  1101→          {/* Max Score */}
+  1102→          <Card className="border-0 shadow-sm">
+  1103→            <CardContent className="p-4 flex items-center gap-3">
+  1104→              <div className="w-10 h-10 rounded-xl bg-orange-50 flex items-center justify-center">
+  1105→                <Award className="w-5 h-5 text-orange-600" />
+  1106→              </div>
+  1107→              <div>
+  1108→                <p className="text-xs text-gray-500">Maximum Score</p>
+  1109→                <p className="font-bold text-lg">{selectedTest.totalQuestions * selectedTest.markingCorrect} marks</p>
+  1110→              </div>
+  1111→            </CardContent>
+  1112→          </Card>
+  1113→
+  1114→          {/* Start Button */}
+  1115→          <Button
+  1116→            className="w-full h-12 bg-gradient-to-r from-orange-500 to-red-500 text-white rounded-2xl text-base font-semibold"
+  1117→            onClick={() => startTest(selectedTest)}
+  1118→          >
+  1119→            <Play className="w-5 h-5 mr-2" /> Start Test Now
+  1120→          </Button>
+  1121→        </div>
+  1122→      </div>
+  1123→    )
+  1124→  }
+  1125→
+  1126→  // ===== RENDER: Test Taking =====
+  1127→  function renderTestTaking() {
+  1128→    if (!selectedTest) return null
+  1129→    const questions = selectedTest.questions
+  1130→    const question = questions[currentQuestionIndex]
+  1131→    if (!question) return null
+  1132→
+  1133→    const totalAnswered = Object.keys(answers).length
+  1134→    const totalMarked = markedForReview.size
+  1135→    const progressPercent = (totalAnswered / questions.length) * 100
+  1136→
+  1137→    const optionLabels: Record<string, string> = { A: question.optionA, B: question.optionB, C: question.optionC, D: question.optionD }
+  1138→    const optionLetters = ['A', 'B', 'C', 'D']
+  1139→
+  1140→    return (
+  1141→      <div className="min-h-screen min-h-dvh bg-gray-50 flex flex-col">
+  1142→        {/* Test Header */}
+  1143→        <div className="bg-white border-b px-4 pt-[calc(env(safe-area-inset-top,0px)+0.75rem)] pb-3">
+  1144→          <div className="flex items-center justify-between">
+  1145→            <button
+  1146→              onClick={() => setShowBackConfirm(true)}
+  1147→              className="w-8 h-8 rounded-full hover:bg-gray-100 flex items-center justify-center"
+  1148→            >
+  1149→              <ArrowLeft className="w-5 h-5" />
+  1150→            </button>
+  1151→            <div className="flex items-center gap-1 text-orange-600 font-bold">
+  1152→              <Timer className="w-4 h-4" />
+  1153→              <span className={timeLeft < 60 ? 'text-red-600' : ''}>{formatTime(timeLeft)}</span>
+  1154→            </div>
+  1155→            <button
+  1156→              onClick={() => setShowQuestionNav(true)}
+  1157→              className="w-8 h-8 rounded-full hover:bg-gray-100 flex items-center justify-center"
+  1158→            >
+  1159→              <BookMarked className="w-5 h-5" />
+  1160→            </button>
+  1161→          </div>
+  1162→          <Progress value={progressPercent} className="mt-2 h-1.5" />
+  1163→          <div className="flex items-center justify-between mt-2 text-xs text-gray-400">
+  1164→            <span>Q {currentQuestionIndex + 1} of {questions.length}</span>
+  1165→            <span>{totalAnswered} answered · {totalMarked} marked</span>
+  1166→          </div>
+  1167→        </div>
+  1168→
+  1169→        {/* Question */}
+  1170→        <ScrollArea className="flex-1">
+  1171→          <div className="p-4">
+  1172→            <div className="bg-white rounded-2xl p-4 shadow-sm">
+  1173→              {question.subject && (
+  1174→                <Badge variant="secondary" className="mb-3 text-xs">{question.subject}</Badge>
+  1175→              )}
+  1176→              {markedForReview.has(question.id) && (
+  1177→                <Badge className="mb-3 ml-2 bg-amber-100 text-amber-700 text-xs border-0">
+  1178→                  <BookMarked className="w-3 h-3 mr-1" /> Marked for Review
+  1179→                </Badge>
+  1180→              )}
+  1181→              <p className="text-sm font-medium leading-relaxed mt-2">{question.questionText}</p>
+  1182→            </div>
+  1183→
+  1184→            {/* Options */}
+  1185→            <div className="space-y-3 mt-4">
+  1186→              {optionLetters.map(letter => {
+  1187→                const isSelected = answers[question.id] === letter
+  1188→                return (
+  1189→                  <button
+  1190→                    key={letter}
+  1191→                    onClick={() => selectAnswer(question.id, letter)}
+  1192→                    className={`w-full text-left p-4 rounded-xl border-2 transition-all ${
+  1193→                      isSelected
+  1194→                        ? 'border-orange-500 bg-orange-50'
+  1195→                        : 'border-gray-200 bg-white hover:border-gray-300'
+  1196→                    }`}
+  1197→                  >
+  1198→                    <div className="flex items-start gap-3">
+  1199→                      <span className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 ${
+  1200→                        isSelected ? 'bg-orange-500 text-white' : 'bg-gray-100 text-gray-600'
+  1201→                      }`}>
+  1202→                        {letter}
+  1203→                      </span>
+  1204→                      <span className="text-sm pt-0.5">{optionLabels[letter]}</span>
+  1205→                    </div>
+  1206→                  </button>
+  1207→                )
+  1208→              })}
+  1209→            </div>
+  1210→          </div>
+  1211→        </ScrollArea>
+  1212→
+  1213→        {/* Bottom Actions */}
+  1214→        <div className="bg-white border-t px-4 py-3 space-y-2">
+  1215→          <div className="flex items-center gap-2">
+  1216→            <Button
+  1217→              variant="outline"
+  1218→              size="sm"
+  1219→              className="rounded-xl flex-1"
+  1220→              onClick={() => toggleReview(question.id)}
+  1221→            >
+  1222→              <BookMarked className="w-4 h-4 mr-1" />
+  1223→              {markedForReview.has(question.id) ? 'Unmark' : 'Mark'}
+  1224→            </Button>
+  1225→            <Button
+  1226→              variant="outline"
+  1227→              size="sm"
+  1228→              className="rounded-xl flex-1"
+  1229→              onClick={() => clearAnswer(question.id)}
+  1230→            >
+  1231→              <RefreshCw className="w-4 h-4 mr-1" /> Clear
+  1232→            </Button>
+  1233→            <Button
+  1234→              variant="outline"
+  1235→              size="sm"
+  1236→              className="rounded-xl flex-1"
+  1237→              onClick={() => {
+  1238→                if (currentQuestionIndex < questions.length - 1) {
+  1239→                  setCurrentQuestionIndex(prev => prev + 1)
+  1240→                }
+  1241→              }}
+  1242→            >
+  1243→              <SkipForward className="w-4 h-4 mr-1" /> Skip
+  1244→            </Button>
+  1245→          </div>
+  1246→          <div className="flex items-center gap-2">
+  1247→            <Button
+  1248→              variant="outline"
+  1249→              size="sm"
+  1250→              className="rounded-xl"
+  1251→              disabled={currentQuestionIndex === 0}
+  1252→              onClick={() => setCurrentQuestionIndex(prev => prev - 1)}
+  1253→            >
+  1254→              <ChevronLeft className="w-4 h-4" />
+  1255→            </Button>
+  1256→            <Button
+  1257→              className="rounded-xl flex-1 bg-gradient-to-r from-orange-500 to-red-500 text-white"
+  1258→              onClick={handleFinishTest}
+  1259→            >
+  1260→              Submit Test
+  1261→            </Button>
+  1262→            <Button
+  1263→              variant="outline"
+  1264→              size="sm"
+  1265→              className="rounded-xl"
+  1266→              disabled={currentQuestionIndex === questions.length - 1}
+  1267→              onClick={() => setCurrentQuestionIndex(prev => prev + 1)}
+  1268→            >
+  1269→              <ChevronRight className="w-4 h-4" />
+  1270→            </Button>
+  1271→          </div>
+  1272→        </div>
+  1273→
+  1274→        {/* Question Navigation Panel */}
+  1275→        {showQuestionNav && (
+  1276→          <div className="fixed inset-0 bg-black/50 z-50 flex items-end justify-center" onClick={() => setShowQuestionNav(false)}>
+  1277→            <div className="bg-white rounded-t-3xl w-full max-h-[70vh] p-6" onClick={e => e.stopPropagation()}>
+  1278→              <div className="flex items-center justify-between mb-4">
+  1279→                <h3 className="font-bold text-lg">Question Navigator</h3>
+  1280→                <button onClick={() => setShowQuestionNav(false)} className="text-gray-400 text-2xl">&times;</button>
+  1281→              </div>
+  1282→              <div className="flex items-center gap-4 mb-4 text-xs">
+  1283→                <span className="flex items-center gap-1"><span className="w-3 h-3 rounded-full bg-orange-500" /> Answered</span>
+  1284→                <span className="flex items-center gap-1"><span className="w-3 h-3 rounded-full bg-gray-200" /> Unanswered</span>
+  1285→                <span className="flex items-center gap-1"><span className="w-3 h-3 rounded-full bg-amber-400" /> Marked</span>
+  1286→              </div>
+  1287→              <div className="grid grid-cols-5 gap-2 max-h-60 overflow-y-auto">
+  1288→                {questions.map((q, i) => {
+  1289→                  const isAnswered = !!answers[q.id]
+  1290→                  const isMarked = markedForReview.has(q.id)
+  1291→                  const isCurrent = i === currentQuestionIndex
+  1292→                  let bgClass = 'bg-gray-200 text-gray-600'
+  1293→                  if (isCurrent) bgClass = 'ring-2 ring-orange-500 bg-white'
+  1294→                  if (isAnswered) bgClass = 'bg-orange-500 text-white'
+  1295→                  if (isMarked && !isAnswered) bgClass = 'bg-amber-400 text-white'
+  1296→                  if (isMarked && isAnswered) bgClass = 'bg-orange-500 text-white ring-2 ring-amber-400'
+  1297→
+  1298→                  return (
+  1299→                    <button
+  1300→                      key={q.id}
+  1301→                      onClick={() => { setCurrentQuestionIndex(i); setShowQuestionNav(false) }}
+  1302→                      className={`w-full aspect-square rounded-xl flex items-center justify-center font-bold text-sm ${bgClass}`}
+  1303→                    >
+  1304→                      {i + 1}
+  1305→                    </button>
+  1306→                  )
+  1307→                })}
+  1308→              </div>
+  1309→              <Button
+  1310→                className="w-full mt-4 bg-gradient-to-r from-orange-500 to-red-500 text-white rounded-xl"
+  1311→                onClick={handleFinishTest}
+  1312→              >
+  1313→                Submit Test
+  1314→              </Button>
+  1315→            </div>
+  1316→          </div>
+  1317→        )}
+  1318→
+  1319→        {/* Back Confirmation - Professional Dialog */}
+  1320→        {showBackConfirm && (
+  1321→          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-5">
+  1322→            <div className="bg-white rounded-3xl w-full max-w-sm shadow-2xl overflow-hidden animate-scale-in">
+  1323→              <div className="p-6 pb-4 text-center">
+  1324→                <div className="w-16 h-16 rounded-full bg-gradient-to-br from-red-100 to-red-50 flex items-center justify-center mx-auto mb-4">
+  1325→                  <AlertTriangle className="w-8 h-8 text-red-500" />
+  1326→                </div>
+  1327→                <h3 className="font-bold text-xl text-gray-900">Leave Test?</h3>
+  1328→                <p className="text-gray-500 text-sm mt-2 leading-relaxed">
+  1329→                  Your progress will be lost if you leave now. All answered questions will not be saved.
+  1330→                </p>
+  1331→              </div>
+  1332→              <div className="px-6 pb-6 space-y-2.5">
+  1333→                <Button
+  1334→                  className="w-full h-11 bg-gradient-to-r from-orange-500 to-red-500 text-white rounded-xl font-semibold text-sm"
+  1335→                  onClick={() => setShowBackConfirm(false)}
+  1336→                >
+  1337→                  No, Continue Test
+  1338→                </Button>
+  1339→                <Button
+  1340→                  variant="outline"
+  1341→                  className="w-full h-11 rounded-xl border-gray-200 text-gray-600 hover:bg-red-50 hover:text-red-600 hover:border-red-200 font-semibold text-sm"
+  1342→                  onClick={() => {
+  1343→                    setShowBackConfirm(false)
+  1344→                    if (timerRef.current) clearInterval(timerRef.current)
+  1345→                    setTestActive(false)
+  1346→                    goBack()
+  1347→                  }}
+  1348→                >
+  1349→                  Yes, Leave Test
+  1350→                </Button>
+  1351→              </div>
+  1352→            </div>
+  1353→          </div>
+  1354→        )}
+  1355→      </div>
+  1356→    )
+  1357→  }
+  1358→
+  1359→  // ===== RENDER: Results Page =====
+  1360→  function renderResults() {
+  1361→    if (!lastResult || !selectedTest) return null
+  1362→    const percentage = Math.round((lastResult.score / lastResult.maxScore) * 100)
+  1363→    const questions = selectedTest.questions
+  1364→
+  1365→    return (
+  1366→      <div className="pb-20">
+  1367→        <div className="bg-gradient-to-r from-orange-500 to-red-500 px-4 pt-[calc(env(safe-area-inset-top,0px)+3rem)] pb-8 rounded-b-3xl text-center">
+  1368→          <div className="w-20 h-20 rounded-full bg-white/20 flex items-center justify-center mx-auto mb-4">
+  1369→            {percentage >= 60 ? (
+  1370→              <Trophy className="w-10 h-10 text-yellow-300" />
+  1371→            ) : percentage >= 30 ? (
+  1372→              <Target className="w-10 h-10 text-white" />
+  1373→            ) : (
+  1374→              <BookOpen className="w-10 h-10 text-white" />
+  1375→            )}
+  1376→          </div>
+  1377→          <h1 className="text-white text-2xl font-bold">
+  1378→            {percentage >= 60 ? 'Great Job!' : percentage >= 30 ? 'Keep Practicing!' : 'Keep Going!'}
+  1379→          </h1>
+  1380→          <p className="text-white/70 text-sm mt-1">{selectedTest.title}</p>
+  1381→        </div>
+  1382→
+  1383→        <div className="px-4 -mt-4 space-y-4">
+  1384→          {/* Score Card */}
+  1385→          <Card className="border-0 shadow-md">
+  1386→            <CardContent className="p-6 text-center">
+  1387→              <div className="text-4xl font-bold text-orange-600">{lastResult.score}<span className="text-lg text-gray-400">/{lastResult.maxScore}</span></div>
+  1388→              <Progress value={Math.max(0, percentage)} className="mt-3 h-2" />
+  1389→              <p className="text-gray-500 text-sm mt-2">{percentage}% Score</p>
+  1390→            </CardContent>
+  1391→          </Card>
+  1392→
+  1393→          {/* Breakdown */}
+  1394→          <div className="grid grid-cols-3 gap-3">
+  1395→            <Card className="border-0 shadow-sm">
+  1396→              <CardContent className="p-3 text-center">
+  1397→                <CheckCircle2 className="w-6 h-6 text-emerald-500 mx-auto" />
+  1398→                <p className="font-bold text-lg text-emerald-600 mt-1">{lastResult.correctCount}</p>
+  1399→                <p className="text-gray-400 text-xs">Correct</p>
+  1400→              </CardContent>
+  1401→            </Card>
+  1402→            <Card className="border-0 shadow-sm">
+  1403→              <CardContent className="p-3 text-center">
+  1404→                <XCircle className="w-6 h-6 text-red-500 mx-auto" />
+  1405→                <p className="font-bold text-lg text-red-600 mt-1">{lastResult.wrongCount}</p>
+  1406→                <p className="text-gray-400 text-xs">Wrong</p>
+  1407→              </CardContent>
+  1408→            </Card>
+  1409→            <Card className="border-0 shadow-sm">
+  1410→              <CardContent className="p-3 text-center">
+  1411→                <SkipForward className="w-6 h-6 text-gray-400 mx-auto" />
+  1412→                <p className="font-bold text-lg text-gray-500 mt-1">{lastResult.skippedCount}</p>
+  1413→                <p className="text-gray-400 text-xs">Skipped</p>
+  1414→              </CardContent>
+  1415→            </Card>
+  1416→          </div>
+  1417→
+  1418→          {/* Time Taken */}
+  1419→          <Card className="border-0 shadow-sm">
+  1420→            <CardContent className="p-3 flex items-center gap-3">
+  1421→              <Clock className="w-5 h-5 text-orange-500" />
+  1422→              <span className="text-gray-500 text-sm">Time Taken</span>
+  1423→              <span className="font-bold ml-auto">{formatTime(lastResult.timeTaken)}</span>
+  1424→            </CardContent>
+  1425→          </Card>
+  1426→
+  1427→          {/* Actions */}
+  1428→          <div className="flex gap-3">
+  1429→            <Button
+  1430→              variant="outline"
+  1431→              className="flex-1 rounded-xl"
+  1432→              onClick={() => openLeaderboard(lastResult.testId)}
+  1433→            >
+  1434→              <Trophy className="w-4 h-4 mr-2" /> Leaderboard
+  1435→            </Button>
+  1436→            <Button
+  1437→              className="flex-1 rounded-xl bg-gradient-to-r from-orange-500 to-red-500 text-white"
+  1438→              onClick={() => {
+  1439→                if (selectedTest) startTest(selectedTest)
+  1440→              }}
+  1441→            >
+  1442→              <RefreshCw className="w-4 h-4 mr-2" /> Retry
+  1443→            </Button>
+  1444→          </div>
+  1445→
+  1446→          {/* Answer Key */}
+  1447→          <div>
+  1448→            <h2 className="font-bold text-lg mb-3">Answer Key</h2>
+  1449→            <div className="space-y-3">
+  1450→              {questions.map((q, i) => {
+  1451→                const userAnswer = lastResult.answers[q.id]
+  1452→                const isCorrect = userAnswer === q.correctAnswer
+  1453→                const isSkipped = !userAnswer
+  1454→
+  1455→                return (
+  1456→                  <Card key={q.id} className="border-0 shadow-sm">
+  1457→                    <CardContent className="p-4">
+  1458→                      <div className="flex items-start gap-2 mb-2">
+  1459→                        <span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 ${
+  1460→                          isCorrect ? 'bg-emerald-100 text-emerald-700' :
+  1461→                          isSkipped ? 'bg-gray-100 text-gray-500' :
+  1462→                          'bg-red-100 text-red-700'
+  1463→                        }`}>
+  1464→                          {isCorrect ? <CheckCircle2 className="w-4 h-4" /> :
+  1465→                           isSkipped ? <SkipForward className="w-4 h-4" /> :
+  1466→                           <XCircle className="w-4 h-4" />}
+  1467→                        </span>
+  1468→                        <p className="text-sm font-medium">{i + 1}. {q.questionText}</p>
+  1469→                      </div>
+  1470→
+  1471→                      <div className="ml-8 space-y-1 text-xs">
+  1472→                        {['A', 'B', 'C', 'D'].map(letter => {
+  1473→                          const isUserAnswer = userAnswer === letter
+  1474→                          const isCorrectOption = q.correctAnswer === letter
+  1475→                          let optionClass = 'text-gray-500'
+  1476→                          if (isCorrectOption) optionClass = 'text-emerald-600 font-semibold'
+  1477→                          if (isUserAnswer && !isCorrect) optionClass = 'text-red-600 line-through'
+  1478→                          if (isUserAnswer && isCorrect) optionClass = 'text-emerald-600 font-semibold'
+  1479→
+  1480→                          const optionText = letter === 'A' ? q.optionA : letter === 'B' ? q.optionB : letter === 'C' ? q.optionC : q.optionD
+  1481→                          return (
+  1482→                            <p key={letter} className={optionClass}>
+  1483→                              {letter}. {optionText}
+  1484→                              {isUserAnswer && ' (Your Answer)'}
+  1485→                              {isCorrectOption && ' ✓'}
+  1486→                            </p>
+  1487→                          )
+  1488→                        })}
+  1489→                      </div>
+  1490→
+  1491→                      {q.explanation && (
+  1492→                        <div className="ml-8 mt-2 p-2 bg-blue-50 rounded-lg text-xs text-blue-700">
+  1493→                          💡 {q.explanation}
+  1494→                        </div>
+  1495→                      )}
+  1496→                    </CardContent>
+  1497→                  </Card>
+  1498→                )
+  1499→              })}
+  1500→            </div>
+  1501→          </div>
+  1502→
+  1503→          <Button
+  1504→            className="w-full rounded-xl bg-gradient-to-r from-orange-500 to-red-500 text-white"
+  1505→            onClick={() => { pageHistoryRef.current = []; setCurrentPage('home') }}
+  1506→          >
+  1507→            <Home className="w-4 h-4 mr-2" /> Back to Home
+  1508→          </Button>
+  1509→        </div>
+  1510→      </div>
+  1511→    )
+  1512→  }
+  1513→
+  1514→  // ===== RENDER: Leaderboard =====
+  1515→  function renderLeaderboard() {
+  1516→    return (
+  1517→      <div className="pb-20">
+  1518→        <div className="bg-gradient-to-r from-orange-500 to-red-500 px-4 pt-[calc(env(safe-area-inset-top,0px)+3rem)] pb-6 rounded-b-3xl">
+  1519→          <div className="flex items-center gap-3">
+  1520→            <button onClick={goBack} className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center">
+  1521→              <ArrowLeft className="w-5 h-5 text-white" />
+  1522→            </button>
+  1523→            <Trophy className="w-6 h-6 text-yellow-300" />
+  1524→            <h1 className="text-white text-xl font-bold">Leaderboard</h1>
+  1525→          </div>
+  1526→        </div>
+  1527→
+  1528→        <div className="px-4 mt-4">
+  1529→          {leaderboardData.length === 0 ? (
+  1530→            <Card className="border-0 shadow-sm">
+  1531→              <CardContent className="p-8 text-center">
+  1532→                <Trophy className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+  1533→                <p className="font-semibold text-gray-400">No results yet</p>
+  1534→                <p className="text-gray-400 text-sm mt-1">Be the first to take this test!</p>
+  1535→              </CardContent>
+  1536→            </Card>
+  1537→          ) : (
+  1538→            <div className="space-y-2">
+  1539→              {leaderboardData.map((result, index) => {
+  1540→                const percentage = Math.round((result.score / result.maxScore) * 100)
+  1541→                const medals = ['🥇', '🥈', '🥉']
+  1542→                return (
+  1543→                  <Card key={result.id} className={`border-0 shadow-sm ${index < 3 ? 'bg-gradient-to-r from-yellow-50 to-orange-50' : ''}`}>
+  1544→                    <CardContent className="p-3 flex items-center gap-3">
+  1545→                      <span className="w-8 text-center font-bold text-lg">
+  1546→                        {index < 3 ? medals[index] : `${index + 1}`}
+  1547→                      </span>
+  1548→                      <div className="flex-1 min-w-0">
+  1549→                        <p className="font-semibold text-sm truncate">{result.testName}</p>
+  1550→                        <p className="text-gray-400 text-xs">{formatTime(result.timeTaken)} · {result.createdAt ? new Date(result.createdAt).toLocaleDateString() : ''}</p>
+  1551→                      </div>
+  1552→                      <div className="text-right">
+  1553→                        <p className="font-bold text-orange-600">{result.score}/{result.maxScore}</p>
+  1554→                        <p className="text-gray-400 text-xs">{percentage}%</p>
+  1555→                      </div>
+  1556→                    </CardContent>
+  1557→                  </Card>
+  1558→                )
+  1559→              })}
+  1560→            </div>
+  1561→          )}
+  1562→        </div>
+  1563→      </div>
+  1564→    )
+  1565→  }
+  1566→
+  1567→  // ===== RENDER: Practice Page =====
+  1568→  function renderPractice() {
+  1569→    return (
+  1570→      <div className="pb-20">
+  1571→        <div className="bg-gradient-to-r from-orange-500 to-red-500 px-4 pt-[calc(env(safe-area-inset-top,0px)+3rem)] pb-6 rounded-b-3xl">
+  1572→          <div className="flex items-center gap-3 mb-2">
+  1573→            <button onClick={goBack} className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center">
+  1574→              <ArrowLeft className="w-5 h-5 text-white" />
+  1575→            </button>
+  1576→            <div>
+  1577→              <h1 className="text-white text-xl font-bold">Practice</h1>
+  1578→              <p className="text-orange-100 text-xs">Topic-wise practice sessions</p>
+  1579→            </div>
+  1580→          </div>
+  1581→        </div>
+  1582→
+  1583→        <div className="px-4 mt-4 space-y-4">
+  1584→          {/* Practice Mode Selection */}
+  1585→          <div>
+  1586→            <h2 className="font-bold text-lg mb-3">Choose Practice Mode</h2>
+  1587→            <div className="grid grid-cols-2 gap-3">
+  1588→              <Card className="border-0 shadow-sm cursor-pointer hover:shadow-md transition-shadow" onClick={() => {
+  1589→                const allCats = categories
+  1590→                const allExams = allCats.flatMap(c => c.exams)
+  1591→                if (allExams.length > 0) {
+  1592→                  const randomExam = allExams[Math.floor(Math.random() * allExams.length)]
+  1593→                  const randomCat = allCats.find(c => c.exams.some(e => e.id === randomExam.id))!
+  1594→                  openExam(randomExam, randomCat)
+  1595→                }
+  1596→              }}>
+  1597→                <CardContent className="p-4 text-center">
+  1598→                  <div className="w-12 h-12 rounded-2xl bg-orange-50 flex items-center justify-center mx-auto mb-2">
+  1599→                    <Zap className="w-6 h-6 text-orange-500" />
+  1600→                  </div>
+  1601→                  <p className="font-semibold text-sm">Quick Practice</p>
+  1602→                  <p className="text-gray-400 text-[11px] mt-1">Random questions</p>
+  1603→                </CardContent>
+  1604→              </Card>
+  1605→              <Card className="border-0 shadow-sm cursor-pointer hover:shadow-md transition-shadow">
+  1606→                <CardContent className="p-4 text-center">
+  1607→                  <div className="w-12 h-12 rounded-2xl bg-blue-50 flex items-center justify-center mx-auto mb-2">
+  1608→                    <Target className="w-6 h-6 text-blue-500" />
+  1609→                  </div>
+  1610→                  <p className="font-semibold text-sm">Topic Wise</p>
+  1611→                  <p className="text-gray-400 text-[11px] mt-1">Pick a subject</p>
+  1612→                </CardContent>
+  1613→              </Card>
+  1614→              <Card className="border-0 shadow-sm cursor-pointer hover:shadow-md transition-shadow">
+  1615→                <CardContent className="p-4 text-center">
+  1616→                  <div className="w-12 h-12 rounded-2xl bg-green-50 flex items-center justify-center mx-auto mb-2">
+  1617→                    <BookMarked className="w-6 h-6 text-green-500" />
+  1618→                  </div>
+  1619→                  <p className="font-semibold text-sm">Bookmarked</p>
+  1620→                  <p className="text-gray-400 text-[11px] mt-1">Saved questions</p>
+  1621→                </CardContent>
+  1622→              </Card>
+  1623→              <Card className="border-0 shadow-sm cursor-pointer hover:shadow-md transition-shadow">
+  1624→                <CardContent className="p-4 text-center">
+  1625→                  <div className="w-12 h-12 rounded-2xl bg-purple-50 flex items-center justify-center mx-auto mb-2">
+  1626→                    <PenTool className="w-6 h-6 text-purple-500" />
+  1627→                  </div>
+  1628→                  <p className="font-semibold text-sm">Weak Areas</p>
+  1629→                  <p className="text-gray-400 text-[11px] mt-1">Improve scores</p>
+  1630→                </CardContent>
+  1631→              </Card>
+  1632→            </div>
+  1633→          </div>
+  1634→
+  1635→          {/* Practice by Category */}
+  1636→          <div>
+  1637→            <h2 className="font-bold text-lg mb-3">Practice by Category</h2>
+  1638→            <div className="space-y-2">
+  1639→              {categories.map(cat => {
+  1640→                const color = getCatColor(cat.slug)
+  1641→                const totalQs = cat.exams.reduce((sum, e) => sum + e.totalQuestions, 0)
+  1642→                return (
+  1643→                  <Card
+  1644→                    key={cat.id}
+  1645→                    className="border-0 shadow-sm cursor-pointer hover:shadow-md transition-shadow"
+  1646→                    onClick={() => {
+  1647→                      setSelectedCategory(cat)
+  1648→                      handleBottomNav('exams')
+  1649→                    }}
+  1650→                  >
+  1651→                    <CardContent className="p-3 flex items-center gap-3">
+  1652→                      <div className={`w-10 h-10 rounded-xl ${color.light} flex items-center justify-center ${color.text}`}>
+  1653→                        {getCatIcon(cat.slug)}
+  1654→                      </div>
+  1655→                      <div className="flex-1 min-w-0">
+  1656→                        <p className="font-semibold text-sm">{cat.name}</p>
+  1657→                        <p className="text-gray-400 text-xs">{cat.exams.length} exams · {totalQs} questions</p>
+  1658→                      </div>
+  1659→                      <Button size="sm" variant="outline" className="rounded-xl text-orange-600 border-orange-200 text-xs">
+  1660→                        Start
+  1661→                      </Button>
+  1662→                    </CardContent>
+  1663→                  </Card>
+  1664→                )
+  1665→              })}
+  1666→            </div>
+  1667→          </div>
+  1668→
+  1669→          {/* Previous Practice Sessions */}
+  1670→          <div>
+  1671→            <h2 className="font-bold text-lg mb-3">Recent Practice</h2>
+  1672→            {auth.isLoggedIn ? (
+  1673→              <Card className="border-0 shadow-sm">
+  1674→                <CardContent className="p-4 text-center">
+  1675→                  <Clock className="w-8 h-8 text-gray-300 mx-auto mb-2" />
+  1676→                  <p className="text-gray-400 text-sm">Your practice history will appear here</p>
+  1677→                </CardContent>
+  1678→              </Card>
+  1679→            ) : (
+  1680→              <Card className="border-0 shadow-sm bg-gradient-to-r from-orange-50 to-red-50">
+  1681→                <CardContent className="p-4 text-center">
+  1682→                  <PenTool className="w-8 h-8 text-orange-400 mx-auto mb-2" />
+  1683→                  <p className="font-semibold text-sm text-gray-700">Login to save practice history</p>
+  1684→                  <Button size="sm" className="bg-gradient-to-r from-orange-500 to-red-500 text-white rounded-xl mt-2" onClick={() => setShowLoginModal(true)}>
+  1685→                    Login Now
+  1686→                  </Button>
+  1687→                </CardContent>
+  1688→              </Card>
+  1689→            )}
+  1690→          </div>
+  1691→        </div>
+  1692→      </div>
+  1693→    )
+  1694→  }
+  1695→
+  1696→  // ===== RENDER: Profile Page =====
+  1697→  function renderProfile() {
+  1698→    const stats = getUserStats()
+  1699→    const userDisplay = auth.getUserDisplay()
+  1700→    const userEmail = auth.getUserEmail()
+  1701→    const isEmailUser = !auth.isGuest && auth.isLoggedIn
+  1702→
+  1703→    return (
+  1704→      <div className="pb-20">
+  1705→        {/* Header with gradient */}
+  1706→        <div className="bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 px-5 pt-[calc(env(safe-area-inset-top,0px)+3rem)] pb-10 rounded-b-[28px] relative overflow-hidden">
+  1707→          {/* Decorative circles */}
+  1708→          <div className="absolute top-0 right-0 w-40 h-40 bg-orange-500/10 rounded-full -translate-y-1/2 translate-x-1/4" />
+  1709→          <div className="absolute bottom-0 left-0 w-32 h-32 bg-orange-500/10 rounded-full translate-y-1/2 -translate-x-1/4" />
+  1710→
+  1711→          {/* Top bar */}
+  1712→          <div className="flex items-center justify-between mb-6 relative z-10">
+  1713→            <h1 className="text-white text-xl font-bold">My Profile</h1>
+  1714→            <button
+  1715→              onClick={() => setShowAboutSheet(true)}
+  1716→              className="w-9 h-9 rounded-full bg-white/10 backdrop-blur flex items-center justify-center"
+  1717→            >
+  1718→              <Settings className="w-4 h-4 text-white/70" />
+  1719→            </button>
+  1720→          </div>
+  1721→
+  1722→          {/* Profile Card */}
+  1723→          <div className="bg-white/10 backdrop-blur-md rounded-2xl p-5 border border-white/10 relative z-10">
+  1724→            <div className="flex items-center gap-4">
+  1725→              <div className="relative">
+  1726→                <div className="w-16 h-16 rounded-full bg-gradient-to-br from-orange-400 to-red-500 flex items-center justify-center shadow-lg shadow-orange-500/20">
+  1727→                  <span className="text-white font-bold text-xl">{getAvatarDisplay()}</span>
+  1728→                </div>
+  1729→                {isEmailUser && (
+  1730→                  <div className="absolute -bottom-1 -right-1 w-6 h-6 rounded-full bg-emerald-500 flex items-center justify-center border-2 border-slate-900">
+  1731→                    <CheckCircle2 className="w-3 h-3 text-white" />
+  1732→                  </div>
+  1733→                )}
+  1734→              </div>
+  1735→              <div className="flex-1 min-w-0">
+  1736→                <p className="text-white font-bold text-lg truncate">
+  1737→                  {isEmailUser ? (userDisplay || userEmail) : 'Guest User'}
+  1738→                </p>
+  1739→                <div className="flex items-center gap-2 mt-1">
+  1740→                  {isEmailUser ? (
+  1741→                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 text-xs font-medium">
+  1742→                      <Shield className="w-3 h-3" /> Verified
+  1743→                    </span>
+  1744→                  ) : (
+  1745→                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-400 text-xs font-medium">
+  1746→                      <AlertTriangle className="w-3 h-3" /> Guest Mode
+  1747→                    </span>
+  1748→                  )}
+  1749→                </div>
+  1750→              </div>
+  1751→              {auth.isLoggedIn && !auth.isGuest && (
+  1752→                <button
+  1753→                  onClick={() => auth.logout()}
+  1754→                  className="w-9 h-9 rounded-full bg-white/10 flex items-center justify-center"
+  1755→                >
+  1756→                  <LogOut className="w-4 h-4 text-white/60" />
+  1757→                </button>
+  1758→              )}
+  1759→            </div>
+  1760→
+  1761→            {/* Stats Row */}
+  1762→            <div className="mt-5 pt-4 border-t border-white/10 grid grid-cols-3 gap-2">
+  1763→              <div className="text-center">
+  1764→                <p className="text-white font-bold text-xl">{stats.testsTaken}</p>
+  1765→                <p className="text-white/40 text-[10px] font-medium uppercase tracking-wider">Tests</p>
+  1766→              </div>
+  1767→              <div className="text-center border-x border-white/10">
+  1768→                <p className="text-white font-bold text-xl">{stats.avgScore}%</p>
+  1769→                <p className="text-white/40 text-[10px] font-medium uppercase tracking-wider">Avg Score</p>
+  1770→              </div>
+  1771→              <div className="text-center">
+  1772→                <p className="text-white font-bold text-xl">#{stats.bestRank}</p>
+  1773→                <p className="text-white/40 text-[10px] font-medium uppercase tracking-wider">Best Rank</p>
+  1774→              </div>
+  1775→            </div>
+  1776→          </div>
+  1777→        </div>
+  1778→
+  1779→        <div className="px-4 -mt-5 space-y-4 relative z-20">
+  1780→          {/* Guest Upgrade Banner */}
+  1781→          {auth.isGuest && (
+  1782→            <Card className="border-0 shadow-lg bg-gradient-to-r from-amber-500 to-orange-500 overflow-hidden">
+  1783→              <CardContent className="p-4">
+  1784→                <div className="flex items-center gap-3">
+  1785→                  <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center flex-shrink-0">
+  1786→                    <Crown className="w-5 h-5 text-white" />
+  1787→                  </div>
+  1788→                  <div className="flex-1 min-w-0">
+  1789→                    <p className="text-white font-bold text-sm">Upgrade to Phone Login</p>
+  1790→                    <p className="text-white/80 text-xs mt-0.5">Save progress & access from any device</p>
+  1791→                  </div>
+  1792→                  <Button
+  1793→                    size="sm"
+  1794→                    className="bg-white text-orange-600 hover:bg-white/90 rounded-xl font-bold px-3"
+  1795→                    onClick={() => setShowLoginModal(true)}
+  1796→                  >
+  1797→                    <Mail className="w-3 h-3 mr-1" /> Login
+  1798→                  </Button>
+  1799→                </div>
+  1800→              </CardContent>
+  1801→            </Card>
+  1802→          )}
+  1803→
+  1804→          {/* Not logged in - Login Card */}
+  1805→          {!auth.isLoggedIn && (
+  1806→            <Card className="border-0 shadow-lg overflow-hidden">
+  1807→              <CardContent className="p-5">
+  1808→                <div className="text-center mb-4">
+  1809→                  <div className="w-14 h-14 rounded-full bg-orange-50 flex items-center justify-center mx-auto mb-3">
+  1810→                    <User className="w-7 h-7 text-orange-500" />
+  1811→                  </div>
+  1812→                  <p className="font-bold text-base">Login to unlock all features</p>
+  1813→                  <p className="text-gray-400 text-xs mt-1">Track progress, compete & save data</p>
+  1814→                </div>
+  1815→                <Button
+  1816→                  className="w-full h-11 bg-gradient-to-r from-orange-500 to-red-500 text-white rounded-xl font-semibold"
+  1817→                  onClick={() => setShowLoginModal(true)}
+  1818→                >
+  1819→                  <Mail className="w-4 h-4 mr-2" /> Login with Email
+  1820→                </Button>
+  1821→              </CardContent>
+  1822→            </Card>
+  1823→          )}
+  1824→
+  1825→          {/* Quick Actions Grid */}
+  1826→          <div className="grid grid-cols-2 gap-3">
+  1827→            <Card
+  1828→              className="border-0 shadow-sm cursor-pointer hover:shadow-md transition-all active:scale-[0.98]"
+  1829→              onClick={() => { pageHistoryRef.current.push(currentPage); setCurrentPage('exams') }}
+  1830→            >
+  1831→              <CardContent className="p-4">
+  1832→                <div className="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center mb-2">
+  1833→                  <BookOpen className="w-5 h-5 text-blue-600" />
+  1834→                </div>
+  1835→                <p className="font-semibold text-sm">My Exams</p>
+  1836→                <p className="text-gray-400 text-[10px] mt-0.5">{categories.length} categories</p>
+  1837→              </CardContent>
+  1838→            </Card>
+  1839→            <Card
+  1840→              className="border-0 shadow-sm cursor-pointer hover:shadow-md transition-all active:scale-[0.98]"
+  1841→              onClick={() => { pageHistoryRef.current.push(currentPage); setCurrentPage('leaderboard') }}
+  1842→            >
+  1843→              <CardContent className="p-4">
+  1844→                <div className="w-10 h-10 rounded-xl bg-amber-50 flex items-center justify-center mb-2">
+  1845→                  <Trophy className="w-5 h-5 text-amber-600" />
+  1846→                </div>
+  1847→                <p className="font-semibold text-sm">Leaderboard</p>
+  1848→                <p className="text-gray-400 text-[10px] mt-0.5">View rankings</p>
+  1849→              </CardContent>
+  1850→            </Card>
+  1851→          </div>
+  1852→
+  1853→          {/* Settings Section */}
+  1854→          <div>
+  1855→            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider px-1 mb-2">Settings</p>
+  1856→            <Card className="border-0 shadow-sm overflow-hidden">
+  1857→              <CardContent className="p-0">
+  1858→                {/* Language */}
+  1859→                <button
+  1860→                  className="w-full flex items-center gap-3 p-4 hover:bg-gray-50/80 transition-colors active:bg-gray-100"
+  1861→                  onClick={() => setShowLanguageSheet(true)}
+  1862→                >
+  1863→                  <div className="w-9 h-9 rounded-xl bg-indigo-50 flex items-center justify-center">
+  1864→                    <BookOpen className="w-4 h-4 text-indigo-600" />
+  1865→                  </div>
+  1866→                  <div className="flex-1 text-left">
+  1867→                    <p className="font-semibold text-[13px]">Language</p>
+  1868→                    <p className="text-gray-400 text-[11px]">{selectedLanguage === 'en' ? 'English' : selectedLanguage === 'hi' ? 'हिन्दी (Hindi)' : 'বাংলা (Bangla)'}</p>
+  1869→                  </div>
+  1870→                  <ChevronRight className="w-4 h-4 text-gray-300" />
+  1871→                </button>
+  1872→                <div className="mx-4 border-t border-gray-100" />
+  1873→                {/* About */}
+  1874→                <button
+  1875→                  className="w-full flex items-center gap-3 p-4 hover:bg-gray-50/80 transition-colors active:bg-gray-100"
+  1876→                  onClick={() => setShowAboutSheet(true)}
+  1877→                >
+  1878→                  <div className="w-9 h-9 rounded-xl bg-purple-50 flex items-center justify-center">
+  1879→                    <Shield className="w-4 h-4 text-purple-600" />
+  1880→                  </div>
+  1881→                  <div className="flex-1 text-left">
+  1882→                    <p className="font-semibold text-[13px]">About</p>
+  1883→                    <p className="text-gray-400 text-[11px]">App info & details</p>
+  1884→                  </div>
+  1885→                  <ChevronRight className="w-4 h-4 text-gray-300" />
+  1886→                </button>
+  1887→              </CardContent>
+  1888→            </Card>
+  1889→          </div>
+  1890→
+  1891→          {/* Support Section */}
+  1892→          <div>
+  1893→            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider px-1 mb-2">Support</p>
+  1894→            <Card className="border-0 shadow-sm overflow-hidden">
+  1895→              <CardContent className="p-0">
+  1896→                <button
+  1897→                  className="w-full flex items-center gap-3 p-4 hover:bg-gray-50/80 transition-colors active:bg-gray-100"
+  1898→                  onClick={() => setShowAboutSheet(true)}
+  1899→                >
+  1900→                  <div className="w-9 h-9 rounded-xl bg-teal-50 flex items-center justify-center">
+  1901→                    <HelpCircle className="w-4 h-4 text-teal-600" />
+  1902→                  </div>
+  1903→                  <div className="flex-1 text-left">
+  1904→                    <p className="font-semibold text-[13px]">Help & FAQ</p>
+  1905→                    <p className="text-gray-400 text-[11px]">Get answers to common questions</p>
+  1906→                  </div>
+  1907→                  <ChevronRight className="w-4 h-4 text-gray-300" />
+  1908→                </button>
+  1909→                <div className="mx-4 border-t border-gray-100" />
+  1910→                <button
+  1911→                  className="w-full flex items-center gap-3 p-4 hover:bg-gray-50/80 transition-colors active:bg-gray-100"
+  1912→                  onClick={() => {
+  1913→                    if (navigator.share) {
+  1914→                      navigator.share({ title: 'ExamPrep Bharat', text: 'Prepare for government exams!', url: window.location.href })
+  1915→                    }
+  1916→                  }}
+  1917→                >
+  1918→                  <div className="w-9 h-9 rounded-xl bg-pink-50 flex items-center justify-center">
+  1919→                    <Share2 className="w-4 h-4 text-pink-600" />
+  1920→                  </div>
+  1921→                  <div className="flex-1 text-left">
+  1922→                    <p className="font-semibold text-[13px]">Share App</p>
+  1923→                    <p className="text-gray-400 text-[11px]">Tell your friends about us</p>
+  1924→                  </div>
+  1925→                  <ChevronRight className="w-4 h-4 text-gray-300" />
+  1926→                </button>
+  1927→              </CardContent>
+  1928→            </Card>
+  1929→          </div>
+  1930→
+  1931→          {/* Logout Button */}
+  1932→          {auth.isLoggedIn && !auth.isGuest && (
+  1933→            <Button
+  1934→              variant="outline"
+  1935→              className="w-full rounded-xl border-red-200 text-red-500 hover:bg-red-50 hover:text-red-600 h-11 font-semibold"
+  1936→              onClick={() => auth.logout()}
+  1937→            >
+  1938→              <LogOut className="w-4 h-4 mr-2" /> Logout
+  1939→            </Button>
+  1940→          )}
+  1941→
+  1942→          {/* App Version */}
+  1943→          <p className="text-center text-gray-300 text-[10px] pt-2 pb-4">ExamPrep Bharat v1.0</p>
+  1944→        </div>
+  1945→
+  1946→        {/* Language Sheet */}
+  1947→        {showLanguageSheet && (
+  1948→          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-end justify-center" onClick={() => setShowLanguageSheet(false)}>
+  1949→            <div className="bg-white rounded-t-[28px] w-full p-6 animate-slide-up" onClick={e => e.stopPropagation()}>
+  1950→              <div className="w-10 h-1 rounded-full bg-gray-200 mx-auto mb-5" />
+  1951→              <h3 className="font-bold text-lg mb-4">Select Language</h3>
+  1952→              <div className="space-y-1">
+  1953→                {[
+  1954→                  { code: 'en', name: 'English', flag: '🇬🇧', available: true },
+  1955→                  { code: 'hi', name: 'हिन्दी (Hindi)', flag: '🇮🇳', available: true },
+  1956→                  { code: 'bn', name: 'বাংলা (Bangla)', flag: '🇧🇩', available: true },
+  1957→                ].map(lang => (
+  1958→                  <button
+  1959→                    key={lang.code}
+  1960→                    className={`w-full flex items-center gap-3 p-4 rounded-xl transition-colors ${
+  1961→                      lang.available ? 'hover:bg-gray-50 active:bg-gray-100' : 'opacity-50'
+  1962→                    }`}
+  1963→                    onClick={() => {
+  1964→                      if (lang.available) {
+  1965→                        setSelectedLanguage(lang.code)
+  1966→                        setShowLanguageSheet(false)
+  1967→                      }
+  1968→                    }}
+  1969→                    onTouchEnd={(e) => {
+  1970→                      if (lang.available) {
+  1971→                        e.preventDefault()
+  1972→                        setSelectedLanguage(lang.code)
+  1973→                        setShowLanguageSheet(false)
+  1974→                      }
+  1975→                    }}
+  1976→                  >
+  1977→                    <span className="text-xl">{lang.flag}</span>
+  1978→                    <span className="font-medium text-sm flex-1">{lang.name}</span>
+  1979→                    {!lang.available && <Badge variant="secondary" className="text-[10px]">Coming Soon</Badge>}
+  1980→                    {selectedLanguage === lang.code && (
+  1981→                      <div className="w-6 h-6 rounded-full bg-orange-500 flex items-center justify-center">
+  1982→                        <CheckCircle2 className="w-4 h-4 text-white" />
+  1983→                      </div>
+  1984→                    )}
+  1985→                  </button>
+  1986→                ))}
+  1987→              </div>
+  1988→              <Button
+  1989→                variant="outline"
+  1990→                className="w-full mt-5 rounded-xl h-11"
+  1991→                onClick={() => setShowLanguageSheet(false)}
+  1992→              >
+  1993→                Cancel
+  1994→              </Button>
+  1995→            </div>
+  1996→          </div>
+  1997→        )}
+  1998→
+  1999→        {/* About Sheet */}
+  2000→        {showAboutSheet && (
+
+[showing lines 1-2000 of 2285; use offset=2001 with limit to continue reading]
