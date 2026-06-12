@@ -391,7 +391,7 @@ export default function ExamPrepApp() {
       <div className="pb-20">
         {/* Header */}
         <div className="bg-gradient-to-r from-orange-500 to-red-500 px-4 pt-[calc(env(safe-area-inset-top,0px)+3rem)] pb-8 rounded-b-3xl">
-          {/* Top Row: Menu, Notification, Profile */}
+          {/* Top Row: Menu + Notification */}
           <div className="flex items-center justify-between mb-4">
             {/* Menu Button */}
             <button
@@ -401,33 +401,18 @@ export default function ExamPrepApp() {
               <Menu className="w-5 h-5 text-white" />
             </button>
 
-            {/* Right side: Notification + Profile */}
-            <div className="flex items-center gap-2">
-              {/* Notification Bell */}
-              <button
-                onClick={() => setShowNotificationPanel(!showNotificationPanel)}
-                className="w-10 h-10 rounded-xl bg-white/20 backdrop-blur flex items-center justify-center active:bg-white/30 transition-colors relative"
-              >
-                <Bell className="w-5 h-5 text-white" />
-                {unreadCount > 0 && (
-                  <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 rounded-full flex items-center justify-center text-white text-[10px] font-bold border-2 border-orange-500">
-                    {unreadCount}
-                  </span>
-                )}
-              </button>
-
-              {/* Profile Button */}
-              <button
-                onClick={() => auth.isLoggedIn ? handleBottomNav('profile') : setShowLoginModal(true)}
-                className="w-10 h-10 rounded-full bg-white/20 backdrop-blur flex items-center justify-center"
-              >
-                {auth.isLoggedIn ? (
-                  <span className="text-white font-bold text-sm">{getAvatarDisplay()}</span>
-                ) : (
-                  <User className="w-5 h-5 text-white" />
-                )}
-              </button>
-            </div>
+            {/* Notification Bell */}
+            <button
+              onClick={() => setShowNotificationPanel(!showNotificationPanel)}
+              className="w-10 h-10 rounded-xl bg-white/20 backdrop-blur flex items-center justify-center active:bg-white/30 transition-colors relative"
+            >
+              <Bell className="w-5 h-5 text-white" />
+              {unreadCount > 0 && (
+                <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 rounded-full flex items-center justify-center text-white text-[10px] font-bold border-2 border-orange-500">
+                  {unreadCount}
+                </span>
+              )}
+            </button>
           </div>
 
           {/* App Name Row */}
