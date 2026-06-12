@@ -16,7 +16,7 @@ import {
   LogOut, Loader2, Mail, AlertTriangle, Settings, Bell,
   ChevronDown, Star, Flame, TrendingUp, Calendar, Gift,
   HelpCircle, Share2, MessageCircle, Crown,
-  Menu,
+  Menu, BookmarkPlus, Download, BarChart3, Wifi,
   ClipboardList, PenTool
 } from 'lucide-react'
 import {
@@ -499,10 +499,11 @@ export default function ExamPrepApp() {
             <div className="flex items-center gap-2.5">
               <button
                 onClick={() => setShowSideMenu(true)}
-                className="w-8 h-8 rounded-lg bg-white/20 backdrop-blur flex items-center justify-center active:bg-white/30 transition-colors"
-                style={{ touchAction: 'manipulation' }}
+                onTouchEnd={(e) => { e.preventDefault(); setShowSideMenu(true) }}
+                className="w-10 h-10 rounded-lg bg-white/20 backdrop-blur flex items-center justify-center active:bg-white/30 transition-colors"
+                style={{ touchAction: 'manipulation', WebkitTapHighlightColor: 'transparent' }}
               >
-                <Menu className="w-4 h-4 text-white" />
+                <Menu className="w-5 h-5 text-white" />
               </button>
               <div>
                 <h1 className="text-white text-base font-bold leading-tight">ExamPrep Bharat</h1>
@@ -513,8 +514,9 @@ export default function ExamPrepApp() {
             {/* Right: Notification */}
             <button
               onClick={() => setShowNotificationPanel(!showNotificationPanel)}
-              className="w-8 h-8 rounded-lg bg-white/20 backdrop-blur flex items-center justify-center active:bg-white/30 transition-colors relative"
-              style={{ touchAction: 'manipulation' }}
+              onTouchEnd={(e) => { e.preventDefault(); setShowNotificationPanel(!showNotificationPanel) }}
+              className="w-10 h-10 rounded-lg bg-white/20 backdrop-blur flex items-center justify-center active:bg-white/30 transition-colors relative"
+              style={{ touchAction: 'manipulation', WebkitTapHighlightColor: 'transparent' }}
             >
               <Bell className="w-4 h-4 text-white" />
               {unreadCount > 0 && (
@@ -2052,9 +2054,11 @@ export default function ExamPrepApp() {
                 <button
                   key={item.page}
                   onClick={() => handleBottomNav(item.page)}
+                  onTouchEnd={(e) => { e.preventDefault(); handleBottomNav(item.page) }}
                   className={`flex flex-col items-center gap-0.5 py-1 px-4 rounded-xl transition-all ${
                     isActive ? 'text-orange-600' : 'text-gray-400 active:text-gray-600'
                   }`}
+                  style={{ touchAction: 'manipulation', WebkitTapHighlightColor: 'transparent' }}
                 >
                   <div className={`relative ${isActive ? '' : ''}`}>
                     <Icon className={`w-5 h-5 ${isActive ? 'text-orange-600' : ''}`} />
@@ -2100,6 +2104,7 @@ export default function ExamPrepApp() {
           <div
             className="absolute inset-0 bg-black/50 backdrop-blur-sm"
             onClick={() => setShowSideMenu(false)}
+            onTouchEnd={(e) => { e.preventDefault(); setShowSideMenu(false) }}
             style={{ touchAction: 'manipulation' }}
           />
           {/* Drawer Panel */}
@@ -2112,7 +2117,9 @@ export default function ExamPrepApp() {
                 </div>
                 <button
                   onClick={() => setShowSideMenu(false)}
+                  onTouchEnd={(e) => { e.preventDefault(); setShowSideMenu(false) }}
                   className="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center"
+                  style={{ touchAction: 'manipulation', WebkitTapHighlightColor: 'transparent' }}
                 >
                   <X className="w-4 h-4 text-white/60" />
                 </button>
