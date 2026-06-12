@@ -1,0 +1,2002 @@
+     1→'use client'
+     2→
+     3→import React, { useState, useEffect, useRef, useCallback } from 'react'
+     4→import { Button } from '@/components/ui/button'
+     5→import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+     6→import { Badge } from '@/components/ui/badge'
+     7→import { Progress } from '@/components/ui/progress'
+     8→import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+     9→import { ScrollArea } from '@/components/ui/scroll-area'
+    10→import { Separator } from '@/components/ui/separator'
+    11→import {
+    12→  BookOpen, Trophy, Clock, CheckCircle2, XCircle, SkipForward,
+    13→  ChevronRight, ChevronLeft, Home, User, ArrowLeft, X,
+    14→  Play, Zap, Target, Award, Timer, RefreshCw, BookMarked,
+    15→  GraduationCap, Shield, Building, Train, ShieldCheck, Swords,
+    16→  LogOut, Loader2, Mail, AlertTriangle, Settings, Bell,
+    17→  ChevronDown, Star, Flame, TrendingUp, Calendar, Gift,
+    18→  HelpCircle, Share2, MessageCircle, Crown,
+    19→  Menu, BookmarkPlus, Download, BarChart3, Wifi,
+    20→  ClipboardList, PenTool
+    21→} from 'lucide-react'
+    22→import {
+    23→  getCategories as getLocalCategories, getTestsByExam as getLocalTestsByExam,
+    24→  getTestById as getLocalTestById, saveResult as saveLocalResult,
+    25→  getLeaderboard as getLocalLeaderboard,
+    26→  type LocalExamCategory, type LocalExam, type LocalTest, type LocalQuestion, type TestResult
+    27→} from '@/lib/local-data'
+    28→import {
+    29→  getCategories as getFsCategories, getTests as getFsTests,
+    30→  getTestById as getFsTestById, saveResult as saveFsResult,
+    31→  getLeaderboard as getFsLeaderboard, getUseFirestore,
+    32→  getAnnouncements as getFsAnnouncements, getNotifications as getFsNotifications,
+    33→} from '@/lib/firestore-service'
+    34→import { useFirebaseAuth } from '@/lib/use-firebase-auth'
+    35→import LoginModal from '@/components/LoginModal'
+    36→import { App } from '@capacitor/app'
+    37→import { getAnnouncements as getLocalAnnouncements, getNotifications as getLocalNotifications } from '@/lib/admin-data'
+    38→import { t, type Lang } from '@/lib/i18n'
+    39→
+    40→// ===== Types =====
+    41→type Page = 'home' | 'exams' | 'tests' | 'test-info' | 'test-taking' | 'results' | 'leaderboard' | 'profile' | 'practice'
+    42→
+    43→// ===== Unified Data Access (Firestore or Local) =====
+    44→const isFirestore = () => getUseFirestore()
+    45→
+    46→async function fetchCategories(): Promise<LocalExamCategory[]> {
+    47→  if (isFirestore()) return getFsCategories()
+    48→  return getLocalCategories()
+    49→}
+    50→async function fetchTestsByExam(examId: string): Promise<LocalTest[]> {
+    51→  if (isFirestore()) return getFsTests(examId)
+    52→  return getLocalTestsByExam(examId)
+    53→}
+    54→async function fetchTestById(testId: string): Promise<LocalTest | undefined> {
+    55→  if (isFirestore()) return getFsTestById(testId) as Promise<LocalTest | undefined>
+    56→  return getLocalTestById(testId)
+    57→}
+    58→async function fetchLeaderboard(testId: string): Promise<TestResult[]> {
+    59→  if (isFirestore()) return getFsLeaderboard(testId) as Promise<TestResult[]>
+    60→  return getLocalLeaderboard(testId)
+    61→}
+    62→async function storeResult(data: Omit<TestResult, 'id' | 'createdAt'>): Promise<TestResult> {
+    63→  if (isFirestore()) return saveFsResult(data) as Promise<TestResult>
+    64→  return saveLocalResult(data)
+    65→}
+    66→
+    67→interface CategoryColor {
+    68→  bg: string
+    69→  text: string
+    70→  border: string
+    71→  light: string
+    72→  gradient: string
+    73→}
+    74→
+    75→// ===== Constants =====
+    76→const CATEGORY_COLORS: Record<string, CategoryColor> = {
+    77→  ssc: { bg: 'bg-orange-500', text: 'text-orange-600', border: 'border-orange-300', light: 'bg-orange-50', gradient: 'from-orange-500 to-orange-600' },
+    78→  banking: { bg: 'bg-emerald-500', text: 'text-emerald-600', border: 'border-emerald-300', light: 'bg-emerald-50', gradient: 'from-emerald-500 to-emerald-600' },
+    79→  railways: { bg: 'bg-blue-500', text: 'text-blue-600', border: 'border-blue-300', light: 'bg-blue-50', gradient: 'from-blue-500 to-blue-600' },
+    80→  'state-govt': { bg: 'bg-purple-500', text: 'text-purple-600', border: 'border-purple-300', light: 'bg-purple-50', gradient: 'from-purple-500 to-purple-600' },
+    81→  teaching: { bg: 'bg-pink-500', text: 'text-pink-600', border: 'border-pink-300', light: 'bg-pink-50', gradient: 'from-pink-500 to-pink-600' },
+    82→  defence: { bg: 'bg-amber-500', text: 'text-amber-600', border: 'border-amber-300', light: 'bg-amber-50', gradient: 'from-amber-500 to-amber-600' },
+    83→  police: { bg: 'bg-red-500', text: 'text-red-600', border: 'border-red-300', light: 'bg-red-50', gradient: 'from-red-500 to-red-600' },
+    84→}
+    85→
+    86→const CATEGORY_ICONS: Record<string, React.ReactNode> = {
+    87→  ssc: <BookOpen className="w-5 h-5" />,
+    88→  banking: <Building className="w-5 h-5" />,
+    89→  railways: <Train className="w-5 h-5" />,
+    90→  'state-govt': <Shield className="w-5 h-5" />,
+    91→  teaching: <GraduationCap className="w-5 h-5" />,
+    92→  defence: <Swords className="w-5 h-5" />,
+    93→  police: <ShieldCheck className="w-5 h-5" />,
+    94→}
+    95→
+    96→// ===== Helper Functions =====
+    97→function formatTime(seconds: number): string {
+    98→  const m = Math.floor(seconds / 60)
+    99→  const s = seconds % 60
+   100→  return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`
+   101→}
+   102→
+   103→function getCatColor(slug: string): CategoryColor {
+   104→  return CATEGORY_COLORS[slug] || CATEGORY_COLORS.ssc
+   105→}
+   106→
+   107→function getCatIcon(slug: string): React.ReactNode {
+   108→  return CATEGORY_ICONS[slug] || <BookOpen className="w-5 h-5" />
+   109→}
+   110→
+   111→// ===== Main Component =====
+   112→export default function ExamPrepApp() {
+   113→  // --- Auth ---
+   114→  const auth = useFirebaseAuth()
+   115→
+   116→  // --- Page / Navigation ---
+   117→  const [currentPage, setCurrentPage] = useState<Page>('home')
+   118→  const pageHistoryRef = useRef<Page[]>([])
+   119→
+   120→  // --- Data ---
+   121→  const [categories, setCategories] = useState<LocalExamCategory[]>([])
+   122→  const [selectedCategory, setSelectedCategory] = useState<LocalExamCategory | null>(null)
+   123→  const [selectedExam, setSelectedExam] = useState<LocalExam | null>(null)
+   124→  const [examTests, setExamTests] = useState<LocalTest[]>([])
+   125→  const [selectedTest, setSelectedTest] = useState<LocalTest | null>(null)
+   126→
+   127→  // --- Test Taking ---
+   128→  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0)
+   129→  const [answers, setAnswers] = useState<Record<string, string>>({})
+   130→  const [markedForReview, setMarkedForReview] = useState<Set<string>>(new Set())
+   131→  const [timeLeft, setTimeLeft] = useState(0)
+   132→  const [testActive, setTestActive] = useState(false)
+   133→  const timerRef = useRef<NodeJS.Timeout | null>(null)
+   134→  const carouselRef = useRef<HTMLDivElement | null>(null)
+   135→  const carouselTimerRef = useRef<NodeJS.Timeout | null>(null)
+   136→
+   137→  // --- Results ---
+   138→  const [lastResult, setLastResult] = useState<TestResult | null>(null)
+   139→  const [leaderboardData, setLeaderboardData] = useState<TestResult[]>([])
+   140→  const [leaderboardTestId, setLeaderboardTestId] = useState<string>('')
+   141→
+   142→  // --- UI State ---
+   143→  const [showLoginModal, setShowLoginModal] = useState(false)
+   144→  const [showBackConfirm, setShowBackConfirm] = useState(false)
+   145→  const [showLanguageSheet, setShowLanguageSheet] = useState(false)
+   146→  const [showAboutSheet, setShowAboutSheet] = useState(false)
+   147→  const [selectedLanguage, setSelectedLanguage] = useState<Lang>('en')
+   148→  const [showQuestionNav, setShowQuestionNav] = useState(false)
+   149→  const [showSideMenu, setShowSideMenu] = useState(false)
+   150→  const [showNotificationPanel, setShowNotificationPanel] = useState(false)
+   151→
+   152→  // i18n shorthand
+   153→  const lng = selectedLanguage
+   154→  const _t = (key: string) => t(key, lng)
+   155→
+   156→  // --- Notifications (loaded from shared admin storage) ---
+   157→  const [notifications, setNotifications] = useState<
+   158→    { id: string; title: string; message: string; time: string; read: boolean; type: 'update' | 'alert' | 'info' }[]
+   159→  >([])
+   160→  const unreadCount = notifications.filter(n => !n.read).length
+   161→
+   162→  // --- Announcements (loaded from shared admin storage) ---
+   163→  const [announcements, setAnnouncements] = useState<
+   164→    { id: string; image: string; title: string; subtitle: string; action: Page; gradient: string }[]
+   165→  >([])
+   166→  const [activeAnnouncement, setActiveAnnouncement] = useState(0)
+   167→
+   168→  // (Admin state removed - admin panel is now at /admin route)
+   169→
+   170→  // --- Load categories + admin data on mount ---
+   171→  useEffect(() => {
+   172→    const loadData = async () => {
+   173→      try {
+   174→        const cats = await fetchCategories()
+   175→        setCategories(cats)
+   176→        if (isFirestore()) {
+   177→          const anns = await getFsAnnouncements()
+   178→          setAnnouncements(anns.map(a => ({ ...a, action: a.action as Page })))
+   179→          const notifs = await getFsNotifications()
+   180→          setNotifications(notifs)
+   181→        } else {
+   182→          setAnnouncements(getLocalAnnouncements().map(a => ({ ...a, action: a.action as Page })))
+   183→          setNotifications(getLocalNotifications())
+   184→        }
+   185→      } catch (e) {
+   186→        console.error('Data load failed, using local fallback:', e)
+   187→        setCategories(getLocalCategories())
+   188→        setAnnouncements(getLocalAnnouncements().map(a => ({ ...a, action: a.action as Page })))
+   189→        setNotifications(getLocalNotifications())
+   190→      }
+   191→    }
+   192→    loadData()
+   193→  }, [])
+   194→
+   195→  // --- Listen for admin data changes (when admin panel updates localStorage) ---
+   196→  useEffect(() => {
+   197→    const handleStorageChange = () => {
+   198→      setAnnouncements(getLocalAnnouncements().map(a => ({ ...a, action: a.action as Page })))
+   199→      setNotifications(getLocalNotifications())
+   200→    }
+   201→    window.addEventListener('storage', handleStorageChange)
+   202→    const interval = setInterval(handleStorageChange, 5000)
+   203→    return () => {
+   204→      window.removeEventListener('storage', handleStorageChange)
+   205→      clearInterval(interval)
+   206→    }
+   207→  }, [])
+   208→
+   209→  // --- Auto-scroll carousel ---
+   210→  useEffect(() => {
+   211→    const startCarousel = () => {
+   212→      carouselTimerRef.current = setInterval(() => {
+   213→        setActiveAnnouncement(prev => {
+   214→          const next = (prev + 1) % announcements.length
+   215→          // Scroll the carousel container
+   216→          if (carouselRef.current) {
+   217→            const cardWidth = carouselRef.current.children[0]?.getBoundingClientRect().width || 250
+   218→            const gap = 12 // gap-3 = 12px
+   219→            carouselRef.current.scrollTo({
+   220→              left: next * (cardWidth + gap),
+   221→              behavior: 'smooth'
+   222→            })
+   223→          }
+   224→          return next
+   225→        })
+   226→      }, 3000) // 3 seconds interval
+   227→    }
+   228→    startCarousel()
+   229→    return () => {
+   230→      if (carouselTimerRef.current) clearInterval(carouselTimerRef.current)
+   231→    }
+   232→  }, [announcements.length])
+   233→
+   234→  // --- Navigation ---
+   235→  const navigateTo = useCallback((page: Page) => {
+   236→    pageHistoryRef.current.push(currentPage)
+   237→    setCurrentPage(page)
+   238→  }, [currentPage])
+   239→
+   240→  const goBack = useCallback(() => {
+   241→    const prev = pageHistoryRef.current.pop()
+   242→    if (prev) {
+   243→      setCurrentPage(prev)
+   244→    } else {
+   245→      setCurrentPage('home')
+   246→    }
+   247→  }, [])
+   248→
+   249→  // --- Handle mobile back button (Capacitor + Browser) ---
+   250→  const handleBackButton = useCallback(() => {
+   251→    // If back confirmation is showing, close it
+   252→    if (showBackConfirm) {
+   253→      setShowBackConfirm(false)
+   254→      return
+   255→    }
+   256→    // If notification panel is open, close it
+   257→    if (showNotificationPanel) {
+   258→      setShowNotificationPanel(false)
+   259→      return
+   260→    }
+   261→    // If side menu is open, close it
+   262→    if (showSideMenu) {
+   263→      setShowSideMenu(false)
+   264→      return
+   265→    }
+   266→    // If question nav panel is open, close it
+   267→    if (showQuestionNav) {
+   268→      setShowQuestionNav(false)
+   269→      return
+   270→    }
+   271→    // If login modal is open, close it
+   272→    if (showLoginModal) {
+   273→      setShowLoginModal(false)
+   274→      return
+   275→    }
+   276→    // If language sheet is open, close it
+   277→    if (showLanguageSheet) {
+   278→      setShowLanguageSheet(false)
+   279→      return
+   280→    }
+   281→    // If about sheet is open, close it
+   282→    if (showAboutSheet) {
+   283→      setShowAboutSheet(false)
+   284→      return
+   285→    }
+   286→    // If taking a test, show confirmation
+   287→    if (currentPage === 'test-taking' && testActive) {
+   288→      setShowBackConfirm(true)
+   289→      return
+   290→    }
+   291→    // If on home page, minimize app (Android)
+   292→    if (currentPage === 'home') {
+   293→      App.exitApp?.()
+   294→      return
+   295→    }
+   296→    // Otherwise go back
+   297→    if (pageHistoryRef.current.length > 0) {
+   298→      goBack()
+   299→    } else {
+   300→      setCurrentPage('home')
+   301→    }
+   302→  }, [currentPage, testActive, showBackConfirm, showSideMenu, showQuestionNav, showLoginModal, showLanguageSheet, showAboutSheet, goBack])
+   303→
+   304→  // Capacitor hardware back button
+   305→  useEffect(() => {
+   306→    let handler: any
+   307→    const setupBackButton = async () => {
+   308→      try {
+   309→        handler = await App.addListener('backButton', () => {
+   310→          handleBackButton()
+   311→        })
+   312→      } catch (e) {
+   313→        // Not running in Capacitor, ignore
+   314→      }
+   315→    }
+   316→    setupBackButton()
+   317→    return () => {
+   318→      handler?.remove?.()
+   319→    }
+   320→  }, [handleBackButton])
+   321→
+   322→  // Browser popstate (for web/PWA)
+   323→  useEffect(() => {
+   324→    const handlePopState = () => {
+   325→      handleBackButton()
+   326→      // Re-push state so browser doesn't navigate away
+   327→      window.history.pushState(null, '')
+   328→    }
+   329→    window.addEventListener('popstate', handlePopState)
+   330→    return () => window.removeEventListener('popstate', handlePopState)
+   331→  }, [handleBackButton])
+   332→
+   333→  // Push state on navigation so browser back button fires popstate
+   334→  useEffect(() => {
+   335→    window.history.pushState(null, '')
+   336→  }, [currentPage])
+   337→
+   338→  // --- Timer ---
+   339→  useEffect(() => {
+   340→    if (testActive && timeLeft > 0) {
+   341→      timerRef.current = setInterval(() => {
+   342→        setTimeLeft(prev => {
+   343→          if (prev <= 1) {
+   344→            clearInterval(timerRef.current!)
+   345→            handleFinishTest()
+   346→            return 0
+   347→          }
+   348→          return prev - 1
+   349→        })
+   350→      }, 1000)
+   351→      return () => {
+   352→        if (timerRef.current) clearInterval(timerRef.current)
+   353→      }
+   354→    }
+   355→  }, [testActive])
+   356→
+   357→  // --- Test Functions ---
+   358→  async function startTest(test: LocalTest) {
+   359→    const fullTest = await fetchTestById(test.id)
+   360→    if (!fullTest) return
+   361→    setSelectedTest(fullTest)
+   362→    setAnswers({})
+   363→    setMarkedForReview(new Set())
+   364→    setCurrentQuestionIndex(0)
+   365→    setTimeLeft(fullTest.duration * 60)
+   366→    setTestActive(true)
+   367→    navigateTo('test-taking')
+   368→  }
+   369→
+   370→  async function handleFinishTest() {
+   371→    if (timerRef.current) clearInterval(timerRef.current)
+   372→    setTestActive(false)
+   373→
+   374→    if (!selectedTest) return
+   375→
+   376→    const test = selectedTest
+   377→    const totalQuestions = test.questions.length
+   378→    let correctCount = 0
+   379→    let wrongCount = 0
+   380→    let skippedCount = 0
+   381→
+   382→    test.questions.forEach(q => {
+   383→      const userAnswer = answers[q.id]
+   384→      if (!userAnswer) {
+   385→        skippedCount++
+   386→      } else if (userAnswer === q.correctAnswer) {
+   387→        correctCount++
+   388→      } else {
+   389→        wrongCount++
+   390→      }
+   391→    })
+   392→
+   393→    const score = correctCount * test.markingCorrect - wrongCount * Math.abs(test.markingWrong)
+   394→    const maxScore = totalQuestions * test.markingCorrect
+   395→    const timeTaken = test.duration * 60 - timeLeft
+   396→
+   397→    const result = await storeResult({
+   398→      testId: test.id,
+   399→      testName: test.title,
+   400→      examName: test.exam.name,
+   401→      userId: auth.getUserId() || 'anonymous',
+   402→      correctCount,
+   403→      wrongCount,
+   404→      skippedCount,
+   405→      score,
+   406→      maxScore,
+   407→      timeTaken,
+   408→      totalQuestions,
+   409→      answers,
+   410→    })
+   411→
+   412→    setLastResult(result)
+   413→    navigateTo('results')
+   414→  }
+   415→
+   416→  function selectAnswer(questionId: string, option: string) {
+   417→    setAnswers(prev => ({ ...prev, [questionId]: option }))
+   418→  }
+   419→
+   420→  function clearAnswer(questionId: string) {
+   421→    setAnswers(prev => {
+   422→      const copy = { ...prev }
+   423→      delete copy[questionId]
+   424→      return copy
+   425→    })
+   426→  }
+   427→
+   428→  function toggleReview(questionId: string) {
+   429→    setMarkedForReview(prev => {
+   430→      const next = new Set(prev)
+   431→      if (next.has(questionId)) next.delete(questionId)
+   432→      else next.add(questionId)
+   433→      return next
+   434→    })
+   435→  }
+   436→
+   437→  // --- Stats from localStorage ---
+   438→  function getUserStats() {
+   439→    try {
+   440→      const data = localStorage.getItem('examprep_results')
+   441→      if (!data) return { testsTaken: 0, avgScore: 0, bestRank: 0 }
+   442→      const results: TestResult[] = JSON.parse(data)
+   443→      const userId = auth.getUserId()
+   444→      const userResults = userId ? results.filter((r: TestResult) => r.userId === userId) : results
+   445→      const testsTaken = userResults.length
+   446→      const avgScore = testsTaken > 0 ? Math.round(userResults.reduce((sum: number, r: TestResult) => sum + (r.score / r.maxScore) * 100, 0) / testsTaken) : 0
+   447→      const bestRank = 1 // simplified
+   448→      return { testsTaken, avgScore, bestRank }
+   449→    } catch {
+   450→      return { testsTaken: 0, avgScore: 0, bestRank: 0 }
+   451→    }
+   452→  }
+   453→
+   454→  // --- Bottom nav handler ---
+   455→  function handleBottomNav(page: Page) {
+   456→    pageHistoryRef.current = []
+   457→    setCurrentPage(page)
+   458→  }
+   459→
+   460→  // --- Exam select handler ---
+   461→  async function openExam(exam: LocalExam, category: LocalExamCategory) {
+   462→    setSelectedExam(exam)
+   463→    setSelectedCategory(category)
+   464→    const tests = await fetchTestsByExam(exam.id)
+   465→    setExamTests(tests)
+   466→    navigateTo('tests')
+   467→  }
+   468→
+   469→  async function openTestInfo(test: LocalTest) {
+   470→    const fullTest = await fetchTestById(test.id)
+   471→    if (fullTest) {
+   472→      setSelectedTest(fullTest)
+   473→      navigateTo('test-info')
+   474→    }
+   475→  }
+   476→
+   477→  async function openLeaderboard(testId: string) {
+   478→    setLeaderboardTestId(testId)
+   479→    setLeaderboardData(await fetchLeaderboard(testId))
+   480→    navigateTo('leaderboard')
+   481→  }
+   482→
+   483→  // --- Avatar display ---
+   484→  function getAvatarDisplay() {
+   485→    if (auth.isGuest) return 'G'
+   486→    const display = auth.getUserDisplay()
+   487→    if (display) {
+   488→      // For email: first letter before @, for name: first letter
+   489→      if (display.includes('@')) return display.charAt(0).toUpperCase()
+   490→      return display.charAt(0).toUpperCase()
+   491→    }
+   492→    return 'G'
+   493→  }
+   494→
+   495→  // ===== RENDER: Home Page =====
+   496→  function renderHome() {
+   497→    const stats = getUserStats()
+   498→    return (
+   499→      <div className="pb-20">
+   500→        {/* Compact Header */}
+   501→        <div className="bg-gradient-to-r from-orange-500 to-red-500 px-4 pt-[calc(env(safe-area-inset-top,0px)+0.75rem)] pb-3 rounded-b-2xl">
+   502→          <div className="flex items-center justify-between">
+   503→            {/* Left: Menu + App Name */}
+   504→            <div className="flex items-center gap-2.5">
+   505→              <button
+   506→                onClick={() => setShowSideMenu(true)}
+   507→                onTouchEnd={(e) => { e.preventDefault(); setShowSideMenu(true) }}
+   508→                className="w-10 h-10 rounded-lg bg-white/20 backdrop-blur flex items-center justify-center active:bg-white/30 transition-colors"
+   509→                style={{ touchAction: 'manipulation', WebkitTapHighlightColor: 'transparent' }}
+   510→              >
+   511→                <Menu className="w-5 h-5 text-white" />
+   512→              </button>
+   513→              <div className="flex items-center gap-2">
+   514→                <img src="/logo.png" alt="MockMaster" className="w-7 h-7 rounded-lg" />
+   515→                <div>
+   516→                  <h1 className="text-white text-base font-bold leading-tight">{_t('app.name')}</h1>
+   517→                  <p className="text-orange-100 text-[10px] leading-tight">{_t('app.subtitle')}</p>
+   518→                </div>
+   519→              </div>
+   520→            </div>
+   521→
+   522→            {/* Right: Notification */}
+   523→            <button
+   524→              onClick={() => setShowNotificationPanel(!showNotificationPanel)}
+   525→              onTouchEnd={(e) => { e.preventDefault(); setShowNotificationPanel(!showNotificationPanel) }}
+   526→              className="w-10 h-10 rounded-lg bg-white/20 backdrop-blur flex items-center justify-center active:bg-white/30 transition-colors relative"
+   527→              style={{ touchAction: 'manipulation', WebkitTapHighlightColor: 'transparent' }}
+   528→            >
+   529→              <Bell className="w-4 h-4 text-white" />
+   530→              {unreadCount > 0 && (
+   531→                <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 rounded-full flex items-center justify-center text-white text-[8px] font-bold border border-orange-500">
+   532→                  {unreadCount}
+   533→                </span>
+   534→              )}
+   535→            </button>
+   536→          </div>
+   537→
+   538→          {/* Moving Announcements Marquee */}
+   539→          <div className="bg-white/10 backdrop-blur rounded-lg mt-2.5 overflow-hidden">
+   540→            <div className="flex items-center">
+   541→              <div className="bg-white/15 px-2 py-1.5 flex items-center flex-shrink-0">
+   542→                <Flame className="w-3.5 h-3.5 text-yellow-300" />
+   543→              </div>
+   544→              <div className="overflow-hidden flex-1 py-1.5">
+   545→                <div className="flex animate-marquee whitespace-nowrap">
+   546→                  {announcements.map(a => (
+   547→                    <button
+   548→                      key={a.id}
+   549→                      onClick={() => handleBottomNav(a.action)}
+   550→                      className="mx-6 text-[11px] font-medium text-white/90 active:text-white"
+   551→                    >
+   552→                      {a.title} — {a.subtitle}
+   553→                    </button>
+   554→                  ))}
+   555→                  {/* Duplicate for seamless loop */}
+   556→                  {announcements.map(a => (
+   557→                    <button
+   558→                      key={`dup-${a.id}`}
+   559→                      onClick={() => handleBottomNav(a.action)}
+   560→                      className="mx-6 text-[11px] font-medium text-white/90 active:text-white"
+   561→                    >
+   562→                      {a.title} — {a.subtitle}
+   563→                    </button>
+   564→                  ))}
+   565→                </div>
+   566→              </div>
+   567→            </div>
+   568→          </div>
+   569→        </div>
+   570→
+   571→        {/* Notification Panel */}
+   572→        {showNotificationPanel && (
+   573→          <div className="px-4 -mt-4 mb-2 relative z-40">
+   574→            <div className="bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden">
+   575→              {/* Panel Header */}
+   576→              <div className="flex items-center justify-between px-4 py-3 bg-gradient-to-r from-orange-50 to-red-50 border-b border-gray-100">
+   577→                <div className="flex items-center gap-2">
+   578→                  <Bell className="w-4 h-4 text-orange-500" />
+   579→                  <h3 className="font-bold text-sm text-gray-800">{_t('home.notifications')}</h3>
+   580→                  {unreadCount > 0 && (
+   581→                    <Badge className="bg-orange-500 text-white text-[10px] px-1.5 py-0">{unreadCount} {_t('home.newNotifs')}</Badge>
+   582→                  )}
+   583→                </div>
+   584→                <div className="flex items-center gap-2">
+   585→                  {unreadCount > 0 && (
+   586→                    <button
+   587→                      onClick={() => setNotifications(prev => prev.map(n => ({ ...n, read: true })))}
+   588→                      className="text-[11px] text-orange-500 font-semibold hover:text-orange-600"
+   589→                    >
+   590→                      {_t('home.markAllRead')}
+   591→                    </button>
+   592→                  )}
+   593→                  <button
+   594→                    onClick={() => setShowNotificationPanel(false)}
+   595→                    className="w-6 h-6 rounded-full bg-gray-100 flex items-center justify-center"
+   596→                  >
+   597→                    <X className="w-3 h-3 text-gray-500" />
+   598→                  </button>
+   599→                </div>
+   600→              </div>
+   601→
+   602→              {/* Notification List */}
+   603→              <div className="max-h-[300px] overflow-y-auto">
+   604→                {notifications.length === 0 ? (
+   605→                  <div className="py-8 text-center">
+   606→                    <Bell className="w-8 h-8 text-gray-200 mx-auto mb-2" />
+   607→                    <p className="text-gray-400 text-sm">{_t('home.noNotifs')}</p>
+   608→                  </div>
+   609→                ) : (
+   610→                  notifications.map(notification => (
+   611→                    <div
+   612→                      key={notification.id}
+   613→                      onClick={() => setNotifications(prev => prev.map(n => n.id === notification.id ? { ...n, read: true } : n))}
+   614→                      className={`px-4 py-3 border-b border-gray-50 last:border-b-0 active:bg-gray-50 transition-colors cursor-pointer ${
+   615→                        !notification.read ? 'bg-orange-50/50' : ''
+   616→                      }`}
+   617→                    >
+   618→                      <div className="flex items-start gap-3">
+   619→                        <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 ${
+   620→                          notification.type === 'update' ? 'bg-blue-100' :
+   621→                          notification.type === 'alert' ? 'bg-amber-100' :
+   622→                          'bg-green-100'
+   623→                        }`}>
+   624→                          {notification.type === 'update' ? <Zap className="w-4 h-4 text-blue-500" /> :
+   625→                           notification.type === 'alert' ? <AlertTriangle className="w-4 h-4 text-amber-500" /> :
+   626→                           <Gift className="w-4 h-4 text-green-500" />}
+   627→                        </div>
+   628→                        <div className="flex-1 min-w-0">
+   629→                          <div className="flex items-center gap-2">
+   630→                            <p className={`text-sm ${!notification.read ? 'font-bold text-gray-900' : 'font-medium text-gray-700'}`}>
+   631→                              {notification.title}
+   632→                            </p>
+   633→                            {!notification.read && (
+   634→                              <div className="w-2 h-2 rounded-full bg-orange-500 flex-shrink-0" />
+   635→                            )}
+   636→                          </div>
+   637→                          <p className="text-xs text-gray-500 mt-0.5 line-clamp-2">{notification.message}</p>
+   638→                          <p className="text-[10px] text-gray-400 mt-1">{notification.time}</p>
+   639→                        </div>
+   640→                      </div>
+   641→                    </div>
+   642→                  ))
+   643→                )}
+   644→              </div>
+   645→            </div>
+   646→          </div>
+   647→        )}
+   648→
+   649→        {/* Announcements - Image Banner Carousel */}
+   650→        <div className="px-4 mt-3 mb-1">
+   651→          <div className="relative">
+   652→            {/* Banner Cards - Full Width Single Item */}
+   653→            <div
+   654→              ref={carouselRef}
+   655→              onScroll={() => {
+   656→                if (carouselRef.current) {
+   657→                  const cardWidth = carouselRef.current.children[0]?.getBoundingClientRect().width || 300
+   658→                  const scrollPos = carouselRef.current.scrollLeft
+   659→                  const newIndex = Math.round(scrollPos / cardWidth)
+   660→                  if (newIndex !== activeAnnouncement && newIndex >= 0 && newIndex < announcements.length) {
+   661→                    setActiveAnnouncement(newIndex)
+   662→                  }
+   663→                }
+   664→              }}
+   665→              onTouchStart={() => { if (carouselTimerRef.current) clearInterval(carouselTimerRef.current) }}
+   666→              onTouchEnd={() => {
+   667→                carouselTimerRef.current = setInterval(() => {
+   668→                  setActiveAnnouncement(prev => {
+   669→                    const next = (prev + 1) % announcements.length
+   670→                    if (carouselRef.current) {
+   671→                      const cardWidth = carouselRef.current.children[0]?.getBoundingClientRect().width || 300
+   672→                      carouselRef.current.scrollTo({ left: next * cardWidth, behavior: 'smooth' })
+   673→                    }
+   674→                    return next
+   675→                  })
+   676→                }, 3000)
+   677→              }}
+   678→              className="flex overflow-x-auto scrollbar-hide snap-x snap-mandatory"
+   679→            >
+   680→              {announcements.map((a, index) => (
+   681→                <button
+   682→                  key={a.id}
+   683→                  onClick={() => handleBottomNav(a.action)}
+   684→                  className="flex-shrink-0 w-full snap-center px-1"
+   685→                >
+   686→                  <div className={`bg-gradient-to-br ${a.gradient} rounded-2xl overflow-hidden shadow-md active:scale-[0.98] transition-transform`}>
+   687→                    {/* Image Area */}
+   688→                    <div className="h-32 relative flex items-center justify-center overflow-hidden">
+   689→                      {/* Background Pattern */}
+   690→                      <div className="absolute inset-0 opacity-10">
+   691→                        <div className="absolute top-3 left-6 w-24 h-24 rounded-full border-4 border-white" />
+   692→                        <div className="absolute bottom-2 right-8 w-20 h-20 rounded-full border-4 border-white" />
+   693→                        <div className="absolute top-10 right-16 w-10 h-10 rounded-full bg-white" />
+   694→                        <div className="absolute bottom-4 left-20 w-6 h-6 rounded-full bg-white" />
+   695→                      </div>
+   696→                      {/* Icon + Text */}
+   697→                      <div className="relative z-10 flex items-center gap-4 px-4">
+   698→                        <div className="w-16 h-16 bg-white/20 backdrop-blur rounded-2xl flex items-center justify-center flex-shrink-0">
+   699→                          {a.image === 'ssc' && <BookOpen className="w-8 h-8 text-white" />}
+   700→                          {a.image === 'banking' && <Building className="w-8 h-8 text-white" />}
+   701→                          {a.image === 'leaderboard' && <Trophy className="w-8 h-8 text-white" />}
+   702→                          {a.image === 'practice' && <Zap className="w-8 h-8 text-white" />}
+   703→                        </div>
+   704→                        <div className="flex-1 min-w-0">
+   705→                          <p className="text-white font-bold text-base leading-tight">{a.title}</p>
+   706→                          <p className="text-white/80 text-xs mt-1">{a.subtitle}</p>
+   707→                          <div className="flex items-center gap-1 mt-2">
+   708→                            <span className="text-white/50 text-[10px]">{_t('home.tapExplore')}</span>
+   709→                            <ChevronRight className="w-3 h-3 text-white/50" />
+   710→                          </div>
+   711→                        </div>
+   712→                      </div>
+   713→                    </div>
+   714→                  </div>
+   715→                </button>
+   716→              ))}
+   717→            </div>
+   718→
+   719→            {/* Dots Indicator */}
+   720→            <div className="flex items-center justify-center gap-1.5 mt-1">
+   721→              {announcements.map((_, i) => (
+   722→                <button
+   723→                  key={i}
+   724→                  onClick={() => {
+   725→                    setActiveAnnouncement(i)
+   726→                    if (carouselRef.current) {
+   727→                      const cardWidth = carouselRef.current.children[0]?.getBoundingClientRect().width || 250
+   728→                      const gap = 12
+   729→                      carouselRef.current.scrollTo({ left: i * (cardWidth + gap), behavior: 'smooth' })
+   730→                    }
+   731→                  }}
+   732→                  className={`h-1.5 rounded-full transition-all duration-300 ${
+   733→                    i === activeAnnouncement ? 'w-4 bg-orange-500' : 'w-1.5 bg-gray-300'
+   734→                  }`}
+   735→                />
+   736→              ))}
+   737→            </div>
+   738→          </div>
+   739→        </div>
+   740→
+   741→        <div className="px-4 mt-4 space-y-6">
+   742→          {/* Quick Practice Card */}
+   743→          <Card className="border-0 shadow-md">
+   744→            <CardContent className="p-4">
+   745→              <div className="flex items-center gap-3">
+   746→                <div className="w-10 h-10 rounded-xl bg-gradient-to-r from-orange-500 to-red-500 flex items-center justify-center">
+   747→                  <Zap className="w-5 h-5 text-white" />
+   748→                </div>
+   749→                <div className="flex-1">
+   750→                  <p className="font-semibold text-sm">{_t('home.quickPractice')}</p>
+   751→                  <p className="text-gray-500 text-xs">{_t('home.quickPracticeSub')}</p>
+   752→                </div>
+   753→                <Button
+   754→                  size="sm"
+   755→                  className="bg-gradient-to-r from-orange-500 to-red-500 text-white rounded-xl"
+   756→                  onClick={() => {
+   757→                    const allCats = categories
+   758→                    const allExams = allCats.flatMap(c => c.exams)
+   759→                    if (allExams.length > 0) {
+   760→                      const randomExam = allExams[Math.floor(Math.random() * allExams.length)]
+   761→                      const randomCat = allCats.find(c => c.exams.some(e => e.id === randomExam.id))!
+   762→                      openExam(randomExam, randomCat)
+   763→                    }
+   764→                  }}
+   765→                >
+   766→                  <Play className="w-4 h-4 mr-1" /> {_t('home.start')}
+   767→                </Button>
+   768→              </div>
+   769→            </CardContent>
+   770→          </Card>
+   771→
+   772→          {/* Exam Categories */}
+   773→          <div>
+   774→            <div className="flex items-center justify-between mb-3">
+   775→              <h2 className="font-bold text-lg">{_t('home.examCategories')}</h2>
+   776→              <button onClick={() => handleBottomNav('exams')} className="text-orange-600 text-sm font-medium flex items-center">
+   777→                {_t('home.viewAll')} <ChevronRight className="w-4 h-4" />
+   778→              </button>
+   779→            </div>
+   780→            <div className="grid grid-cols-2 gap-3">
+   781→              {categories.map(cat => {
+   782→                const color = getCatColor(cat.slug)
+   783→                return (
+   784→                  <Card
+   785→                    key={cat.id}
+   786→                    className="border-0 shadow-sm cursor-pointer hover:shadow-md transition-shadow"
+   787→                    onClick={() => {
+   788→                      setSelectedCategory(cat)
+   789→                      handleBottomNav('exams')
+   790→                    }}
+   791→                  >
+   792→                    <CardContent className="p-4">
+   793→                      <div className={`w-10 h-10 rounded-xl ${color.light} flex items-center justify-center ${color.text} mb-2`}>
+   794→                        {getCatIcon(cat.slug)}
+   795→                      </div>
+   796→                      <p className="font-semibold text-sm">{cat.name}</p>
+   797→                      <p className="text-gray-400 text-xs mt-1">{cat.exams.length} {_t('home.exams')}</p>
+   798→                    </CardContent>
+   799→                  </Card>
+   800→                )
+   801→              })}
+   802→            </div>
+   803→          </div>
+   804→
+   805→          {/* Popular Exams */}
+   806→          <div>
+   807→            <h2 className="font-bold text-lg mb-3">{_t('home.popularExams')}</h2>
+   808→            <div className="space-y-2">
+   809→              {categories.slice(0, 3).flatMap(cat =>
+   810→                cat.exams.slice(0, 2).map(exam => (
+   811→                  <Card
+   812→                    key={exam.id}
+   813→                    className="border-0 shadow-sm cursor-pointer hover:shadow-md transition-shadow"
+   814→                    onClick={() => openExam(exam, cat)}
+   815→                  >
+   816→                    <CardContent className="p-3 flex items-center gap-3">
+   817→                      <div className={`w-10 h-10 rounded-xl ${getCatColor(cat.slug).light} flex items-center justify-center ${getCatColor(cat.slug).text}`}>
+   818→                        {getCatIcon(cat.slug)}
+   819→                      </div>
+   820→                      <div className="flex-1 min-w-0">
+   821→                        <p className="font-semibold text-sm truncate">{exam.name}</p>
+   822→                        <p className="text-gray-400 text-xs">{exam.testCount} {_t('exams.tests')} · {exam.totalQuestions} {_t('tests.Qs')}</p>
+   823→                      </div>
+   824→                      <ChevronRight className="w-4 h-4 text-gray-400" />
+   825→                    </CardContent>
+   826→                  </Card>
+   827→                ))
+   828→              )}
+   829→            </div>
+   830→          </div>
+   831→
+   832→          {/* Daily Tips Section */}
+   833→          <div>
+   834→            <div className="flex items-center gap-2 mb-3">
+   835→              <Star className="w-5 h-5 text-amber-500" />
+   836→              <h2 className="font-bold text-lg">{_t('home.dailyTips')}</h2>
+   837→            </div>
+   838→            <Card className="border-0 shadow-sm border-l-4 border-l-orange-400">
+   839→              <CardContent className="p-4">
+   840→                <p className="text-sm text-gray-700 leading-relaxed">{_t('home.dailyTip')}</p>
+   841→              </CardContent>
+   842→            </Card>
+   843→          </div>
+   844→
+   845→          {/* Upcoming Exams Section */}
+   846→          <div>
+   847→            <div className="flex items-center gap-2 mb-3">
+   848→              <Calendar className="w-5 h-5 text-blue-500" />
+   849→              <h2 className="font-bold text-lg">{_t('home.upcomingExams')}</h2>
+   850→            </div>
+   851→            <div className="space-y-2">
+   852→              {[
+   853→                { name: _t('upcoming.sscCgl'), date: _t('upcoming.sscCglDate'), status: _t('upcoming.sscCglStatus'), statusType: 'open' },
+   854→                { name: _t('upcoming.ibpsPo'), date: _t('upcoming.ibpsPoDate'), status: _t('upcoming.ibpsPoStatus'), statusType: 'coming' },
+   855→                { name: _t('upcoming.rrbNtpc'), date: _t('upcoming.rrbNtpcDate'), status: _t('upcoming.rrbNtpcStatus'), statusType: 'admit' },
+   856→              ].map((exam, i) => (
+   857→                <Card key={i} className="border-0 shadow-sm">
+   858→                  <CardContent className="p-3 flex items-center gap-3">
+   859→                    <div className="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center">
+   860→                      <Calendar className="w-5 h-5 text-blue-500" />
+   861→                    </div>
+   862→                    <div className="flex-1 min-w-0">
+   863→                      <p className="font-semibold text-sm truncate">{exam.name}</p>
+   864→                      <p className="text-gray-400 text-xs">{exam.date}</p>
+   865→                    </div>
+   866→                    <Badge variant={exam.statusType === 'open' ? 'default' : 'secondary'} className={`text-[10px] ${
+   867→                      exam.statusType === 'open' ? 'bg-green-100 text-green-700' :
+   868→                      exam.statusType === 'admit' ? 'bg-amber-100 text-amber-700' :
+   869→                      'bg-gray-100 text-gray-600'
+   870→                    }`}>
+   871→                      {exam.status}
+   872→                    </Badge>
+   873→                  </CardContent>
+   874→                </Card>
+   875→              ))}
+   876→            </div>
+   877→          </div>
+   878→
+   879→          {/* Study Stats / Motivation */}
+   880→          <div>
+   881→            <div className="flex items-center gap-2 mb-3">
+   882→              <TrendingUp className="w-5 h-5 text-green-500" />
+   883→              <h2 className="font-bold text-lg">{_t('home.yourProgress')}</h2>
+   884→            </div>
+   885→            {auth.isLoggedIn ? (
+   886→              <div className="grid grid-cols-3 gap-2">
+   887→                <Card className="border-0 shadow-sm">
+   888→                  <CardContent className="p-3 text-center">
+   889→                    <Flame className="w-6 h-6 text-orange-500 mx-auto mb-1" />
+   890→                    <p className="font-bold text-lg">{stats.testsTaken}</p>
+   891→                    <p className="text-gray-400 text-[10px]">{_t('home.testsDone')}</p>
+   892→                  </CardContent>
+   893→                </Card>
+   894→                <Card className="border-0 shadow-sm">
+   895→                  <CardContent className="p-3 text-center">
+   896→                    <Target className="w-6 h-6 text-green-500 mx-auto mb-1" />
+   897→                    <p className="font-bold text-lg">{stats.avgScore}%</p>
+   898→                    <p className="text-gray-400 text-[10px]">{_t('home.accuracy')}</p>
+   899→                  </CardContent>
+   900→                </Card>
+   901→                <Card className="border-0 shadow-sm">
+   902→                  <CardContent className="p-3 text-center">
+   903→                    <Award className="w-6 h-6 text-blue-500 mx-auto mb-1" />
+   904→                    <p className="font-bold text-lg">#{stats.bestRank}</p>
+   905→                    <p className="text-gray-400 text-[10px]">{_t('home.bestRank')}</p>
+   906→                  </CardContent>
+   907→                </Card>
+   908→              </div>
+   909→            ) : (
+   910→              <Card className="border-0 shadow-sm bg-gradient-to-r from-orange-50 to-red-50">
+   911→                <CardContent className="p-4 text-center">
+   912→                  <TrendingUp className="w-8 h-8 text-orange-400 mx-auto mb-2" />
+   913→                  <p className="font-semibold text-sm text-gray-700">{_t('home.loginTrack')}</p>
+   914→                  <p className="text-gray-500 text-xs mt-1 mb-3">{_t('home.loginTrackSub')}</p>
+   915→                  <Button size="sm" className="bg-gradient-to-r from-orange-500 to-red-500 text-white rounded-xl" onClick={() => setShowLoginModal(true)}>
+   916→                    {_t('home.loginNow')}
+   917→                  </Button>
+   918→                </CardContent>
+   919→              </Card>
+   920→            )}
+   921→          </div>
+   922→        </div>
+   923→      </div>
+   924→    )
+   925→  }
+   926→
+   927→  // ===== RENDER: Exams Page =====
+   928→  function renderExams() {
+   929→    return (
+   930→      <div className="pb-20">
+   931→        <div className="bg-gradient-to-r from-orange-500 to-red-500 px-4 pt-[calc(env(safe-area-inset-top,0px)+3rem)] pb-6 rounded-b-3xl">
+   932→          <div className="flex items-center gap-3 mb-4">
+   933→            <button onClick={goBack} className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center">
+   934→              <ArrowLeft className="w-5 h-5 text-white" />
+   935→            </button>
+   936→            <h1 className="text-white text-xl font-bold">{_t('exams.allExams')}</h1>
+   937→          </div>
+   938→        </div>
+   939→
+   940→        <div className="px-4 mt-4 space-y-6">
+   941→          {categories.map(cat => {
+   942→            const color = getCatColor(cat.slug)
+   943→            return (
+   944→              <div key={cat.id}>
+   945→                <div className="flex items-center gap-2 mb-3">
+   946→                  <div className={`w-8 h-8 rounded-lg ${color.light} flex items-center justify-center ${color.text}`}>
+   947→                    {getCatIcon(cat.slug)}
+   948→                  </div>
+   949→                  <h2 className="font-bold text-base">{cat.name}</h2>
+   950→                  <Badge variant="secondary" className="text-xs">{cat.exams.length}</Badge>
+   951→                </div>
+   952→                <div className="space-y-2">
+   953→                  {cat.exams.map(exam => (
+   954→                    <Card
+   955→                      key={exam.id}
+   956→                      className="border-0 shadow-sm cursor-pointer hover:shadow-md transition-shadow"
+   957→                      onClick={() => openExam(exam, cat)}
+   958→                    >
+   959→                      <CardContent className="p-3 flex items-center gap-3">
+   960→                        <div className="flex-1 min-w-0">
+   961→                          <p className="font-semibold text-sm">{exam.name}</p>
+   962→                          <p className="text-gray-400 text-xs">{exam.testCount} {_t('exams.tests')} · {exam.totalQuestions} {_t('tests.Qs')} · {exam.duration} {_t('tests.min')}</p>
+   963→                        </div>
+   964→                        <div className="flex items-center gap-1">
+   965→                          <Badge className={`bg-gradient-to-r ${color.gradient} text-white text-xs border-0`}>
+   966→                            {exam.testCount} {_t('exams.tests')}
+   967→                          </Badge>
+   968→                          <ChevronRight className="w-4 h-4 text-gray-400" />
+   969→                        </div>
+   970→                      </CardContent>
+   971→                    </Card>
+   972→                  ))}
+   973→                </div>
+   974→              </div>
+   975→            )
+   976→          })}
+   977→        </div>
+   978→      </div>
+   979→    )
+   980→  }
+   981→
+   982→  // ===== RENDER: Tests Page =====
+   983→  function renderTests() {
+   984→    if (!selectedExam || !selectedCategory) return null
+   985→    const color = getCatColor(selectedCategory.slug)
+   986→    return (
+   987→      <div className="pb-20">
+   988→        <div className={`bg-gradient-to-r ${color.gradient} px-4 pt-[calc(env(safe-area-inset-top,0px)+3rem)] pb-6 rounded-b-3xl`}>
+   989→          <div className="flex items-center gap-3 mb-2">
+   990→            <button onClick={goBack} className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center">
+   991→              <ArrowLeft className="w-5 h-5 text-white" />
+   992→            </button>
+   993→            <div className="flex-1 min-w-0">
+   994→              <h1 className="text-white text-lg font-bold truncate">{selectedExam.name}</h1>
+   995→              <p className="text-white/70 text-xs">{selectedCategory.name}</p>
+   996→            </div>
+   997→          </div>
+   998→          <div className="flex items-center gap-4 mt-3">
+   999→            <div className="flex items-center gap-1 text-white/80 text-xs">
+  1000→              <BookOpen className="w-3 h-3" /> {selectedExam.totalQuestions} {_t('tests.Qs')}
+  1001→            </div>
+  1002→            <div className="flex items-center gap-1 text-white/80 text-xs">
+  1003→              <Clock className="w-3 h-3" /> {selectedExam.duration} {_t('tests.min')}
+  1004→            </div>
+  1005→            <div className="flex items-center gap-1 text-white/80 text-xs">
+  1006→              <FileText className="w-3 h-3" /> {examTests.length} {_t('exams.tests')}
+  1007→            </div>
+  1008→          </div>
+  1009→        </div>
+  1010→
+  1011→        <div className="px-4 mt-4">
+  1012→          <h2 className="font-bold text-base mb-3">{_t('tests.available')}</h2>
+  1013→          <div className="space-y-3">
+  1014→            {examTests.map(test => (
+  1015→              <Card key={test.id} className="border-0 shadow-sm">
+  1016→                <CardContent className="p-4">
+  1017→                  <div className="flex items-start justify-between mb-2">
+  1018→                    <div className="flex-1 min-w-0 mr-2">
+  1019→                      <p className="font-semibold text-sm">{test.title}</p>
+  1020→                      <p className="text-gray-400 text-xs mt-1">{test.description}</p>
+  1021→                    </div>
+  1022→                    {test.isFree && <Badge className="bg-emerald-100 text-emerald-700 text-xs border-0">{_t('tests.free')}</Badge>}
+  1023→                  </div>
+  1024→                  <div className="flex items-center gap-3 mt-3 text-xs text-gray-500">
+  1025→                    <span className="flex items-center gap-1"><BookOpen className="w-3 h-3" /> {test.totalQuestions} {_t('tests.Qs')}</span>
+  1026→                    <span className="flex items-center gap-1"><Clock className="w-3 h-3" /> {test.duration} {_t('tests.min')}</span>
+  1027→                    <span className="flex items-center gap-1"><Target className="w-3 h-3" /> {test.difficulty}</span>
+  1028→                  </div>
+  1029→                  <div className="flex items-center gap-2 mt-3">
+  1030→                    <Button
+  1031→                      size="sm"
+  1032→                      className={`bg-gradient-to-r ${color.gradient} text-white rounded-xl flex-1`}
+  1033→                      onClick={() => openTestInfo(test)}
+  1034→                    >
+  1035→                      <Play className="w-4 h-4 mr-1" /> {_t('tests.startTest')}
+  1036→                    </Button>
+  1037→                    <Button
+  1038→                      size="sm"
+  1039→                      variant="outline"
+  1040→                      className="rounded-xl"
+  1041→                      onClick={() => openLeaderboard(test.id)}
+  1042→                    >
+  1043→                      <Trophy className="w-4 h-4" />
+  1044→                    </Button>
+  1045→                  </div>
+  1046→                </CardContent>
+  1047→              </Card>
+  1048→            ))}
+  1049→          </div>
+  1050→        </div>
+  1051→      </div>
+  1052→    )
+  1053→  }
+  1054→
+  1055→  // ===== RENDER: Test Info Page =====
+  1056→  function renderTestInfo() {
+  1057→    if (!selectedTest) return null
+  1058→    const cat = selectedCategory || categories[0]
+  1059→    const color = getCatColor(cat.slug)
+  1060→
+  1061→    return (
+  1062→      <div className="pb-24">
+  1063→        <div className={`bg-gradient-to-r ${color.gradient} px-4 pt-[calc(env(safe-area-inset-top,0px)+3rem)] pb-6 rounded-b-3xl`}>
+  1064→          <div className="flex items-center gap-3 mb-3">
+  1065→            <button onClick={goBack} className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center">
+  1066→              <ArrowLeft className="w-5 h-5 text-white" />
+  1067→            </button>
+  1068→            <h1 className="text-white text-lg font-bold flex-1 truncate">{_t('testInfo.details')}</h1>
+  1069→          </div>
+  1070→          <h2 className="text-white font-semibold">{selectedTest.title}</h2>
+  1071→          <p className="text-white/70 text-sm mt-1">{selectedTest.exam.name}</p>
+  1072→        </div>
+  1073→
+  1074→        <div className="px-4 mt-4 space-y-4">
+  1075→          {/* Marking Scheme */}
+  1076→          <Card className="border-0 shadow-sm">
+  1077→            <CardHeader className="pb-2 pt-4 px-4">
+  1078→              <CardTitle className="text-base">{_t('testInfo.information')}</CardTitle>
+  1079→            </CardHeader>
+  1080→            <CardContent className="px-4 pb-4 space-y-3">
+  1081→              <div className="flex justify-between text-sm">
+  1082→                <span className="text-gray-500">{_t('testInfo.totalQ')}</span>
+  1083→                <span className="font-semibold">{selectedTest.totalQuestions}</span>
+  1084→              </div>
+  1085→              <div className="flex justify-between text-sm">
+  1086→                <span className="text-gray-500">{_t('testInfo.duration')}</span>
+  1087→                <span className="font-semibold">{selectedTest.duration} {_t('testInfo.minutes')}</span>
+  1088→              </div>
+  1089→              <div className="flex justify-between text-sm">
+  1090→                <span className="text-gray-500">{_t('testInfo.difficulty')}</span>
+  1091→                <Badge variant="secondary">{selectedTest.difficulty}</Badge>
+  1092→              </div>
+  1093→              <Separator />
+  1094→              <div className="flex justify-between text-sm">
+  1095→                <span className="text-gray-500">{_t('testInfo.correctAns')}</span>
+  1096→                <span className="font-semibold text-emerald-600">+{selectedTest.markingCorrect} {_t('testInfo.marks')}</span>
+  1097→              </div>
+  1098→              <div className="flex justify-between text-sm">
+  1099→                <span className="text-gray-500">{_t('testInfo.wrongAns')}</span>
+  1100→                <span className="font-semibold text-red-600">{selectedTest.markingWrong} {_t('testInfo.marks')}</span>
+  1101→              </div>
+  1102→              <div className="flex justify-between text-sm">
+  1103→                <span className="text-gray-500">{_t('testInfo.skipped')}</span>
+  1104→                <span className="font-semibold text-gray-400">{selectedTest.markingSkipped} {_t('testInfo.marks')}</span>
+  1105→              </div>
+  1106→            </CardContent>
+  1107→          </Card>
+  1108→
+  1109→          {/* Max Score */}
+  1110→          <Card className="border-0 shadow-sm">
+  1111→            <CardContent className="p-4 flex items-center gap-3">
+  1112→              <div className="w-10 h-10 rounded-xl bg-orange-50 flex items-center justify-center">
+  1113→                <Award className="w-5 h-5 text-orange-600" />
+  1114→              </div>
+  1115→              <div>
+  1116→                <p className="text-xs text-gray-500">{_t('testInfo.maxScore')}</p>
+  1117→                <p className="font-bold text-lg">{selectedTest.totalQuestions * selectedTest.markingCorrect} {_t('testInfo.marks')}</p>
+  1118→              </div>
+  1119→            </CardContent>
+  1120→          </Card>
+  1121→
+  1122→          {/* Start Button */}
+  1123→          <Button
+  1124→            className="w-full h-12 bg-gradient-to-r from-orange-500 to-red-500 text-white rounded-2xl text-base font-semibold"
+  1125→            onClick={() => startTest(selectedTest)}
+  1126→          >
+  1127→            <Play className="w-5 h-5 mr-2" /> {_t('testInfo.startNow')}
+  1128→          </Button>
+  1129→        </div>
+  1130→      </div>
+  1131→    )
+  1132→  }
+  1133→
+  1134→  // ===== RENDER: Test Taking =====
+  1135→  function renderTestTaking() {
+  1136→    if (!selectedTest) return null
+  1137→    const questions = selectedTest.questions
+  1138→    const question = questions[currentQuestionIndex]
+  1139→    if (!question) return null
+  1140→
+  1141→    const totalAnswered = Object.keys(answers).length
+  1142→    const totalMarked = markedForReview.size
+  1143→    const progressPercent = (totalAnswered / questions.length) * 100
+  1144→
+  1145→    const optionLabels: Record<string, string> = { A: question.optionA, B: question.optionB, C: question.optionC, D: question.optionD }
+  1146→    const optionLetters = ['A', 'B', 'C', 'D']
+  1147→
+  1148→    return (
+  1149→      <div className="min-h-screen min-h-dvh bg-gray-50 flex flex-col">
+  1150→        {/* Test Header */}
+  1151→        <div className="bg-white border-b px-4 pt-[calc(env(safe-area-inset-top,0px)+0.75rem)] pb-3">
+  1152→          <div className="flex items-center justify-between">
+  1153→            <button
+  1154→              onClick={() => setShowBackConfirm(true)}
+  1155→              className="w-8 h-8 rounded-full hover:bg-gray-100 flex items-center justify-center"
+  1156→            >
+  1157→              <ArrowLeft className="w-5 h-5" />
+  1158→            </button>
+  1159→            <div className="flex items-center gap-1 text-orange-600 font-bold">
+  1160→              <Timer className="w-4 h-4" />
+  1161→              <span className={timeLeft < 60 ? 'text-red-600' : ''}>{formatTime(timeLeft)}</span>
+  1162→            </div>
+  1163→            <button
+  1164→              onClick={() => setShowQuestionNav(true)}
+  1165→              className="w-8 h-8 rounded-full hover:bg-gray-100 flex items-center justify-center"
+  1166→            >
+  1167→              <BookMarked className="w-5 h-5" />
+  1168→            </button>
+  1169→          </div>
+  1170→          <Progress value={progressPercent} className="mt-2 h-1.5" />
+  1171→          <div className="flex items-center justify-between mt-2 text-xs text-gray-400">
+  1172→            <span>Q {currentQuestionIndex + 1} {_t('testTaking.of')} {questions.length}</span>
+  1173→            <span>{totalAnswered} {_t('testTaking.answered')} · {totalMarked} {_t('testTaking.marked')}</span>
+  1174→          </div>
+  1175→        </div>
+  1176→
+  1177→        {/* Question */}
+  1178→        <ScrollArea className="flex-1">
+  1179→          <div className="p-4">
+  1180→            <div className="bg-white rounded-2xl p-4 shadow-sm">
+  1181→              {question.subject && (
+  1182→                <Badge variant="secondary" className="mb-3 text-xs">{question.subject}</Badge>
+  1183→              )}
+  1184→              {markedForReview.has(question.id) && (
+  1185→                <Badge className="mb-3 ml-2 bg-amber-100 text-amber-700 text-xs border-0">
+  1186→                  <BookMarked className="w-3 h-3 mr-1" /> {_t('testTaking.markedReview')}
+  1187→                </Badge>
+  1188→              )}
+  1189→              <p className="text-sm font-medium leading-relaxed mt-2">{question.questionText}</p>
+  1190→            </div>
+  1191→
+  1192→            {/* Options */}
+  1193→            <div className="space-y-3 mt-4">
+  1194→              {optionLetters.map(letter => {
+  1195→                const isSelected = answers[question.id] === letter
+  1196→                return (
+  1197→                  <button
+  1198→                    key={letter}
+  1199→                    onClick={() => selectAnswer(question.id, letter)}
+  1200→                    className={`w-full text-left p-4 rounded-xl border-2 transition-all ${
+  1201→                      isSelected
+  1202→                        ? 'border-orange-500 bg-orange-50'
+  1203→                        : 'border-gray-200 bg-white hover:border-gray-300'
+  1204→                    }`}
+  1205→                  >
+  1206→                    <div className="flex items-start gap-3">
+  1207→                      <span className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 ${
+  1208→                        isSelected ? 'bg-orange-500 text-white' : 'bg-gray-100 text-gray-600'
+  1209→                      }`}>
+  1210→                        {letter}
+  1211→                      </span>
+  1212→                      <span className="text-sm pt-0.5">{optionLabels[letter]}</span>
+  1213→                    </div>
+  1214→                  </button>
+  1215→                )
+  1216→              })}
+  1217→            </div>
+  1218→          </div>
+  1219→        </ScrollArea>
+  1220→
+  1221→        {/* Bottom Actions */}
+  1222→        <div className="bg-white border-t px-4 py-3 space-y-2">
+  1223→          <div className="flex items-center gap-2">
+  1224→            <Button
+  1225→              variant="outline"
+  1226→              size="sm"
+  1227→              className="rounded-xl flex-1"
+  1228→              onClick={() => toggleReview(question.id)}
+  1229→            >
+  1230→              <BookMarked className="w-4 h-4 mr-1" />
+  1231→              {markedForReview.has(question.id) ? _t('testTaking.unmark') : _t('testTaking.mark')}
+  1232→            </Button>
+  1233→            <Button
+  1234→              variant="outline"
+  1235→              size="sm"
+  1236→              className="rounded-xl flex-1"
+  1237→              onClick={() => clearAnswer(question.id)}
+  1238→            >
+  1239→              <RefreshCw className="w-4 h-4 mr-1" /> {_t('testTaking.clear')}
+  1240→            </Button>
+  1241→            <Button
+  1242→              variant="outline"
+  1243→              size="sm"
+  1244→              className="rounded-xl flex-1"
+  1245→              onClick={() => {
+  1246→                if (currentQuestionIndex < questions.length - 1) {
+  1247→                  setCurrentQuestionIndex(prev => prev + 1)
+  1248→                }
+  1249→              }}
+  1250→            >
+  1251→              <SkipForward className="w-4 h-4 mr-1" /> {_t('testTaking.skip')}
+  1252→            </Button>
+  1253→          </div>
+  1254→          <div className="flex items-center gap-2">
+  1255→            <Button
+  1256→              variant="outline"
+  1257→              size="sm"
+  1258→              className="rounded-xl"
+  1259→              disabled={currentQuestionIndex === 0}
+  1260→              onClick={() => setCurrentQuestionIndex(prev => prev - 1)}
+  1261→            >
+  1262→              <ChevronLeft className="w-4 h-4" />
+  1263→            </Button>
+  1264→            <Button
+  1265→              className="rounded-xl flex-1 bg-gradient-to-r from-orange-500 to-red-500 text-white"
+  1266→              onClick={handleFinishTest}
+  1267→            >
+  1268→              {_t('testTaking.submit')}
+  1269→            </Button>
+  1270→            <Button
+  1271→              variant="outline"
+  1272→              size="sm"
+  1273→              className="rounded-xl"
+  1274→              disabled={currentQuestionIndex === questions.length - 1}
+  1275→              onClick={() => setCurrentQuestionIndex(prev => prev + 1)}
+  1276→            >
+  1277→              <ChevronRight className="w-4 h-4" />
+  1278→            </Button>
+  1279→          </div>
+  1280→        </div>
+  1281→
+  1282→        {/* Question Navigation Panel */}
+  1283→        {showQuestionNav && (
+  1284→          <div className="fixed inset-0 bg-black/50 z-50 flex items-end justify-center" onClick={() => setShowQuestionNav(false)}>
+  1285→            <div className="bg-white rounded-t-3xl w-full max-h-[70vh] p-6" onClick={e => e.stopPropagation()}>
+  1286→              <div className="flex items-center justify-between mb-4">
+  1287→                <h3 className="font-bold text-lg">{_t('testTaking.questionNav')}</h3>
+  1288→                <button onClick={() => setShowQuestionNav(false)} className="text-gray-400 text-2xl">&times;</button>
+  1289→              </div>
+  1290→              <div className="flex items-center gap-4 mb-4 text-xs">
+  1291→                <span className="flex items-center gap-1"><span className="w-3 h-3 rounded-full bg-orange-500" /> {_t('testTaking.answered')}</span>
+  1292→                <span className="flex items-center gap-1"><span className="w-3 h-3 rounded-full bg-gray-200" /> {_t('testTaking.unanswered')}</span>
+  1293→                <span className="flex items-center gap-1"><span className="w-3 h-3 rounded-full bg-amber-400" /> {_t('testTaking.marked')}</span>
+  1294→              </div>
+  1295→              <div className="grid grid-cols-5 gap-2 max-h-60 overflow-y-auto">
+  1296→                {questions.map((q, i) => {
+  1297→                  const isAnswered = !!answers[q.id]
+  1298→                  const isMarked = markedForReview.has(q.id)
+  1299→                  const isCurrent = i === currentQuestionIndex
+  1300→                  let bgClass = 'bg-gray-200 text-gray-600'
+  1301→                  if (isCurrent) bgClass = 'ring-2 ring-orange-500 bg-white'
+  1302→                  if (isAnswered) bgClass = 'bg-orange-500 text-white'
+  1303→                  if (isMarked && !isAnswered) bgClass = 'bg-amber-400 text-white'
+  1304→                  if (isMarked && isAnswered) bgClass = 'bg-orange-500 text-white ring-2 ring-amber-400'
+  1305→
+  1306→                  return (
+  1307→                    <button
+  1308→                      key={q.id}
+  1309→                      onClick={() => { setCurrentQuestionIndex(i); setShowQuestionNav(false) }}
+  1310→                      className={`w-full aspect-square rounded-xl flex items-center justify-center font-bold text-sm ${bgClass}`}
+  1311→                    >
+  1312→                      {i + 1}
+  1313→                    </button>
+  1314→                  )
+  1315→                })}
+  1316→              </div>
+  1317→              <Button
+  1318→                className="w-full mt-4 bg-gradient-to-r from-orange-500 to-red-500 text-white rounded-xl"
+  1319→                onClick={handleFinishTest}
+  1320→              >
+  1321→                {_t('testTaking.submit')}
+  1322→              </Button>
+  1323→            </div>
+  1324→          </div>
+  1325→        )}
+  1326→
+  1327→        {/* Back Confirmation - Professional Dialog */}
+  1328→        {showBackConfirm && (
+  1329→          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-5">
+  1330→            <div className="bg-white rounded-3xl w-full max-w-sm shadow-2xl overflow-hidden animate-scale-in">
+  1331→              <div className="p-6 pb-4 text-center">
+  1332→                <div className="w-16 h-16 rounded-full bg-gradient-to-br from-red-100 to-red-50 flex items-center justify-center mx-auto mb-4">
+  1333→                  <AlertTriangle className="w-8 h-8 text-red-500" />
+  1334→                </div>
+  1335→                <h3 className="font-bold text-xl text-gray-900">{_t('testTaking.leaveTest')}</h3>
+  1336→                <p className="text-gray-500 text-sm mt-2 leading-relaxed">
+  1337→                  {_t('testTaking.leaveMsg')}
+  1338→                </p>
+  1339→              </div>
+  1340→              <div className="px-6 pb-6 space-y-2.5">
+  1341→                <Button
+  1342→                  className="w-full h-11 bg-gradient-to-r from-orange-500 to-red-500 text-white rounded-xl font-semibold text-sm"
+  1343→                  onClick={() => setShowBackConfirm(false)}
+  1344→                >
+  1345→                  {_t('testTaking.noContinue')}
+  1346→                </Button>
+  1347→                <Button
+  1348→                  variant="outline"
+  1349→                  className="w-full h-11 rounded-xl border-gray-200 text-gray-600 hover:bg-red-50 hover:text-red-600 hover:border-red-200 font-semibold text-sm"
+  1350→                  onClick={() => {
+  1351→                    setShowBackConfirm(false)
+  1352→                    if (timerRef.current) clearInterval(timerRef.current)
+  1353→                    setTestActive(false)
+  1354→                    goBack()
+  1355→                  }}
+  1356→                >
+  1357→                  {_t('testTaking.yesLeave')}
+  1358→                </Button>
+  1359→              </div>
+  1360→            </div>
+  1361→          </div>
+  1362→        )}
+  1363→      </div>
+  1364→    )
+  1365→  }
+  1366→
+  1367→  // ===== RENDER: Results Page =====
+  1368→  function renderResults() {
+  1369→    if (!lastResult || !selectedTest) return null
+  1370→    const percentage = Math.round((lastResult.score / lastResult.maxScore) * 100)
+  1371→    const questions = selectedTest.questions
+  1372→
+  1373→    return (
+  1374→      <div className="pb-20">
+  1375→        <div className="bg-gradient-to-r from-orange-500 to-red-500 px-4 pt-[calc(env(safe-area-inset-top,0px)+3rem)] pb-8 rounded-b-3xl text-center">
+  1376→          <div className="w-20 h-20 rounded-full bg-white/20 flex items-center justify-center mx-auto mb-4">
+  1377→            {percentage >= 60 ? (
+  1378→              <Trophy className="w-10 h-10 text-yellow-300" />
+  1379→            ) : percentage >= 30 ? (
+  1380→              <Target className="w-10 h-10 text-white" />
+  1381→            ) : (
+  1382→              <BookOpen className="w-10 h-10 text-white" />
+  1383→            )}
+  1384→          </div>
+  1385→          <h1 className="text-white text-2xl font-bold">
+  1386→            {percentage >= 60 ? _t('results.greatJob') : percentage >= 30 ? _t('results.keepPracticing') : _t('results.keepGoing')}
+  1387→          </h1>
+  1388→          <p className="text-white/70 text-sm mt-1">{selectedTest.title}</p>
+  1389→        </div>
+  1390→
+  1391→        <div className="px-4 -mt-4 space-y-4">
+  1392→          {/* Score Card */}
+  1393→          <Card className="border-0 shadow-md">
+  1394→            <CardContent className="p-6 text-center">
+  1395→              <div className="text-4xl font-bold text-orange-600">{lastResult.score}<span className="text-lg text-gray-400">/{lastResult.maxScore}</span></div>
+  1396→              <Progress value={Math.max(0, percentage)} className="mt-3 h-2" />
+  1397→              <p className="text-gray-500 text-sm mt-2">{percentage}% {_t('results.score')}</p>
+  1398→            </CardContent>
+  1399→          </Card>
+  1400→
+  1401→          {/* Breakdown */}
+  1402→          <div className="grid grid-cols-3 gap-3">
+  1403→            <Card className="border-0 shadow-sm">
+  1404→              <CardContent className="p-3 text-center">
+  1405→                <CheckCircle2 className="w-6 h-6 text-emerald-500 mx-auto" />
+  1406→                <p className="font-bold text-lg text-emerald-600 mt-1">{lastResult.correctCount}</p>
+  1407→                <p className="text-gray-400 text-xs">{_t('results.correct')}</p>
+  1408→              </CardContent>
+  1409→            </Card>
+  1410→            <Card className="border-0 shadow-sm">
+  1411→              <CardContent className="p-3 text-center">
+  1412→                <XCircle className="w-6 h-6 text-red-500 mx-auto" />
+  1413→                <p className="font-bold text-lg text-red-600 mt-1">{lastResult.wrongCount}</p>
+  1414→                <p className="text-gray-400 text-xs">{_t('results.wrong')}</p>
+  1415→              </CardContent>
+  1416→            </Card>
+  1417→            <Card className="border-0 shadow-sm">
+  1418→              <CardContent className="p-3 text-center">
+  1419→                <SkipForward className="w-6 h-6 text-gray-400 mx-auto" />
+  1420→                <p className="font-bold text-lg text-gray-500 mt-1">{lastResult.skippedCount}</p>
+  1421→                <p className="text-gray-400 text-xs">{_t('results.skipped')}</p>
+  1422→              </CardContent>
+  1423→            </Card>
+  1424→          </div>
+  1425→
+  1426→          {/* Time Taken */}
+  1427→          <Card className="border-0 shadow-sm">
+  1428→            <CardContent className="p-3 flex items-center gap-3">
+  1429→              <Clock className="w-5 h-5 text-orange-500" />
+  1430→              <span className="text-gray-500 text-sm">{_t('results.timeTaken')}</span>
+  1431→              <span className="font-bold ml-auto">{formatTime(lastResult.timeTaken)}</span>
+  1432→            </CardContent>
+  1433→          </Card>
+  1434→
+  1435→          {/* Actions */}
+  1436→          <div className="flex gap-3">
+  1437→            <Button
+  1438→              variant="outline"
+  1439→              className="flex-1 rounded-xl"
+  1440→              onClick={() => openLeaderboard(lastResult.testId)}
+  1441→            >
+  1442→              <Trophy className="w-4 h-4 mr-2" /> {_t('results.leaderboard')}
+  1443→            </Button>
+  1444→            <Button
+  1445→              className="flex-1 rounded-xl bg-gradient-to-r from-orange-500 to-red-500 text-white"
+  1446→              onClick={() => {
+  1447→                if (selectedTest) startTest(selectedTest)
+  1448→              }}
+  1449→            >
+  1450→              <RefreshCw className="w-4 h-4 mr-2" /> {_t('results.retry')}
+  1451→            </Button>
+  1452→          </div>
+  1453→
+  1454→          {/* Answer Key */}
+  1455→          <div>
+  1456→            <h2 className="font-bold text-lg mb-3">{_t('results.answerKey')}</h2>
+  1457→            <div className="space-y-3">
+  1458→              {questions.map((q, i) => {
+  1459→                const userAnswer = lastResult.answers[q.id]
+  1460→                const isCorrect = userAnswer === q.correctAnswer
+  1461→                const isSkipped = !userAnswer
+  1462→
+  1463→                return (
+  1464→                  <Card key={q.id} className="border-0 shadow-sm">
+  1465→                    <CardContent className="p-4">
+  1466→                      <div className="flex items-start gap-2 mb-2">
+  1467→                        <span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 ${
+  1468→                          isCorrect ? 'bg-emerald-100 text-emerald-700' :
+  1469→                          isSkipped ? 'bg-gray-100 text-gray-500' :
+  1470→                          'bg-red-100 text-red-700'
+  1471→                        }`}>
+  1472→                          {isCorrect ? <CheckCircle2 className="w-4 h-4" /> :
+  1473→                           isSkipped ? <SkipForward className="w-4 h-4" /> :
+  1474→                           <XCircle className="w-4 h-4" />}
+  1475→                        </span>
+  1476→                        <p className="text-sm font-medium">{i + 1}. {q.questionText}</p>
+  1477→                      </div>
+  1478→
+  1479→                      <div className="ml-8 space-y-1 text-xs">
+  1480→                        {['A', 'B', 'C', 'D'].map(letter => {
+  1481→                          const isUserAnswer = userAnswer === letter
+  1482→                          const isCorrectOption = q.correctAnswer === letter
+  1483→                          let optionClass = 'text-gray-500'
+  1484→                          if (isCorrectOption) optionClass = 'text-emerald-600 font-semibold'
+  1485→                          if (isUserAnswer && !isCorrect) optionClass = 'text-red-600 line-through'
+  1486→                          if (isUserAnswer && isCorrect) optionClass = 'text-emerald-600 font-semibold'
+  1487→
+  1488→                          const optionText = letter === 'A' ? q.optionA : letter === 'B' ? q.optionB : letter === 'C' ? q.optionC : q.optionD
+  1489→                          return (
+  1490→                            <p key={letter} className={optionClass}>
+  1491→                              {letter}. {optionText}
+  1492→                              {isUserAnswer && ` (${_t('results.yourAnswer')})`}
+  1493→                              {isCorrectOption && ' ✓'}
+  1494→                            </p>
+  1495→                          )
+  1496→                        })}
+  1497→                      </div>
+  1498→
+  1499→                      {q.explanation && (
+  1500→                        <div className="ml-8 mt-2 p-2 bg-blue-50 rounded-lg text-xs text-blue-700">
+  1501→                          💡 {q.explanation}
+  1502→                        </div>
+  1503→                      )}
+  1504→                    </CardContent>
+  1505→                  </Card>
+  1506→                )
+  1507→              })}
+  1508→            </div>
+  1509→          </div>
+  1510→
+  1511→          <Button
+  1512→            className="w-full rounded-xl bg-gradient-to-r from-orange-500 to-red-500 text-white"
+  1513→            onClick={() => { pageHistoryRef.current = []; setCurrentPage('home') }}
+  1514→          >
+  1515→            <Home className="w-4 h-4 mr-2" /> {_t('results.backHome')}
+  1516→          </Button>
+  1517→        </div>
+  1518→      </div>
+  1519→    )
+  1520→  }
+  1521→
+  1522→  // ===== RENDER: Leaderboard =====
+  1523→  function renderLeaderboard() {
+  1524→    return (
+  1525→      <div className="pb-20">
+  1526→        <div className="bg-gradient-to-r from-orange-500 to-red-500 px-4 pt-[calc(env(safe-area-inset-top,0px)+3rem)] pb-6 rounded-b-3xl">
+  1527→          <div className="flex items-center gap-3">
+  1528→            <button onClick={goBack} className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center">
+  1529→              <ArrowLeft className="w-5 h-5 text-white" />
+  1530→            </button>
+  1531→            <Trophy className="w-6 h-6 text-yellow-300" />
+  1532→            <h1 className="text-white text-xl font-bold">{_t('leaderboard.title')}</h1>
+  1533→          </div>
+  1534→        </div>
+  1535→
+  1536→        <div className="px-4 mt-4">
+  1537→          {leaderboardData.length === 0 ? (
+  1538→            <Card className="border-0 shadow-sm">
+  1539→              <CardContent className="p-8 text-center">
+  1540→                <Trophy className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+  1541→                <p className="font-semibold text-gray-400">{_t('leaderboard.noResults')}</p>
+  1542→                <p className="text-gray-400 text-sm mt-1">{_t('leaderboard.beFirst')}</p>
+  1543→              </CardContent>
+  1544→            </Card>
+  1545→          ) : (
+  1546→            <div className="space-y-2">
+  1547→              {leaderboardData.map((result, index) => {
+  1548→                const percentage = Math.round((result.score / result.maxScore) * 100)
+  1549→                const medals = ['🥇', '🥈', '🥉']
+  1550→                return (
+  1551→                  <Card key={result.id} className={`border-0 shadow-sm ${index < 3 ? 'bg-gradient-to-r from-yellow-50 to-orange-50' : ''}`}>
+  1552→                    <CardContent className="p-3 flex items-center gap-3">
+  1553→                      <span className="w-8 text-center font-bold text-lg">
+  1554→                        {index < 3 ? medals[index] : `${index + 1}`}
+  1555→                      </span>
+  1556→                      <div className="flex-1 min-w-0">
+  1557→                        <p className="font-semibold text-sm truncate">{result.testName}</p>
+  1558→                        <p className="text-gray-400 text-xs">{formatTime(result.timeTaken)} · {result.createdAt ? new Date(result.createdAt).toLocaleDateString() : ''}</p>
+  1559→                      </div>
+  1560→                      <div className="text-right">
+  1561→                        <p className="font-bold text-orange-600">{result.score}/{result.maxScore}</p>
+  1562→                        <p className="text-gray-400 text-xs">{percentage}%</p>
+  1563→                      </div>
+  1564→                    </CardContent>
+  1565→                  </Card>
+  1566→                )
+  1567→              })}
+  1568→            </div>
+  1569→          )}
+  1570→        </div>
+  1571→      </div>
+  1572→    )
+  1573→  }
+  1574→
+  1575→  // ===== RENDER: Practice Page =====
+  1576→  function renderPractice() {
+  1577→    return (
+  1578→      <div className="pb-20">
+  1579→        <div className="bg-gradient-to-r from-orange-500 to-red-500 px-4 pt-[calc(env(safe-area-inset-top,0px)+3rem)] pb-6 rounded-b-3xl">
+  1580→          <div className="flex items-center gap-3 mb-2">
+  1581→            <button onClick={goBack} className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center">
+  1582→              <ArrowLeft className="w-5 h-5 text-white" />
+  1583→            </button>
+  1584→            <div>
+  1585→              <h1 className="text-white text-xl font-bold">{_t('practice.title')}</h1>
+  1586→              <p className="text-orange-100 text-xs">{_t('practice.subtitle')}</p>
+  1587→            </div>
+  1588→          </div>
+  1589→        </div>
+  1590→
+  1591→        <div className="px-4 mt-4 space-y-4">
+  1592→          {/* Practice Mode Selection */}
+  1593→          <div>
+  1594→            <h2 className="font-bold text-lg mb-3">{_t('practice.chooseMode')}</h2>
+  1595→            <div className="grid grid-cols-2 gap-3">
+  1596→              <Card className="border-0 shadow-sm cursor-pointer hover:shadow-md transition-shadow" onClick={() => {
+  1597→                const allCats = categories
+  1598→                const allExams = allCats.flatMap(c => c.exams)
+  1599→                if (allExams.length > 0) {
+  1600→                  const randomExam = allExams[Math.floor(Math.random() * allExams.length)]
+  1601→                  const randomCat = allCats.find(c => c.exams.some(e => e.id === randomExam.id))!
+  1602→                  openExam(randomExam, randomCat)
+  1603→                }
+  1604→              }}>
+  1605→                <CardContent className="p-4 text-center">
+  1606→                  <div className="w-12 h-12 rounded-2xl bg-orange-50 flex items-center justify-center mx-auto mb-2">
+  1607→                    <Zap className="w-6 h-6 text-orange-500" />
+  1608→                  </div>
+  1609→                  <p className="font-semibold text-sm">{_t('practice.quick')}</p>
+  1610→                  <p className="text-gray-400 text-[11px] mt-1">{_t('practice.quickSub')}</p>
+  1611→                </CardContent>
+  1612→              </Card>
+  1613→              <Card className="border-0 shadow-sm cursor-pointer hover:shadow-md transition-shadow">
+  1614→                <CardContent className="p-4 text-center">
+  1615→                  <div className="w-12 h-12 rounded-2xl bg-blue-50 flex items-center justify-center mx-auto mb-2">
+  1616→                    <Target className="w-6 h-6 text-blue-500" />
+  1617→                  </div>
+  1618→                  <p className="font-semibold text-sm">{_t('practice.topicWise')}</p>
+  1619→                  <p className="text-gray-400 text-[11px] mt-1">{_t('practice.topicWiseSub')}</p>
+  1620→                </CardContent>
+  1621→              </Card>
+  1622→              <Card className="border-0 shadow-sm cursor-pointer hover:shadow-md transition-shadow">
+  1623→                <CardContent className="p-4 text-center">
+  1624→                  <div className="w-12 h-12 rounded-2xl bg-green-50 flex items-center justify-center mx-auto mb-2">
+  1625→                    <BookMarked className="w-6 h-6 text-green-500" />
+  1626→                  </div>
+  1627→                  <p className="font-semibold text-sm">{_t('practice.bookmarked')}</p>
+  1628→                  <p className="text-gray-400 text-[11px] mt-1">{_t('practice.bookmarkedSub')}</p>
+  1629→                </CardContent>
+  1630→              </Card>
+  1631→              <Card className="border-0 shadow-sm cursor-pointer hover:shadow-md transition-shadow">
+  1632→                <CardContent className="p-4 text-center">
+  1633→                  <div className="w-12 h-12 rounded-2xl bg-purple-50 flex items-center justify-center mx-auto mb-2">
+  1634→                    <PenTool className="w-6 h-6 text-purple-500" />
+  1635→                  </div>
+  1636→                  <p className="font-semibold text-sm">{_t('practice.weakAreas')}</p>
+  1637→                  <p className="text-gray-400 text-[11px] mt-1">{_t('practice.weakAreasSub')}</p>
+  1638→                </CardContent>
+  1639→              </Card>
+  1640→            </div>
+  1641→          </div>
+  1642→
+  1643→          {/* Practice by Category */}
+  1644→          <div>
+  1645→            <h2 className="font-bold text-lg mb-3">{_t('practice.byCategory')}</h2>
+  1646→            <div className="space-y-2">
+  1647→              {categories.map(cat => {
+  1648→                const color = getCatColor(cat.slug)
+  1649→                const totalQs = cat.exams.reduce((sum, e) => sum + e.totalQuestions, 0)
+  1650→                return (
+  1651→                  <Card
+  1652→                    key={cat.id}
+  1653→                    className="border-0 shadow-sm cursor-pointer hover:shadow-md transition-shadow"
+  1654→                    onClick={() => {
+  1655→                      setSelectedCategory(cat)
+  1656→                      handleBottomNav('exams')
+  1657→                    }}
+  1658→                  >
+  1659→                    <CardContent className="p-3 flex items-center gap-3">
+  1660→                      <div className={`w-10 h-10 rounded-xl ${color.light} flex items-center justify-center ${color.text}`}>
+  1661→                        {getCatIcon(cat.slug)}
+  1662→                      </div>
+  1663→                      <div className="flex-1 min-w-0">
+  1664→                        <p className="font-semibold text-sm">{cat.name}</p>
+  1665→                        <p className="text-gray-400 text-xs">{cat.exams.length} {_t('home.exams')} · {totalQs} {_t('about.questions')}</p>
+  1666→                      </div>
+  1667→                      <Button size="sm" variant="outline" className="rounded-xl text-orange-600 border-orange-200 text-xs">
+  1668→                        {_t('home.start')}
+  1669→                      </Button>
+  1670→                    </CardContent>
+  1671→                  </Card>
+  1672→                )
+  1673→              })}
+  1674→            </div>
+  1675→          </div>
+  1676→
+  1677→          {/* Previous Practice Sessions */}
+  1678→          <div>
+  1679→            <h2 className="font-bold text-lg mb-3">{_t('practice.recent')}</h2>
+  1680→            {auth.isLoggedIn ? (
+  1681→              <Card className="border-0 shadow-sm">
+  1682→                <CardContent className="p-4 text-center">
+  1683→                  <Clock className="w-8 h-8 text-gray-300 mx-auto mb-2" />
+  1684→                  <p className="text-gray-400 text-sm">{_t('practice.historyEmpty')}</p>
+  1685→                </CardContent>
+  1686→              </Card>
+  1687→            ) : (
+  1688→              <Card className="border-0 shadow-sm bg-gradient-to-r from-orange-50 to-red-50">
+  1689→                <CardContent className="p-4 text-center">
+  1690→                  <PenTool className="w-8 h-8 text-orange-400 mx-auto mb-2" />
+  1691→                  <p className="font-semibold text-sm text-gray-700">{_t('practice.loginSave')}</p>
+  1692→                  <Button size="sm" className="bg-gradient-to-r from-orange-500 to-red-500 text-white rounded-xl mt-2" onClick={() => setShowLoginModal(true)}>
+  1693→                    {_t('home.loginNow')}
+  1694→                  </Button>
+  1695→                </CardContent>
+  1696→              </Card>
+  1697→            )}
+  1698→          </div>
+  1699→        </div>
+  1700→      </div>
+  1701→    )
+  1702→  }
+  1703→
+  1704→  // ===== RENDER: Profile Page =====
+  1705→  function renderProfile() {
+  1706→    const stats = getUserStats()
+  1707→    const userDisplay = auth.getUserDisplay()
+  1708→    const userEmail = auth.getUserEmail()
+  1709→    const isEmailUser = !auth.isGuest && auth.isLoggedIn
+  1710→
+  1711→    return (
+  1712→      <div className="pb-20">
+  1713→        {/* Header with gradient */}
+  1714→        <div className="bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 px-5 pt-[calc(env(safe-area-inset-top,0px)+3rem)] pb-10 rounded-b-[28px] relative overflow-hidden">
+  1715→          {/* Decorative circles */}
+  1716→          <div className="absolute top-0 right-0 w-40 h-40 bg-orange-500/10 rounded-full -translate-y-1/2 translate-x-1/4" />
+  1717→          <div className="absolute bottom-0 left-0 w-32 h-32 bg-orange-500/10 rounded-full translate-y-1/2 -translate-x-1/4" />
+  1718→
+  1719→          {/* Top bar */}
+  1720→          <div className="flex items-center justify-between mb-6 relative z-10">
+  1721→            <h1 className="text-white text-xl font-bold">{_t('profile.title')}</h1>
+  1722→            <button
+  1723→              onClick={() => setShowAboutSheet(true)}
+  1724→              className="w-9 h-9 rounded-full bg-white/10 backdrop-blur flex items-center justify-center"
+  1725→            >
+  1726→              <Settings className="w-4 h-4 text-white/70" />
+  1727→            </button>
+  1728→          </div>
+  1729→
+  1730→          {/* Profile Card */}
+  1731→          <div className="bg-white/10 backdrop-blur-md rounded-2xl p-5 border border-white/10 relative z-10">
+  1732→            <div className="flex items-center gap-4">
+  1733→              <div className="relative">
+  1734→                <div className="w-16 h-16 rounded-full bg-gradient-to-br from-orange-400 to-red-500 flex items-center justify-center shadow-lg shadow-orange-500/20">
+  1735→                  <span className="text-white font-bold text-xl">{getAvatarDisplay()}</span>
+  1736→                </div>
+  1737→                {isEmailUser && (
+  1738→                  <div className="absolute -bottom-1 -right-1 w-6 h-6 rounded-full bg-emerald-500 flex items-center justify-center border-2 border-slate-900">
+  1739→                    <CheckCircle2 className="w-3 h-3 text-white" />
+  1740→                  </div>
+  1741→                )}
+  1742→              </div>
+  1743→              <div className="flex-1 min-w-0">
+  1744→                <p className="text-white font-bold text-lg truncate">
+  1745→                  {isEmailUser ? (userDisplay || userEmail) : _t('profile.guestUser')}
+  1746→                </p>
+  1747→                <div className="flex items-center gap-2 mt-1">
+  1748→                  {isEmailUser ? (
+  1749→                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 text-xs font-medium">
+  1750→                      <Shield className="w-3 h-3" /> {_t('profile.verified')}
+  1751→                    </span>
+  1752→                  ) : (
+  1753→                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-400 text-xs font-medium">
+  1754→                      <AlertTriangle className="w-3 h-3" /> {_t('profile.guestMode')}
+  1755→                    </span>
+  1756→                  )}
+  1757→                </div>
+  1758→              </div>
+  1759→              {auth.isLoggedIn && !auth.isGuest && (
+  1760→                <button
+  1761→                  onClick={() => auth.logout()}
+  1762→                  className="w-9 h-9 rounded-full bg-white/10 flex items-center justify-center"
+  1763→                >
+  1764→                  <LogOut className="w-4 h-4 text-white/60" />
+  1765→                </button>
+  1766→              )}
+  1767→            </div>
+  1768→
+  1769→            {/* Stats Row */}
+  1770→            <div className="mt-5 pt-4 border-t border-white/10 grid grid-cols-3 gap-2">
+  1771→              <div className="text-center">
+  1772→                <p className="text-white font-bold text-xl">{stats.testsTaken}</p>
+  1773→                <p className="text-white/40 text-[10px] font-medium uppercase tracking-wider">{_t('profile.tests')}</p>
+  1774→              </div>
+  1775→              <div className="text-center border-x border-white/10">
+  1776→                <p className="text-white font-bold text-xl">{stats.avgScore}%</p>
+  1777→                <p className="text-white/40 text-[10px] font-medium uppercase tracking-wider">{_t('profile.avgScore')}</p>
+  1778→              </div>
+  1779→              <div className="text-center">
+  1780→                <p className="text-white font-bold text-xl">#{stats.bestRank}</p>
+  1781→                <p className="text-white/40 text-[10px] font-medium uppercase tracking-wider">{_t('profile.bestRank')}</p>
+  1782→              </div>
+  1783→            </div>
+  1784→          </div>
+  1785→        </div>
+  1786→
+  1787→        <div className="px-4 -mt-5 space-y-4 relative z-20">
+  1788→          {/* Guest Upgrade Banner */}
+  1789→          {auth.isGuest && (
+  1790→            <Card className="border-0 shadow-lg bg-gradient-to-r from-amber-500 to-orange-500 overflow-hidden">
+  1791→              <CardContent className="p-4">
+  1792→                <div className="flex items-center gap-3">
+  1793→                  <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center flex-shrink-0">
+  1794→                    <Crown className="w-5 h-5 text-white" />
+  1795→                  </div>
+  1796→                  <div className="flex-1 min-w-0">
+  1797→                    <p className="text-white font-bold text-sm">{_t('profile.upgradeTitle')}</p>
+  1798→                    <p className="text-white/80 text-xs mt-0.5">{_t('profile.upgradeSub')}</p>
+  1799→                  </div>
+  1800→                  <Button
+  1801→                    size="sm"
+  1802→                    className="bg-white text-orange-600 hover:bg-white/90 rounded-xl font-bold px-3"
+  1803→                    onClick={() => setShowLoginModal(true)}
+  1804→                  >
+  1805→                    <Mail className="w-3 h-3 mr-1" /> {_t('profile.login')}
+  1806→                  </Button>
+  1807→                </div>
+  1808→              </CardContent>
+  1809→            </Card>
+  1810→          )}
+  1811→
+  1812→          {/* Not logged in - Login Card */}
+  1813→          {!auth.isLoggedIn && (
+  1814→            <Card className="border-0 shadow-lg overflow-hidden">
+  1815→              <CardContent className="p-5">
+  1816→                <div className="text-center mb-4">
+  1817→                  <div className="w-14 h-14 rounded-full bg-orange-50 flex items-center justify-center mx-auto mb-3">
+  1818→                    <User className="w-7 h-7 text-orange-500" />
+  1819→                  </div>
+  1820→                  <p className="font-bold text-base">{_t('profile.loginUnlock')}</p>
+  1821→                  <p className="text-gray-400 text-xs mt-1">{_t('profile.loginUnlockSub')}</p>
+  1822→                </div>
+  1823→                <Button
+  1824→                  className="w-full h-11 bg-gradient-to-r from-orange-500 to-red-500 text-white rounded-xl font-semibold"
+  1825→                  onClick={() => setShowLoginModal(true)}
+  1826→                >
+  1827→                  <Mail className="w-4 h-4 mr-2" /> {_t('profile.loginEmail')}
+  1828→                </Button>
+  1829→              </CardContent>
+  1830→            </Card>
+  1831→          )}
+  1832→
+  1833→          {/* Quick Actions Grid */}
+  1834→          <div className="grid grid-cols-2 gap-3">
+  1835→            <Card
+  1836→              className="border-0 shadow-sm cursor-pointer hover:shadow-md transition-all active:scale-[0.98]"
+  1837→              onClick={() => { pageHistoryRef.current.push(currentPage); setCurrentPage('exams') }}
+  1838→            >
+  1839→              <CardContent className="p-4">
+  1840→                <div className="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center mb-2">
+  1841→                  <BookOpen className="w-5 h-5 text-blue-600" />
+  1842→                </div>
+  1843→                <p className="font-semibold text-sm">{_t('profile.myExams')}</p>
+  1844→                <p className="text-gray-400 text-[10px] mt-0.5">{categories.length} {_t('profile.categories')}</p>
+  1845→              </CardContent>
+  1846→            </Card>
+  1847→            <Card
+  1848→              className="border-0 shadow-sm cursor-pointer hover:shadow-md transition-all active:scale-[0.98]"
+  1849→              onClick={() => { pageHistoryRef.current.push(currentPage); setCurrentPage('leaderboard') }}
+  1850→            >
+  1851→              <CardContent className="p-4">
+  1852→                <div className="w-10 h-10 rounded-xl bg-amber-50 flex items-center justify-center mb-2">
+  1853→                  <Trophy className="w-5 h-5 text-amber-600" />
+  1854→                </div>
+  1855→                <p className="font-semibold text-sm">{_t('leaderboard.title')}</p>
+  1856→                <p className="text-gray-400 text-[10px] mt-0.5">{_t('profile.viewRankings')}</p>
+  1857→              </CardContent>
+  1858→            </Card>
+  1859→          </div>
+  1860→
+  1861→          {/* Settings Section */}
+  1862→          <div>
+  1863→            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider px-1 mb-2">{_t('profile.settings')}</p>
+  1864→            <Card className="border-0 shadow-sm overflow-hidden">
+  1865→              <CardContent className="p-0">
+  1866→                {/* Language */}
+  1867→                <button
+  1868→                  className="w-full flex items-center gap-3 p-4 hover:bg-gray-50/80 transition-colors active:bg-gray-100"
+  1869→                  onClick={() => setShowLanguageSheet(true)}
+  1870→                >
+  1871→                  <div className="w-9 h-9 rounded-xl bg-indigo-50 flex items-center justify-center">
+  1872→                    <BookOpen className="w-4 h-4 text-indigo-600" />
+  1873→                  </div>
+  1874→                  <div className="flex-1 text-left">
+  1875→                    <p className="font-semibold text-[13px]">{_t('profile.language')}</p>
+  1876→                    <p className="text-gray-400 text-[11px]">{lng === 'en' ? _t('lang.english') : lng === 'hi' ? _t('lang.hindi') : _t('lang.bangla')}</p>
+  1877→                  </div>
+  1878→                  <ChevronRight className="w-4 h-4 text-gray-300" />
+  1879→                </button>
+  1880→                <div className="mx-4 border-t border-gray-100" />
+  1881→                {/* About */}
+  1882→                <button
+  1883→                  className="w-full flex items-center gap-3 p-4 hover:bg-gray-50/80 transition-colors active:bg-gray-100"
+  1884→                  onClick={() => setShowAboutSheet(true)}
+  1885→                >
+  1886→                  <div className="w-9 h-9 rounded-xl bg-purple-50 flex items-center justify-center">
+  1887→                    <Shield className="w-4 h-4 text-purple-600" />
+  1888→                  </div>
+  1889→                  <div className="flex-1 text-left">
+  1890→                    <p className="font-semibold text-[13px]">{_t('profile.about')}</p>
+  1891→                    <p className="text-gray-400 text-[11px]">{_t('profile.aboutSub')}</p>
+  1892→                  </div>
+  1893→                  <ChevronRight className="w-4 h-4 text-gray-300" />
+  1894→                </button>
+  1895→              </CardContent>
+  1896→            </Card>
+  1897→          </div>
+  1898→
+  1899→          {/* Support Section */}
+  1900→          <div>
+  1901→            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider px-1 mb-2">{_t('profile.support')}</p>
+  1902→            <Card className="border-0 shadow-sm overflow-hidden">
+  1903→              <CardContent className="p-0">
+  1904→                <button
+  1905→                  className="w-full flex items-center gap-3 p-4 hover:bg-gray-50/80 transition-colors active:bg-gray-100"
+  1906→                  onClick={() => setShowAboutSheet(true)}
+  1907→                >
+  1908→                  <div className="w-9 h-9 rounded-xl bg-teal-50 flex items-center justify-center">
+  1909→                    <HelpCircle className="w-4 h-4 text-teal-600" />
+  1910→                  </div>
+  1911→                  <div className="flex-1 text-left">
+  1912→                    <p className="font-semibold text-[13px]">{_t('profile.helpFaq')}</p>
+  1913→                    <p className="text-gray-400 text-[11px]">{_t('profile.helpFaqSub')}</p>
+  1914→                  </div>
+  1915→                  <ChevronRight className="w-4 h-4 text-gray-300" />
+  1916→                </button>
+  1917→                <div className="mx-4 border-t border-gray-100" />
+  1918→                <button
+  1919→                  className="w-full flex items-center gap-3 p-4 hover:bg-gray-50/80 transition-colors active:bg-gray-100"
+  1920→                  onClick={() => {
+  1921→                    if (navigator.share) {
+  1922→                      navigator.share({ title: _t('app.name'), text: _t('share.text'), url: window.location.href })
+  1923→                    }
+  1924→                  }}
+  1925→                >
+  1926→                  <div className="w-9 h-9 rounded-xl bg-pink-50 flex items-center justify-center">
+  1927→                    <Share2 className="w-4 h-4 text-pink-600" />
+  1928→                  </div>
+  1929→                  <div className="flex-1 text-left">
+  1930→                    <p className="font-semibold text-[13px]">{_t('profile.shareApp')}</p>
+  1931→                    <p className="text-gray-400 text-[11px]">{_t('profile.shareAppSub')}</p>
+  1932→                  </div>
+  1933→                  <ChevronRight className="w-4 h-4 text-gray-300" />
+  1934→                </button>
+  1935→              </CardContent>
+  1936→            </Card>
+  1937→          </div>
+  1938→
+  1939→          {/* Logout Button */}
+  1940→          {auth.isLoggedIn && !auth.isGuest && (
+  1941→            <Button
+  1942→              variant="outline"
+  1943→              className="w-full rounded-xl border-red-200 text-red-500 hover:bg-red-50 hover:text-red-600 h-11 font-semibold"
+  1944→              onClick={() => auth.logout()}
+  1945→            >
+  1946→              <LogOut className="w-4 h-4 mr-2" /> {_t('profile.logout')}
+  1947→            </Button>
+  1948→          )}
+  1949→
+  1950→          {/* App Version */}
+  1951→          <p className="text-center text-gray-300 text-[10px] pt-2 pb-4">{_t('app.versionFull')}</p>
+  1952→        </div>
+  1953→
+  1954→        {/* Language Sheet */}
+  1955→        {showLanguageSheet && (
+  1956→          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-end justify-center" onClick={() => setShowLanguageSheet(false)}>
+  1957→            <div className="bg-white rounded-t-[28px] w-full p-6 animate-slide-up" onClick={e => e.stopPropagation()}>
+  1958→              <div className="w-10 h-1 rounded-full bg-gray-200 mx-auto mb-5" />
+  1959→              <h3 className="font-bold text-lg mb-4">{_t('lang.select')}</h3>
+  1960→              <div className="space-y-1">
+  1961→                {[
+  1962→                  { code: 'en', name: _t('lang.english'), flag: '🇬🇧', available: true },
+  1963→                  { code: 'hi', name: _t('lang.hindi'), flag: '🇮🇳', available: true },
+  1964→                  { code: 'bn', name: _t('lang.bangla'), flag: '🇧🇩', available: true },
+  1965→                ].map(lang => (
+  1966→                  <button
+  1967→                    key={lang.code}
+  1968→                    className={`w-full flex items-center gap-3 p-4 rounded-xl transition-colors ${
+  1969→                      lang.available ? 'hover:bg-gray-50 active:bg-gray-100' : 'opacity-50'
+  1970→                    }`}
+  1971→                    onClick={() => {
+  1972→                      if (lang.available) {
+  1973→                        setSelectedLanguage(lang.code)
+  1974→                        setShowLanguageSheet(false)
+  1975→                      }
+  1976→                    }}
+  1977→                    onTouchEnd={(e) => {
+  1978→                      if (lang.available) {
+  1979→                        e.preventDefault()
+  1980→                        setSelectedLanguage(lang.code)
+  1981→                        setShowLanguageSheet(false)
+  1982→                      }
+  1983→                    }}
+  1984→                  >
+  1985→                    <span className="text-xl">{lang.flag}</span>
+  1986→                    <span className="font-medium text-sm flex-1">{lang.name}</span>
+  1987→                    {!lang.available && <Badge variant="secondary" className="text-[10px]">{_t('lang.comingSoon')}</Badge>}
+  1988→                    {selectedLanguage === lang.code && (
+  1989→                      <div className="w-6 h-6 rounded-full bg-orange-500 flex items-center justify-center">
+  1990→                        <CheckCircle2 className="w-4 h-4 text-white" />
+  1991→                      </div>
+  1992→                    )}
+  1993→                  </button>
+  1994→                ))}
+  1995→              </div>
+  1996→              <Button
+  1997→                variant="outline"
+  1998→                className="w-full mt-5 rounded-xl h-11"
+  1999→                onClick={() => setShowLanguageSheet(false)}
+  2000→              >
+
+[showing lines 1-2000 of 2296; use offset=2001 with limit to continue reading]

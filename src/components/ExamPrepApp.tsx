@@ -1953,7 +1953,7 @@ export default function ExamPrepApp() {
 
         {/* Language Sheet */}
         {showLanguageSheet && (
-          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-end justify-center" onClick={() => setShowLanguageSheet(false)}>
+          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[110] flex items-end justify-center" onClick={() => setShowLanguageSheet(false)}>
             <div className="bg-white rounded-t-[28px] w-full p-6 animate-slide-up" onClick={e => e.stopPropagation()}>
               <div className="w-10 h-1 rounded-full bg-gray-200 mx-auto mb-5" />
               <h3 className="font-bold text-lg mb-4">{_t('lang.select')}</h3>
@@ -2006,7 +2006,7 @@ export default function ExamPrepApp() {
 
         {/* About Sheet */}
         {showAboutSheet && (
-          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-end justify-center" onClick={() => setShowAboutSheet(false)}>
+          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[110] flex items-end justify-center" onClick={() => setShowAboutSheet(false)}>
             <div className="bg-white rounded-t-[28px] w-full p-6 animate-slide-up" onClick={e => e.stopPropagation()}>
               <div className="w-10 h-1 rounded-full bg-gray-200 mx-auto mb-5" />
               <div className="text-center mb-5">
@@ -2221,8 +2221,8 @@ export default function ExamPrepApp() {
                 ].map((item, i) => (
                   <button
                     key={i}
-                    onClick={() => { item.action(); setShowSideMenu(false) }}
-                    onTouchEnd={(e) => { e.preventDefault(); item.action(); setShowSideMenu(false) }}
+                    onClick={() => { setShowSideMenu(false); setTimeout(() => item.action(), 150) }}
+                    onTouchEnd={(e) => { e.preventDefault(); setShowSideMenu(false); setTimeout(() => item.action(), 150) }}
                     className="w-full flex items-center gap-3 px-3 py-3 rounded-xl text-gray-600 hover:bg-gray-50 active:bg-gray-100 transition-colors"
                     style={{ touchAction: 'manipulation', WebkitTapHighlightColor: 'transparent' }}
                   >
