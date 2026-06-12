@@ -17,7 +17,7 @@ import {
   ChevronDown, Star, Flame, TrendingUp, Calendar, Gift,
   HelpCircle, Share2, MessageCircle, Lock, Crown, Edit3,
   Eye, EyeOff, Menu, BookmarkPlus, Download, Wifi, WifiOff, BarChart3,
-  ClipboardList, PenTool
+  ClipboardList, PenTool, Plus
 } from 'lucide-react'
 import {
   getCategories, getTestsByExam, getTestById, saveResult, getLeaderboard,
@@ -28,7 +28,7 @@ import LoginModal from '@/components/LoginModal'
 import { App } from '@capacitor/app'
 
 // ===== Types =====
-type Page = 'home' | 'exams' | 'tests' | 'test-info' | 'test-taking' | 'results' | 'leaderboard' | 'profile' | 'practice'
+type Page = 'home' | 'exams' | 'tests' | 'test-info' | 'test-taking' | 'results' | 'leaderboard' | 'profile' | 'practice' | 'admin'
 
 interface CategoryColor {
   bg: string
@@ -126,7 +126,7 @@ export default function ExamPrepApp() {
   const unreadCount = notifications.filter(n => !n.read).length
 
   // --- Announcements (admin-managed image banners) ---
-  const [announcements] = useState<
+  const [announcements, setAnnouncements] = useState<
     { id: string; image: string; title: string; subtitle: string; action: Page; gradient: string }[]
   >([
     { id: '1', image: 'ssc', title: 'SSC CGL 2025', subtitle: 'New Mock Tests Added!', action: 'exams', gradient: 'from-orange-500 to-red-500' },
@@ -135,6 +135,18 @@ export default function ExamPrepApp() {
     { id: '4', image: 'practice', title: 'Practice Mode', subtitle: 'Topic-wise Practice LIVE!', action: 'practice', gradient: 'from-purple-500 to-pink-500' },
   ])
   const [activeAnnouncement, setActiveAnnouncement] = useState(0)
+
+  // --- Admin ---
+  const [adminLoggedIn, setAdminLoggedIn] = useState(false)
+  const [adminPassword, setAdminPassword] = useState('')
+  const [adminTab, setAdminTab] = useState<'announcements' | 'notifications'>('announcements')
+  const [newAnnTitle, setNewAnnTitle] = useState('')
+  const [newAnnSubtitle, setNewAnnSubtitle] = useState('')
+  const [newAnnGradient, setNewAnnGradient] = useState('from-orange-500 to-red-500')
+  const [newAnnImage, setNewAnnImage] = useState('ssc')
+  const [newNotifTitle, setNewNotifTitle] = useState('')
+  const [newNotifMessage, setNewNotifMessage] = useState('')
+  const [newNotifType, setNewNotifType] = useState<'update' | 'alert' | 'info'>('info')
 
   // --- Load categories on mount ---
   useEffect(() => {
@@ -1625,6 +1637,352 @@ export default function ExamPrepApp() {
     )
   }
 
+  // ===== RENDER: Admin Page =====
+  function renderAdmin() {
+    const ADMIN_PASSWORD = 'admin123'
+
+    if (!adminLoggedIn) {
+      return (
+        <div className="pb-20">
+          <div className="bg-gradient-to-r from-slate-800 to-slate-900 px-4 pt-[calc(env(safe-area-inset-top,0px)+3rem)] pb-6 rounded-b-2xl">
+            <div className="flex items-center gap-3 mb-2">
+              <button onClick={goBack} className="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center">
+                <ArrowLeft className="w-5 h-5 text-white" />
+              </button>
+              <div>
+                <h1 className="text-white text-xl font-bold">Admin Panel</h1>
+                <p className="text-slate-400 text-xs">Manage your app content</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="px-4 mt-8">
+            <Card className="border-0 shadow-lg max-w-sm mx-auto">
+              <CardContent className="p-6 text-center">
+                <div className="w-16 h-16 bg-slate-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                  <Lock className="w-8 h-8 text-slate-500" />
+                </div>
+                <h2 className="font-bold text-lg mb-1">Admin Login</h2>
+                <p className="text-gray-400 text-xs mb-4">Enter password to access admin panel</p>
+                <input
+                  type="password"
+                  value={adminPassword}
+                  onChange={e => setAdminPassword(e.target.value)}
+                  placeholder="Enter admin password"
+                  className="w-full px-4 py-3 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-slate-400 mb-3"
+                  onKeyDown={e => {
+                    if (e.key === 'Enter' && adminPassword === ADMIN_PASSWORD) {
+                      setAdminLoggedIn(true)
+                      setAdminPassword('')
+                    }
+                  }}
+                />
+                <Button
+                  className="w-full bg-gradient-to-r from-slate-700 to-slate-800 text-white rounded-xl"
+                  onClick={() => {
+                    if (adminPassword === ADMIN_PASSWORD) {
+                      setAdminLoggedIn(true)
+                      setAdminPassword('')
+                    }
+                  }}
+                >
+                  <Shield className="w-4 h-4 mr-2" /> Login
+                </Button>
+                {adminPassword && adminPassword !== ADMIN_PASSWORD && adminPassword.length > 3 && (
+                  <p className="text-red-500 text-xs mt-2">Wrong password. Try again.</p>
+                )}
+                <p className="text-gray-300 text-[10px] mt-3">Default: admin123</p>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      )
+    }
+
+    return (
+      <div className="pb-20">
+        <div className="bg-gradient-to-r from-slate-800 to-slate-900 px-4 pt-[calc(env(safe-area-inset-top,0px)+3rem)] pb-4 rounded-b-2xl">
+          <div className="flex items-center gap-3 mb-3">
+            <button onClick={goBack} className="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center">
+              <ArrowLeft className="w-5 h-5 text-white" />
+            </button>
+            <div className="flex-1">
+              <h1 className="text-white text-lg font-bold">Admin Panel</h1>
+              <p className="text-slate-400 text-[10px]">Manage your app content</p>
+            </div>
+            <button
+              onClick={() => setAdminLoggedIn(false)}
+              className="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center"
+            >
+              <LogOut className="w-4 h-4 text-white/60" />
+            </button>
+          </div>
+
+          {/* Tabs */}
+          <div className="flex gap-2">
+            <button
+              onClick={() => setAdminTab('announcements')}
+              className={`flex-1 py-2 rounded-xl text-sm font-medium transition-colors ${
+                adminTab === 'announcements' ? 'bg-white/15 text-white' : 'text-white/50'
+              }`}
+            >
+              <Flame className="w-4 h-4 inline mr-1" />Announcements
+            </button>
+            <button
+              onClick={() => setAdminTab('notifications')}
+              className={`flex-1 py-2 rounded-xl text-sm font-medium transition-colors ${
+                adminTab === 'notifications' ? 'bg-white/15 text-white' : 'text-white/50'
+              }`}
+            >
+              <Bell className="w-4 h-4 inline mr-1" />Notifications
+            </button>
+          </div>
+        </div>
+
+        <div className="px-4 mt-4 space-y-4">
+          {/* ===== ANNOUNCEMENTS TAB ===== */}
+          {adminTab === 'announcements' && (
+            <>
+              {/* Add New Announcement */}
+              <Card className="border-0 shadow-md">
+                <CardContent className="p-4">
+                  <h3 className="font-bold text-sm mb-3 flex items-center gap-2">
+                    <Plus className="w-4 h-4 text-orange-500" /> Add New Announcement
+                  </h3>
+                  <div className="space-y-3">
+                    <input
+                      type="text"
+                      value={newAnnTitle}
+                      onChange={e => setNewAnnTitle(e.target.value)}
+                      placeholder="Title (e.g. SSC CGL 2025)"
+                      className="w-full px-3 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-orange-300"
+                    />
+                    <input
+                      type="text"
+                      value={newAnnSubtitle}
+                      onChange={e => setNewAnnSubtitle(e.target.value)}
+                      placeholder="Subtitle (e.g. New Mock Tests Added!)"
+                      className="w-full px-3 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-orange-300"
+                    />
+                    <div>
+                      <p className="text-xs text-gray-500 mb-1.5">Gradient Color</p>
+                      <div className="flex gap-2 flex-wrap">
+                        {[
+                          { label: 'Orange', value: 'from-orange-500 to-red-500' },
+                          { label: 'Blue', value: 'from-blue-500 to-indigo-500' },
+                          { label: 'Green', value: 'from-emerald-500 to-teal-500' },
+                          { label: 'Purple', value: 'from-purple-500 to-pink-500' },
+                          { label: 'Red', value: 'from-red-500 to-rose-500' },
+                          { label: 'Cyan', value: 'from-cyan-500 to-blue-500' },
+                        ].map(g => (
+                          <button
+                            key={g.value}
+                            onClick={() => setNewAnnGradient(g.value)}
+                            className={`px-3 py-1.5 rounded-lg text-[11px] font-medium transition-colors ${
+                              newAnnGradient === g.value
+                                ? `bg-gradient-to-r ${g.value} text-white shadow-sm`
+                                : 'bg-gray-100 text-gray-600'
+                            }`}
+                          >
+                            {g.label}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                    <div>
+                      <p className="text-xs text-gray-500 mb-1.5">Icon</p>
+                      <div className="flex gap-2">
+                        {[
+                          { label: 'Book', value: 'ssc', icon: <BookOpen className="w-4 h-4" /> },
+                          { label: 'Building', value: 'banking', icon: <Building className="w-4 h-4" /> },
+                          { label: 'Trophy', value: 'leaderboard', icon: <Trophy className="w-4 h-4" /> },
+                          { label: 'Zap', value: 'practice', icon: <Zap className="w-4 h-4" /> },
+                        ].map(ic => (
+                          <button
+                            key={ic.value}
+                            onClick={() => setNewAnnImage(ic.value)}
+                            className={`w-10 h-10 rounded-xl flex items-center justify-center transition-colors ${
+                              newAnnImage === ic.value
+                                ? 'bg-orange-100 text-orange-600 ring-2 ring-orange-300'
+                                : 'bg-gray-100 text-gray-500'
+                            }`}
+                          >
+                            {ic.icon}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                    <Button
+                      className="w-full bg-gradient-to-r from-orange-500 to-red-500 text-white rounded-xl"
+                      disabled={!newAnnTitle || !newAnnSubtitle}
+                      onClick={() => {
+                        const newAnn = {
+                          id: Date.now().toString(),
+                          image: newAnnImage,
+                          title: newAnnTitle,
+                          subtitle: newAnnSubtitle,
+                          action: 'exams' as Page,
+                          gradient: newAnnGradient,
+                        }
+                        setAnnouncements(prev => [...prev, newAnn])
+                        setNewAnnTitle('')
+                        setNewAnnSubtitle('')
+                      }}
+                    >
+                      <Plus className="w-4 h-4 mr-1" /> Add Announcement
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Existing Announcements */}
+              <div>
+                <h3 className="font-bold text-sm mb-2 px-1">Current Announcements ({announcements.length})</h3>
+                <div className="space-y-2">
+                  {announcements.map((a, i) => (
+                    <Card key={a.id} className="border-0 shadow-sm">
+                      <CardContent className="p-3 flex items-center gap-3">
+                        <div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${a.gradient} flex items-center justify-center flex-shrink-0`}>
+                          {a.image === 'ssc' && <BookOpen className="w-5 h-5 text-white" />}
+                          {a.image === 'banking' && <Building className="w-5 h-5 text-white" />}
+                          {a.image === 'leaderboard' && <Trophy className="w-5 h-5 text-white" />}
+                          {a.image === 'practice' && <Zap className="w-5 h-5 text-white" />}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="font-semibold text-sm truncate">{a.title}</p>
+                          <p className="text-gray-400 text-xs truncate">{a.subtitle}</p>
+                        </div>
+                        <button
+                          onClick={() => {
+                            announcements.splice(i, 1)
+                            setAnnouncements([...announcements])
+                            if (activeAnnouncement >= announcements.length) {
+                              setActiveAnnouncement(Math.max(0, announcements.length - 1))
+                            }
+                          }}
+                          className="w-8 h-8 rounded-lg bg-red-50 flex items-center justify-center flex-shrink-0"
+                        >
+                          <XCircle className="w-4 h-4 text-red-400" />
+                        </button>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              </div>
+            </>
+          )}
+
+          {/* ===== NOTIFICATIONS TAB ===== */}
+          {adminTab === 'notifications' && (
+            <>
+              {/* Send New Notification */}
+              <Card className="border-0 shadow-md">
+                <CardContent className="p-4">
+                  <h3 className="font-bold text-sm mb-3 flex items-center gap-2">
+                    <Bell className="w-4 h-4 text-orange-500" /> Send Notification
+                  </h3>
+                  <div className="space-y-3">
+                    <input
+                      type="text"
+                      value={newNotifTitle}
+                      onChange={e => setNewNotifTitle(e.target.value)}
+                      placeholder="Title (e.g. New Update Available)"
+                      className="w-full px-3 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-orange-300"
+                    />
+                    <textarea
+                      value={newNotifMessage}
+                      onChange={e => setNewNotifMessage(e.target.value)}
+                      placeholder="Message (e.g. A new version is available...)"
+                      rows={3}
+                      className="w-full px-3 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-orange-300 resize-none"
+                    />
+                    <div>
+                      <p className="text-xs text-gray-500 mb-1.5">Type</p>
+                      <div className="flex gap-2">
+                        {[
+                          { label: 'Info', value: 'info' as const, color: 'bg-green-100 text-green-700' },
+                          { label: 'Update', value: 'update' as const, color: 'bg-blue-100 text-blue-700' },
+                          { label: 'Alert', value: 'alert' as const, color: 'bg-amber-100 text-amber-700' },
+                        ].map(t => (
+                          <button
+                            key={t.value}
+                            onClick={() => setNewNotifType(t.value)}
+                            className={`px-4 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                              newNotifType === t.value ? t.color : 'bg-gray-100 text-gray-500'
+                            }`}
+                          >
+                            {t.label}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                    <Button
+                      className="w-full bg-gradient-to-r from-orange-500 to-red-500 text-white rounded-xl"
+                      disabled={!newNotifTitle || !newNotifMessage}
+                      onClick={() => {
+                        const newNotif = {
+                          id: Date.now().toString(),
+                          title: newNotifTitle,
+                          message: newNotifMessage,
+                          time: 'Just now',
+                          read: false,
+                          type: newNotifType,
+                        }
+                        setNotifications(prev => [newNotif, ...prev])
+                        setNewNotifTitle('')
+                        setNewNotifMessage('')
+                      }}
+                    >
+                      <Bell className="w-4 h-4 mr-1" /> Send Notification
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Existing Notifications */}
+              <div>
+                <h3 className="font-bold text-sm mb-2 px-1">Current Notifications ({notifications.length})</h3>
+                <div className="space-y-2">
+                  {notifications.map((n, i) => (
+                    <Card key={n.id} className={`border-0 shadow-sm ${!n.read ? 'border-l-4 border-l-orange-400' : ''}`}>
+                      <CardContent className="p-3 flex items-start gap-3">
+                        <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 ${
+                          n.type === 'update' ? 'bg-blue-100' :
+                          n.type === 'alert' ? 'bg-amber-100' :
+                          'bg-green-100'
+                        }`}>
+                          {n.type === 'update' ? <Zap className="w-4 h-4 text-blue-500" /> :
+                           n.type === 'alert' ? <AlertTriangle className="w-4 h-4 text-amber-500" /> :
+                           <Gift className="w-4 h-4 text-green-500" />}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2">
+                            <p className="font-semibold text-sm truncate">{n.title}</p>
+                            {!n.read && <div className="w-2 h-2 rounded-full bg-orange-500 flex-shrink-0" />}
+                          </div>
+                          <p className="text-gray-400 text-xs truncate">{n.message}</p>
+                          <p className="text-gray-300 text-[10px] mt-0.5">{n.time}</p>
+                        </div>
+                        <button
+                          onClick={() => {
+                            setNotifications(prev => prev.filter((_, idx) => idx !== i))
+                          }}
+                          className="w-7 h-7 rounded-lg bg-red-50 flex items-center justify-center flex-shrink-0"
+                        >
+                          <XCircle className="w-3.5 h-3.5 text-red-400" />
+                        </button>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              </div>
+            </>
+          )}
+        </div>
+      </div>
+    )
+  }
+
   // ===== RENDER: Profile Page =====
   function renderProfile() {
     const stats = getUserStats()
@@ -2017,6 +2375,7 @@ export default function ExamPrepApp() {
       case 'leaderboard': return renderLeaderboard()
       case 'profile': return renderProfile()
       case 'practice': return renderPractice()
+      case 'admin': return renderAdmin()
       default: return renderHome()
     }
   }
@@ -2146,6 +2505,23 @@ export default function ExamPrepApp() {
                   </button>
                 ))}
               </div>
+            </div>
+
+            {/* Admin Access */}
+            <div className="border-t border-gray-100 px-5 py-3">
+              <button
+                onClick={() => { navigateTo('admin'); setShowSideMenu(false) }}
+                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-slate-600 hover:bg-slate-50 active:bg-slate-100 transition-colors"
+              >
+                <div className="w-8 h-8 rounded-lg bg-slate-100 flex items-center justify-center">
+                  <Shield className="w-4 h-4 text-slate-600" />
+                </div>
+                <div className="flex-1 text-left">
+                  <span className="font-medium text-sm block">Admin Panel</span>
+                  <span className="text-gray-400 text-[10px]">Manage announcements & notifications</span>
+                </div>
+                <ChevronRight className="w-4 h-4 text-gray-300" />
+              </button>
             </div>
 
             {/* Drawer Footer */}
