@@ -35,6 +35,7 @@ import { useFirebaseAuth } from '@/lib/use-firebase-auth'
 import LoginModal from '@/components/LoginModal'
 import { App } from '@capacitor/app'
 import { getAnnouncements as getLocalAnnouncements, getNotifications as getLocalNotifications } from '@/lib/admin-data'
+import { t, type Lang } from '@/lib/i18n'
 
 // ===== Types =====
 type Page = 'home' | 'exams' | 'tests' | 'test-info' | 'test-taking' | 'results' | 'leaderboard' | 'profile' | 'practice'
@@ -143,10 +144,14 @@ export default function ExamPrepApp() {
   const [showBackConfirm, setShowBackConfirm] = useState(false)
   const [showLanguageSheet, setShowLanguageSheet] = useState(false)
   const [showAboutSheet, setShowAboutSheet] = useState(false)
-  const [selectedLanguage, setSelectedLanguage] = useState('en')
+  const [selectedLanguage, setSelectedLanguage] = useState<Lang>('en')
   const [showQuestionNav, setShowQuestionNav] = useState(false)
   const [showSideMenu, setShowSideMenu] = useState(false)
   const [showNotificationPanel, setShowNotificationPanel] = useState(false)
+
+  // i18n shorthand
+  const lng = selectedLanguage
+  const _t = (key: string) => t(key, lng)
 
   // --- Notifications (loaded from shared admin storage) ---
   const [notifications, setNotifications] = useState<
@@ -506,8 +511,8 @@ export default function ExamPrepApp() {
                 <Menu className="w-5 h-5 text-white" />
               </button>
               <div>
-                <h1 className="text-white text-base font-bold leading-tight">ExamPrep Bharat</h1>
-                <p className="text-orange-100 text-[10px] leading-tight">Prepare for government exams</p>
+                <h1 className="text-white text-base font-bold leading-tight">{_t('app.name')}</h1>
+                <p className="text-orange-100 text-[10px] leading-tight">{_t('app.subtitle')}</p>
               </div>
             </div>
 
@@ -568,9 +573,9 @@ export default function ExamPrepApp() {
               <div className="flex items-center justify-between px-4 py-3 bg-gradient-to-r from-orange-50 to-red-50 border-b border-gray-100">
                 <div className="flex items-center gap-2">
                   <Bell className="w-4 h-4 text-orange-500" />
-                  <h3 className="font-bold text-sm text-gray-800">Notifications</h3>
+                  <h3 className="font-bold text-sm text-gray-800">{_t('home.notifications')}</h3>
                   {unreadCount > 0 && (
-                    <Badge className="bg-orange-500 text-white text-[10px] px-1.5 py-0">{unreadCount} new</Badge>
+                    <Badge className="bg-orange-500 text-white text-[10px] px-1.5 py-0">{unreadCount} {_t('home.newNotifs')}</Badge>
                   )}
                 </div>
                 <div className="flex items-center gap-2">
@@ -579,7 +584,7 @@ export default function ExamPrepApp() {
                       onClick={() => setNotifications(prev => prev.map(n => ({ ...n, read: true })))}
                       className="text-[11px] text-orange-500 font-semibold hover:text-orange-600"
                     >
-                      Mark all read
+                      {_t('home.markAllRead')}
                     </button>
                   )}
                   <button
@@ -596,7 +601,7 @@ export default function ExamPrepApp() {
                 {notifications.length === 0 ? (
                   <div className="py-8 text-center">
                     <Bell className="w-8 h-8 text-gray-200 mx-auto mb-2" />
-                    <p className="text-gray-400 text-sm">No notifications yet</p>
+                    <p className="text-gray-400 text-sm">{_t('home.noNotifs')}</p>
                   </div>
                 ) : (
                   notifications.map(notification => (
@@ -697,7 +702,7 @@ export default function ExamPrepApp() {
                           <p className="text-white font-bold text-base leading-tight">{a.title}</p>
                           <p className="text-white/80 text-xs mt-1">{a.subtitle}</p>
                           <div className="flex items-center gap-1 mt-2">
-                            <span className="text-white/50 text-[10px]">Tap to explore</span>
+                            <span className="text-white/50 text-[10px]">{_t('home.tapExplore')}</span>
                             <ChevronRight className="w-3 h-3 text-white/50" />
                           </div>
                         </div>
@@ -739,8 +744,8 @@ export default function ExamPrepApp() {
                   <Zap className="w-5 h-5 text-white" />
                 </div>
                 <div className="flex-1">
-                  <p className="font-semibold text-sm">Quick Practice</p>
-                  <p className="text-gray-500 text-xs">Jump into a random test</p>
+                  <p className="font-semibold text-sm">{_t('home.quickPractice')}</p>
+                  <p className="text-gray-500 text-xs">{_t('home.quickPracticeSub')}</p>
                 </div>
                 <Button
                   size="sm"
@@ -755,7 +760,7 @@ export default function ExamPrepApp() {
                     }
                   }}
                 >
-                  <Play className="w-4 h-4 mr-1" /> Start
+                  <Play className="w-4 h-4 mr-1" /> {_t('home.start')}
                 </Button>
               </div>
             </CardContent>
@@ -764,9 +769,9 @@ export default function ExamPrepApp() {
           {/* Exam Categories */}
           <div>
             <div className="flex items-center justify-between mb-3">
-              <h2 className="font-bold text-lg">Exam Categories</h2>
+              <h2 className="font-bold text-lg">{_t('home.examCategories')}</h2>
               <button onClick={() => handleBottomNav('exams')} className="text-orange-600 text-sm font-medium flex items-center">
-                View All <ChevronRight className="w-4 h-4" />
+                {_t('home.viewAll')} <ChevronRight className="w-4 h-4" />
               </button>
             </div>
             <div className="grid grid-cols-2 gap-3">
@@ -786,7 +791,7 @@ export default function ExamPrepApp() {
                         {getCatIcon(cat.slug)}
                       </div>
                       <p className="font-semibold text-sm">{cat.name}</p>
-                      <p className="text-gray-400 text-xs mt-1">{cat.exams.length} exams</p>
+                      <p className="text-gray-400 text-xs mt-1">{cat.exams.length} {_t('home.exams')}</p>
                     </CardContent>
                   </Card>
                 )
@@ -796,7 +801,7 @@ export default function ExamPrepApp() {
 
           {/* Popular Exams */}
           <div>
-            <h2 className="font-bold text-lg mb-3">Popular Exams</h2>
+            <h2 className="font-bold text-lg mb-3">{_t('home.popularExams')}</h2>
             <div className="space-y-2">
               {categories.slice(0, 3).flatMap(cat =>
                 cat.exams.slice(0, 2).map(exam => (
@@ -811,7 +816,7 @@ export default function ExamPrepApp() {
                       </div>
                       <div className="flex-1 min-w-0">
                         <p className="font-semibold text-sm truncate">{exam.name}</p>
-                        <p className="text-gray-400 text-xs">{exam.testCount} tests · {exam.totalQuestions} Qs</p>
+                        <p className="text-gray-400 text-xs">{exam.testCount} {_t('exams.tests')} · {exam.totalQuestions} {_t('tests.Qs')}</p>
                       </div>
                       <ChevronRight className="w-4 h-4 text-gray-400" />
                     </CardContent>
@@ -825,11 +830,11 @@ export default function ExamPrepApp() {
           <div>
             <div className="flex items-center gap-2 mb-3">
               <Star className="w-5 h-5 text-amber-500" />
-              <h2 className="font-bold text-lg">Daily Tips</h2>
+              <h2 className="font-bold text-lg">{_t('home.dailyTips')}</h2>
             </div>
             <Card className="border-0 shadow-sm border-l-4 border-l-orange-400">
               <CardContent className="p-4">
-                <p className="text-sm text-gray-700 leading-relaxed">💡 <strong>Pro Tip:</strong> Solve at least 50 questions daily from different topics. Consistency beats intensity in exam preparation!</p>
+                <p className="text-sm text-gray-700 leading-relaxed">{_t('home.dailyTip')}</p>
               </CardContent>
             </Card>
           </div>
@@ -838,13 +843,13 @@ export default function ExamPrepApp() {
           <div>
             <div className="flex items-center gap-2 mb-3">
               <Calendar className="w-5 h-5 text-blue-500" />
-              <h2 className="font-bold text-lg">Upcoming Exams</h2>
+              <h2 className="font-bold text-lg">{_t('home.upcomingExams')}</h2>
             </div>
             <div className="space-y-2">
               {[
-                { name: 'SSC CGL 2025 Tier-I', date: 'Jul 2025', status: 'Registration Open' },
-                { name: 'IBPS PO 2025 Prelims', date: 'Aug 2025', status: 'Coming Soon' },
-                { name: 'RRB NTPC CBT-2', date: 'Sep 2025', status: 'Admit Card Soon' },
+                { name: _t('upcoming.sscCgl'), date: _t('upcoming.sscCglDate'), status: _t('upcoming.sscCglStatus'), statusType: 'open' },
+                { name: _t('upcoming.ibpsPo'), date: _t('upcoming.ibpsPoDate'), status: _t('upcoming.ibpsPoStatus'), statusType: 'coming' },
+                { name: _t('upcoming.rrbNtpc'), date: _t('upcoming.rrbNtpcDate'), status: _t('upcoming.rrbNtpcStatus'), statusType: 'admit' },
               ].map((exam, i) => (
                 <Card key={i} className="border-0 shadow-sm">
                   <CardContent className="p-3 flex items-center gap-3">
@@ -855,9 +860,9 @@ export default function ExamPrepApp() {
                       <p className="font-semibold text-sm truncate">{exam.name}</p>
                       <p className="text-gray-400 text-xs">{exam.date}</p>
                     </div>
-                    <Badge variant={exam.status === 'Registration Open' ? 'default' : 'secondary'} className={`text-[10px] ${
-                      exam.status === 'Registration Open' ? 'bg-green-100 text-green-700' :
-                      exam.status === 'Admit Card Soon' ? 'bg-amber-100 text-amber-700' :
+                    <Badge variant={exam.statusType === 'open' ? 'default' : 'secondary'} className={`text-[10px] ${
+                      exam.statusType === 'open' ? 'bg-green-100 text-green-700' :
+                      exam.statusType === 'admit' ? 'bg-amber-100 text-amber-700' :
                       'bg-gray-100 text-gray-600'
                     }`}>
                       {exam.status}
@@ -872,7 +877,7 @@ export default function ExamPrepApp() {
           <div>
             <div className="flex items-center gap-2 mb-3">
               <TrendingUp className="w-5 h-5 text-green-500" />
-              <h2 className="font-bold text-lg">Your Progress</h2>
+              <h2 className="font-bold text-lg">{_t('home.yourProgress')}</h2>
             </div>
             {auth.isLoggedIn ? (
               <div className="grid grid-cols-3 gap-2">
@@ -880,21 +885,21 @@ export default function ExamPrepApp() {
                   <CardContent className="p-3 text-center">
                     <Flame className="w-6 h-6 text-orange-500 mx-auto mb-1" />
                     <p className="font-bold text-lg">{stats.testsTaken}</p>
-                    <p className="text-gray-400 text-[10px]">Tests Done</p>
+                    <p className="text-gray-400 text-[10px]">{_t('home.testsDone')}</p>
                   </CardContent>
                 </Card>
                 <Card className="border-0 shadow-sm">
                   <CardContent className="p-3 text-center">
                     <Target className="w-6 h-6 text-green-500 mx-auto mb-1" />
                     <p className="font-bold text-lg">{stats.avgScore}%</p>
-                    <p className="text-gray-400 text-[10px]">Accuracy</p>
+                    <p className="text-gray-400 text-[10px]">{_t('home.accuracy')}</p>
                   </CardContent>
                 </Card>
                 <Card className="border-0 shadow-sm">
                   <CardContent className="p-3 text-center">
                     <Award className="w-6 h-6 text-blue-500 mx-auto mb-1" />
                     <p className="font-bold text-lg">#{stats.bestRank}</p>
-                    <p className="text-gray-400 text-[10px]">Best Rank</p>
+                    <p className="text-gray-400 text-[10px]">{_t('home.bestRank')}</p>
                   </CardContent>
                 </Card>
               </div>
@@ -902,10 +907,10 @@ export default function ExamPrepApp() {
               <Card className="border-0 shadow-sm bg-gradient-to-r from-orange-50 to-red-50">
                 <CardContent className="p-4 text-center">
                   <TrendingUp className="w-8 h-8 text-orange-400 mx-auto mb-2" />
-                  <p className="font-semibold text-sm text-gray-700">Login to track your progress</p>
-                  <p className="text-gray-500 text-xs mt-1 mb-3">See your scores, ranks and improvement over time</p>
+                  <p className="font-semibold text-sm text-gray-700">{_t('home.loginTrack')}</p>
+                  <p className="text-gray-500 text-xs mt-1 mb-3">{_t('home.loginTrackSub')}</p>
                   <Button size="sm" className="bg-gradient-to-r from-orange-500 to-red-500 text-white rounded-xl" onClick={() => setShowLoginModal(true)}>
-                    Login Now
+                    {_t('home.loginNow')}
                   </Button>
                 </CardContent>
               </Card>
@@ -925,7 +930,7 @@ export default function ExamPrepApp() {
             <button onClick={goBack} className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center">
               <ArrowLeft className="w-5 h-5 text-white" />
             </button>
-            <h1 className="text-white text-xl font-bold">All Exams</h1>
+            <h1 className="text-white text-xl font-bold">{_t('exams.allExams')}</h1>
           </div>
         </div>
 
@@ -951,11 +956,11 @@ export default function ExamPrepApp() {
                       <CardContent className="p-3 flex items-center gap-3">
                         <div className="flex-1 min-w-0">
                           <p className="font-semibold text-sm">{exam.name}</p>
-                          <p className="text-gray-400 text-xs">{exam.testCount} tests · {exam.totalQuestions} Qs · {exam.duration} min</p>
+                          <p className="text-gray-400 text-xs">{exam.testCount} {_t('exams.tests')} · {exam.totalQuestions} {_t('tests.Qs')} · {exam.duration} {_t('tests.min')}</p>
                         </div>
                         <div className="flex items-center gap-1">
                           <Badge className={`bg-gradient-to-r ${color.gradient} text-white text-xs border-0`}>
-                            {exam.testCount} Tests
+                            {exam.testCount} {_t('exams.tests')}
                           </Badge>
                           <ChevronRight className="w-4 h-4 text-gray-400" />
                         </div>
@@ -989,19 +994,19 @@ export default function ExamPrepApp() {
           </div>
           <div className="flex items-center gap-4 mt-3">
             <div className="flex items-center gap-1 text-white/80 text-xs">
-              <BookOpen className="w-3 h-3" /> {selectedExam.totalQuestions} Qs
+              <BookOpen className="w-3 h-3" /> {selectedExam.totalQuestions} {_t('tests.Qs')}
             </div>
             <div className="flex items-center gap-1 text-white/80 text-xs">
-              <Clock className="w-3 h-3" /> {selectedExam.duration} min
+              <Clock className="w-3 h-3" /> {selectedExam.duration} {_t('tests.min')}
             </div>
             <div className="flex items-center gap-1 text-white/80 text-xs">
-              <FileText className="w-3 h-3" /> {examTests.length} tests
+              <FileText className="w-3 h-3" /> {examTests.length} {_t('exams.tests')}
             </div>
           </div>
         </div>
 
         <div className="px-4 mt-4">
-          <h2 className="font-bold text-base mb-3">Available Tests</h2>
+          <h2 className="font-bold text-base mb-3">{_t('tests.available')}</h2>
           <div className="space-y-3">
             {examTests.map(test => (
               <Card key={test.id} className="border-0 shadow-sm">
@@ -1011,11 +1016,11 @@ export default function ExamPrepApp() {
                       <p className="font-semibold text-sm">{test.title}</p>
                       <p className="text-gray-400 text-xs mt-1">{test.description}</p>
                     </div>
-                    {test.isFree && <Badge className="bg-emerald-100 text-emerald-700 text-xs border-0">FREE</Badge>}
+                    {test.isFree && <Badge className="bg-emerald-100 text-emerald-700 text-xs border-0">{_t('tests.free')}</Badge>}
                   </div>
                   <div className="flex items-center gap-3 mt-3 text-xs text-gray-500">
-                    <span className="flex items-center gap-1"><BookOpen className="w-3 h-3" /> {test.totalQuestions} Qs</span>
-                    <span className="flex items-center gap-1"><Clock className="w-3 h-3" /> {test.duration} min</span>
+                    <span className="flex items-center gap-1"><BookOpen className="w-3 h-3" /> {test.totalQuestions} {_t('tests.Qs')}</span>
+                    <span className="flex items-center gap-1"><Clock className="w-3 h-3" /> {test.duration} {_t('tests.min')}</span>
                     <span className="flex items-center gap-1"><Target className="w-3 h-3" /> {test.difficulty}</span>
                   </div>
                   <div className="flex items-center gap-2 mt-3">
@@ -1024,7 +1029,7 @@ export default function ExamPrepApp() {
                       className={`bg-gradient-to-r ${color.gradient} text-white rounded-xl flex-1`}
                       onClick={() => openTestInfo(test)}
                     >
-                      <Play className="w-4 h-4 mr-1" /> Start Test
+                      <Play className="w-4 h-4 mr-1" /> {_t('tests.startTest')}
                     </Button>
                     <Button
                       size="sm"
@@ -1057,7 +1062,7 @@ export default function ExamPrepApp() {
             <button onClick={goBack} className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center">
               <ArrowLeft className="w-5 h-5 text-white" />
             </button>
-            <h1 className="text-white text-lg font-bold flex-1 truncate">Test Details</h1>
+            <h1 className="text-white text-lg font-bold flex-1 truncate">{_t('testInfo.details')}</h1>
           </div>
           <h2 className="text-white font-semibold">{selectedTest.title}</h2>
           <p className="text-white/70 text-sm mt-1">{selectedTest.exam.name}</p>
@@ -1067,33 +1072,33 @@ export default function ExamPrepApp() {
           {/* Marking Scheme */}
           <Card className="border-0 shadow-sm">
             <CardHeader className="pb-2 pt-4 px-4">
-              <CardTitle className="text-base">Test Information</CardTitle>
+              <CardTitle className="text-base">{_t('testInfo.information')}</CardTitle>
             </CardHeader>
             <CardContent className="px-4 pb-4 space-y-3">
               <div className="flex justify-between text-sm">
-                <span className="text-gray-500">Total Questions</span>
+                <span className="text-gray-500">{_t('testInfo.totalQ')}</span>
                 <span className="font-semibold">{selectedTest.totalQuestions}</span>
               </div>
               <div className="flex justify-between text-sm">
-                <span className="text-gray-500">Duration</span>
-                <span className="font-semibold">{selectedTest.duration} minutes</span>
+                <span className="text-gray-500">{_t('testInfo.duration')}</span>
+                <span className="font-semibold">{selectedTest.duration} {_t('testInfo.minutes')}</span>
               </div>
               <div className="flex justify-between text-sm">
-                <span className="text-gray-500">Difficulty</span>
+                <span className="text-gray-500">{_t('testInfo.difficulty')}</span>
                 <Badge variant="secondary">{selectedTest.difficulty}</Badge>
               </div>
               <Separator />
               <div className="flex justify-between text-sm">
-                <span className="text-gray-500">Correct Answer</span>
-                <span className="font-semibold text-emerald-600">+{selectedTest.markingCorrect} marks</span>
+                <span className="text-gray-500">{_t('testInfo.correctAns')}</span>
+                <span className="font-semibold text-emerald-600">+{selectedTest.markingCorrect} {_t('testInfo.marks')}</span>
               </div>
               <div className="flex justify-between text-sm">
-                <span className="text-gray-500">Wrong Answer</span>
-                <span className="font-semibold text-red-600">{selectedTest.markingWrong} marks</span>
+                <span className="text-gray-500">{_t('testInfo.wrongAns')}</span>
+                <span className="font-semibold text-red-600">{selectedTest.markingWrong} {_t('testInfo.marks')}</span>
               </div>
               <div className="flex justify-between text-sm">
-                <span className="text-gray-500">Skipped</span>
-                <span className="font-semibold text-gray-400">{selectedTest.markingSkipped} marks</span>
+                <span className="text-gray-500">{_t('testInfo.skipped')}</span>
+                <span className="font-semibold text-gray-400">{selectedTest.markingSkipped} {_t('testInfo.marks')}</span>
               </div>
             </CardContent>
           </Card>
@@ -1105,8 +1110,8 @@ export default function ExamPrepApp() {
                 <Award className="w-5 h-5 text-orange-600" />
               </div>
               <div>
-                <p className="text-xs text-gray-500">Maximum Score</p>
-                <p className="font-bold text-lg">{selectedTest.totalQuestions * selectedTest.markingCorrect} marks</p>
+                <p className="text-xs text-gray-500">{_t('testInfo.maxScore')}</p>
+                <p className="font-bold text-lg">{selectedTest.totalQuestions * selectedTest.markingCorrect} {_t('testInfo.marks')}</p>
               </div>
             </CardContent>
           </Card>
@@ -1116,7 +1121,7 @@ export default function ExamPrepApp() {
             className="w-full h-12 bg-gradient-to-r from-orange-500 to-red-500 text-white rounded-2xl text-base font-semibold"
             onClick={() => startTest(selectedTest)}
           >
-            <Play className="w-5 h-5 mr-2" /> Start Test Now
+            <Play className="w-5 h-5 mr-2" /> {_t('testInfo.startNow')}
           </Button>
         </div>
       </div>
@@ -1161,8 +1166,8 @@ export default function ExamPrepApp() {
           </div>
           <Progress value={progressPercent} className="mt-2 h-1.5" />
           <div className="flex items-center justify-between mt-2 text-xs text-gray-400">
-            <span>Q {currentQuestionIndex + 1} of {questions.length}</span>
-            <span>{totalAnswered} answered · {totalMarked} marked</span>
+            <span>Q {currentQuestionIndex + 1} {_t('testTaking.of')} {questions.length}</span>
+            <span>{totalAnswered} {_t('testTaking.answered')} · {totalMarked} {_t('testTaking.marked')}</span>
           </div>
         </div>
 
@@ -1175,7 +1180,7 @@ export default function ExamPrepApp() {
               )}
               {markedForReview.has(question.id) && (
                 <Badge className="mb-3 ml-2 bg-amber-100 text-amber-700 text-xs border-0">
-                  <BookMarked className="w-3 h-3 mr-1" /> Marked for Review
+                  <BookMarked className="w-3 h-3 mr-1" /> {_t('testTaking.markedReview')}
                 </Badge>
               )}
               <p className="text-sm font-medium leading-relaxed mt-2">{question.questionText}</p>
@@ -1220,7 +1225,7 @@ export default function ExamPrepApp() {
               onClick={() => toggleReview(question.id)}
             >
               <BookMarked className="w-4 h-4 mr-1" />
-              {markedForReview.has(question.id) ? 'Unmark' : 'Mark'}
+              {markedForReview.has(question.id) ? _t('testTaking.unmark') : _t('testTaking.mark')}
             </Button>
             <Button
               variant="outline"
@@ -1228,7 +1233,7 @@ export default function ExamPrepApp() {
               className="rounded-xl flex-1"
               onClick={() => clearAnswer(question.id)}
             >
-              <RefreshCw className="w-4 h-4 mr-1" /> Clear
+              <RefreshCw className="w-4 h-4 mr-1" /> {_t('testTaking.clear')}
             </Button>
             <Button
               variant="outline"
@@ -1240,7 +1245,7 @@ export default function ExamPrepApp() {
                 }
               }}
             >
-              <SkipForward className="w-4 h-4 mr-1" /> Skip
+              <SkipForward className="w-4 h-4 mr-1" /> {_t('testTaking.skip')}
             </Button>
           </div>
           <div className="flex items-center gap-2">
@@ -1257,7 +1262,7 @@ export default function ExamPrepApp() {
               className="rounded-xl flex-1 bg-gradient-to-r from-orange-500 to-red-500 text-white"
               onClick={handleFinishTest}
             >
-              Submit Test
+              {_t('testTaking.submit')}
             </Button>
             <Button
               variant="outline"
@@ -1276,13 +1281,13 @@ export default function ExamPrepApp() {
           <div className="fixed inset-0 bg-black/50 z-50 flex items-end justify-center" onClick={() => setShowQuestionNav(false)}>
             <div className="bg-white rounded-t-3xl w-full max-h-[70vh] p-6" onClick={e => e.stopPropagation()}>
               <div className="flex items-center justify-between mb-4">
-                <h3 className="font-bold text-lg">Question Navigator</h3>
+                <h3 className="font-bold text-lg">{_t('testTaking.questionNav')}</h3>
                 <button onClick={() => setShowQuestionNav(false)} className="text-gray-400 text-2xl">&times;</button>
               </div>
               <div className="flex items-center gap-4 mb-4 text-xs">
-                <span className="flex items-center gap-1"><span className="w-3 h-3 rounded-full bg-orange-500" /> Answered</span>
-                <span className="flex items-center gap-1"><span className="w-3 h-3 rounded-full bg-gray-200" /> Unanswered</span>
-                <span className="flex items-center gap-1"><span className="w-3 h-3 rounded-full bg-amber-400" /> Marked</span>
+                <span className="flex items-center gap-1"><span className="w-3 h-3 rounded-full bg-orange-500" /> {_t('testTaking.answered')}</span>
+                <span className="flex items-center gap-1"><span className="w-3 h-3 rounded-full bg-gray-200" /> {_t('testTaking.unanswered')}</span>
+                <span className="flex items-center gap-1"><span className="w-3 h-3 rounded-full bg-amber-400" /> {_t('testTaking.marked')}</span>
               </div>
               <div className="grid grid-cols-5 gap-2 max-h-60 overflow-y-auto">
                 {questions.map((q, i) => {
@@ -1310,7 +1315,7 @@ export default function ExamPrepApp() {
                 className="w-full mt-4 bg-gradient-to-r from-orange-500 to-red-500 text-white rounded-xl"
                 onClick={handleFinishTest}
               >
-                Submit Test
+                {_t('testTaking.submit')}
               </Button>
             </div>
           </div>
@@ -1324,9 +1329,9 @@ export default function ExamPrepApp() {
                 <div className="w-16 h-16 rounded-full bg-gradient-to-br from-red-100 to-red-50 flex items-center justify-center mx-auto mb-4">
                   <AlertTriangle className="w-8 h-8 text-red-500" />
                 </div>
-                <h3 className="font-bold text-xl text-gray-900">Leave Test?</h3>
+                <h3 className="font-bold text-xl text-gray-900">{_t('testTaking.leaveTest')}</h3>
                 <p className="text-gray-500 text-sm mt-2 leading-relaxed">
-                  Your progress will be lost if you leave now. All answered questions will not be saved.
+                  {_t('testTaking.leaveMsg')}
                 </p>
               </div>
               <div className="px-6 pb-6 space-y-2.5">
@@ -1334,7 +1339,7 @@ export default function ExamPrepApp() {
                   className="w-full h-11 bg-gradient-to-r from-orange-500 to-red-500 text-white rounded-xl font-semibold text-sm"
                   onClick={() => setShowBackConfirm(false)}
                 >
-                  No, Continue Test
+                  {_t('testTaking.noContinue')}
                 </Button>
                 <Button
                   variant="outline"
@@ -1346,7 +1351,7 @@ export default function ExamPrepApp() {
                     goBack()
                   }}
                 >
-                  Yes, Leave Test
+                  {_t('testTaking.yesLeave')}
                 </Button>
               </div>
             </div>
@@ -1375,7 +1380,7 @@ export default function ExamPrepApp() {
             )}
           </div>
           <h1 className="text-white text-2xl font-bold">
-            {percentage >= 60 ? 'Great Job!' : percentage >= 30 ? 'Keep Practicing!' : 'Keep Going!'}
+            {percentage >= 60 ? _t('results.greatJob') : percentage >= 30 ? _t('results.keepPracticing') : _t('results.keepGoing')}
           </h1>
           <p className="text-white/70 text-sm mt-1">{selectedTest.title}</p>
         </div>
@@ -1386,7 +1391,7 @@ export default function ExamPrepApp() {
             <CardContent className="p-6 text-center">
               <div className="text-4xl font-bold text-orange-600">{lastResult.score}<span className="text-lg text-gray-400">/{lastResult.maxScore}</span></div>
               <Progress value={Math.max(0, percentage)} className="mt-3 h-2" />
-              <p className="text-gray-500 text-sm mt-2">{percentage}% Score</p>
+              <p className="text-gray-500 text-sm mt-2">{percentage}% {_t('results.score')}</p>
             </CardContent>
           </Card>
 
@@ -1396,21 +1401,21 @@ export default function ExamPrepApp() {
               <CardContent className="p-3 text-center">
                 <CheckCircle2 className="w-6 h-6 text-emerald-500 mx-auto" />
                 <p className="font-bold text-lg text-emerald-600 mt-1">{lastResult.correctCount}</p>
-                <p className="text-gray-400 text-xs">Correct</p>
+                <p className="text-gray-400 text-xs">{_t('results.correct')}</p>
               </CardContent>
             </Card>
             <Card className="border-0 shadow-sm">
               <CardContent className="p-3 text-center">
                 <XCircle className="w-6 h-6 text-red-500 mx-auto" />
                 <p className="font-bold text-lg text-red-600 mt-1">{lastResult.wrongCount}</p>
-                <p className="text-gray-400 text-xs">Wrong</p>
+                <p className="text-gray-400 text-xs">{_t('results.wrong')}</p>
               </CardContent>
             </Card>
             <Card className="border-0 shadow-sm">
               <CardContent className="p-3 text-center">
                 <SkipForward className="w-6 h-6 text-gray-400 mx-auto" />
                 <p className="font-bold text-lg text-gray-500 mt-1">{lastResult.skippedCount}</p>
-                <p className="text-gray-400 text-xs">Skipped</p>
+                <p className="text-gray-400 text-xs">{_t('results.skipped')}</p>
               </CardContent>
             </Card>
           </div>
@@ -1419,7 +1424,7 @@ export default function ExamPrepApp() {
           <Card className="border-0 shadow-sm">
             <CardContent className="p-3 flex items-center gap-3">
               <Clock className="w-5 h-5 text-orange-500" />
-              <span className="text-gray-500 text-sm">Time Taken</span>
+              <span className="text-gray-500 text-sm">{_t('results.timeTaken')}</span>
               <span className="font-bold ml-auto">{formatTime(lastResult.timeTaken)}</span>
             </CardContent>
           </Card>
@@ -1431,7 +1436,7 @@ export default function ExamPrepApp() {
               className="flex-1 rounded-xl"
               onClick={() => openLeaderboard(lastResult.testId)}
             >
-              <Trophy className="w-4 h-4 mr-2" /> Leaderboard
+              <Trophy className="w-4 h-4 mr-2" /> {_t('results.leaderboard')}
             </Button>
             <Button
               className="flex-1 rounded-xl bg-gradient-to-r from-orange-500 to-red-500 text-white"
@@ -1439,13 +1444,13 @@ export default function ExamPrepApp() {
                 if (selectedTest) startTest(selectedTest)
               }}
             >
-              <RefreshCw className="w-4 h-4 mr-2" /> Retry
+              <RefreshCw className="w-4 h-4 mr-2" /> {_t('results.retry')}
             </Button>
           </div>
 
           {/* Answer Key */}
           <div>
-            <h2 className="font-bold text-lg mb-3">Answer Key</h2>
+            <h2 className="font-bold text-lg mb-3">{_t('results.answerKey')}</h2>
             <div className="space-y-3">
               {questions.map((q, i) => {
                 const userAnswer = lastResult.answers[q.id]
@@ -1481,7 +1486,7 @@ export default function ExamPrepApp() {
                           return (
                             <p key={letter} className={optionClass}>
                               {letter}. {optionText}
-                              {isUserAnswer && ' (Your Answer)'}
+                              {isUserAnswer && ` (${_t('results.yourAnswer')})`}
                               {isCorrectOption && ' ✓'}
                             </p>
                           )
@@ -1504,7 +1509,7 @@ export default function ExamPrepApp() {
             className="w-full rounded-xl bg-gradient-to-r from-orange-500 to-red-500 text-white"
             onClick={() => { pageHistoryRef.current = []; setCurrentPage('home') }}
           >
-            <Home className="w-4 h-4 mr-2" /> Back to Home
+            <Home className="w-4 h-4 mr-2" /> {_t('results.backHome')}
           </Button>
         </div>
       </div>
@@ -1521,7 +1526,7 @@ export default function ExamPrepApp() {
               <ArrowLeft className="w-5 h-5 text-white" />
             </button>
             <Trophy className="w-6 h-6 text-yellow-300" />
-            <h1 className="text-white text-xl font-bold">Leaderboard</h1>
+            <h1 className="text-white text-xl font-bold">{_t('leaderboard.title')}</h1>
           </div>
         </div>
 
@@ -1530,8 +1535,8 @@ export default function ExamPrepApp() {
             <Card className="border-0 shadow-sm">
               <CardContent className="p-8 text-center">
                 <Trophy className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-                <p className="font-semibold text-gray-400">No results yet</p>
-                <p className="text-gray-400 text-sm mt-1">Be the first to take this test!</p>
+                <p className="font-semibold text-gray-400">{_t('leaderboard.noResults')}</p>
+                <p className="text-gray-400 text-sm mt-1">{_t('leaderboard.beFirst')}</p>
               </CardContent>
             </Card>
           ) : (
@@ -1574,8 +1579,8 @@ export default function ExamPrepApp() {
               <ArrowLeft className="w-5 h-5 text-white" />
             </button>
             <div>
-              <h1 className="text-white text-xl font-bold">Practice</h1>
-              <p className="text-orange-100 text-xs">Topic-wise practice sessions</p>
+              <h1 className="text-white text-xl font-bold">{_t('practice.title')}</h1>
+              <p className="text-orange-100 text-xs">{_t('practice.subtitle')}</p>
             </div>
           </div>
         </div>
@@ -1583,7 +1588,7 @@ export default function ExamPrepApp() {
         <div className="px-4 mt-4 space-y-4">
           {/* Practice Mode Selection */}
           <div>
-            <h2 className="font-bold text-lg mb-3">Choose Practice Mode</h2>
+            <h2 className="font-bold text-lg mb-3">{_t('practice.chooseMode')}</h2>
             <div className="grid grid-cols-2 gap-3">
               <Card className="border-0 shadow-sm cursor-pointer hover:shadow-md transition-shadow" onClick={() => {
                 const allCats = categories
@@ -1598,8 +1603,8 @@ export default function ExamPrepApp() {
                   <div className="w-12 h-12 rounded-2xl bg-orange-50 flex items-center justify-center mx-auto mb-2">
                     <Zap className="w-6 h-6 text-orange-500" />
                   </div>
-                  <p className="font-semibold text-sm">Quick Practice</p>
-                  <p className="text-gray-400 text-[11px] mt-1">Random questions</p>
+                  <p className="font-semibold text-sm">{_t('practice.quick')}</p>
+                  <p className="text-gray-400 text-[11px] mt-1">{_t('practice.quickSub')}</p>
                 </CardContent>
               </Card>
               <Card className="border-0 shadow-sm cursor-pointer hover:shadow-md transition-shadow">
@@ -1607,8 +1612,8 @@ export default function ExamPrepApp() {
                   <div className="w-12 h-12 rounded-2xl bg-blue-50 flex items-center justify-center mx-auto mb-2">
                     <Target className="w-6 h-6 text-blue-500" />
                   </div>
-                  <p className="font-semibold text-sm">Topic Wise</p>
-                  <p className="text-gray-400 text-[11px] mt-1">Pick a subject</p>
+                  <p className="font-semibold text-sm">{_t('practice.topicWise')}</p>
+                  <p className="text-gray-400 text-[11px] mt-1">{_t('practice.topicWiseSub')}</p>
                 </CardContent>
               </Card>
               <Card className="border-0 shadow-sm cursor-pointer hover:shadow-md transition-shadow">
@@ -1616,8 +1621,8 @@ export default function ExamPrepApp() {
                   <div className="w-12 h-12 rounded-2xl bg-green-50 flex items-center justify-center mx-auto mb-2">
                     <BookMarked className="w-6 h-6 text-green-500" />
                   </div>
-                  <p className="font-semibold text-sm">Bookmarked</p>
-                  <p className="text-gray-400 text-[11px] mt-1">Saved questions</p>
+                  <p className="font-semibold text-sm">{_t('practice.bookmarked')}</p>
+                  <p className="text-gray-400 text-[11px] mt-1">{_t('practice.bookmarkedSub')}</p>
                 </CardContent>
               </Card>
               <Card className="border-0 shadow-sm cursor-pointer hover:shadow-md transition-shadow">
@@ -1625,8 +1630,8 @@ export default function ExamPrepApp() {
                   <div className="w-12 h-12 rounded-2xl bg-purple-50 flex items-center justify-center mx-auto mb-2">
                     <PenTool className="w-6 h-6 text-purple-500" />
                   </div>
-                  <p className="font-semibold text-sm">Weak Areas</p>
-                  <p className="text-gray-400 text-[11px] mt-1">Improve scores</p>
+                  <p className="font-semibold text-sm">{_t('practice.weakAreas')}</p>
+                  <p className="text-gray-400 text-[11px] mt-1">{_t('practice.weakAreasSub')}</p>
                 </CardContent>
               </Card>
             </div>
@@ -1634,7 +1639,7 @@ export default function ExamPrepApp() {
 
           {/* Practice by Category */}
           <div>
-            <h2 className="font-bold text-lg mb-3">Practice by Category</h2>
+            <h2 className="font-bold text-lg mb-3">{_t('practice.byCategory')}</h2>
             <div className="space-y-2">
               {categories.map(cat => {
                 const color = getCatColor(cat.slug)
@@ -1654,10 +1659,10 @@ export default function ExamPrepApp() {
                       </div>
                       <div className="flex-1 min-w-0">
                         <p className="font-semibold text-sm">{cat.name}</p>
-                        <p className="text-gray-400 text-xs">{cat.exams.length} exams · {totalQs} questions</p>
+                        <p className="text-gray-400 text-xs">{cat.exams.length} {_t('home.exams')} · {totalQs} {_t('about.questions')}</p>
                       </div>
                       <Button size="sm" variant="outline" className="rounded-xl text-orange-600 border-orange-200 text-xs">
-                        Start
+                        {_t('home.start')}
                       </Button>
                     </CardContent>
                   </Card>
@@ -1668,21 +1673,21 @@ export default function ExamPrepApp() {
 
           {/* Previous Practice Sessions */}
           <div>
-            <h2 className="font-bold text-lg mb-3">Recent Practice</h2>
+            <h2 className="font-bold text-lg mb-3">{_t('practice.recent')}</h2>
             {auth.isLoggedIn ? (
               <Card className="border-0 shadow-sm">
                 <CardContent className="p-4 text-center">
                   <Clock className="w-8 h-8 text-gray-300 mx-auto mb-2" />
-                  <p className="text-gray-400 text-sm">Your practice history will appear here</p>
+                  <p className="text-gray-400 text-sm">{_t('practice.historyEmpty')}</p>
                 </CardContent>
               </Card>
             ) : (
               <Card className="border-0 shadow-sm bg-gradient-to-r from-orange-50 to-red-50">
                 <CardContent className="p-4 text-center">
                   <PenTool className="w-8 h-8 text-orange-400 mx-auto mb-2" />
-                  <p className="font-semibold text-sm text-gray-700">Login to save practice history</p>
+                  <p className="font-semibold text-sm text-gray-700">{_t('practice.loginSave')}</p>
                   <Button size="sm" className="bg-gradient-to-r from-orange-500 to-red-500 text-white rounded-xl mt-2" onClick={() => setShowLoginModal(true)}>
-                    Login Now
+                    {_t('home.loginNow')}
                   </Button>
                 </CardContent>
               </Card>
@@ -1710,7 +1715,7 @@ export default function ExamPrepApp() {
 
           {/* Top bar */}
           <div className="flex items-center justify-between mb-6 relative z-10">
-            <h1 className="text-white text-xl font-bold">My Profile</h1>
+            <h1 className="text-white text-xl font-bold">{_t('profile.title')}</h1>
             <button
               onClick={() => setShowAboutSheet(true)}
               className="w-9 h-9 rounded-full bg-white/10 backdrop-blur flex items-center justify-center"
@@ -1734,16 +1739,16 @@ export default function ExamPrepApp() {
               </div>
               <div className="flex-1 min-w-0">
                 <p className="text-white font-bold text-lg truncate">
-                  {isEmailUser ? (userDisplay || userEmail) : 'Guest User'}
+                  {isEmailUser ? (userDisplay || userEmail) : _t('profile.guestUser')}
                 </p>
                 <div className="flex items-center gap-2 mt-1">
                   {isEmailUser ? (
                     <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 text-xs font-medium">
-                      <Shield className="w-3 h-3" /> Verified
+                      <Shield className="w-3 h-3" /> {_t('profile.verified')}
                     </span>
                   ) : (
                     <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-400 text-xs font-medium">
-                      <AlertTriangle className="w-3 h-3" /> Guest Mode
+                      <AlertTriangle className="w-3 h-3" /> {_t('profile.guestMode')}
                     </span>
                   )}
                 </div>
@@ -1762,15 +1767,15 @@ export default function ExamPrepApp() {
             <div className="mt-5 pt-4 border-t border-white/10 grid grid-cols-3 gap-2">
               <div className="text-center">
                 <p className="text-white font-bold text-xl">{stats.testsTaken}</p>
-                <p className="text-white/40 text-[10px] font-medium uppercase tracking-wider">Tests</p>
+                <p className="text-white/40 text-[10px] font-medium uppercase tracking-wider">{_t('profile.tests')}</p>
               </div>
               <div className="text-center border-x border-white/10">
                 <p className="text-white font-bold text-xl">{stats.avgScore}%</p>
-                <p className="text-white/40 text-[10px] font-medium uppercase tracking-wider">Avg Score</p>
+                <p className="text-white/40 text-[10px] font-medium uppercase tracking-wider">{_t('profile.avgScore')}</p>
               </div>
               <div className="text-center">
                 <p className="text-white font-bold text-xl">#{stats.bestRank}</p>
-                <p className="text-white/40 text-[10px] font-medium uppercase tracking-wider">Best Rank</p>
+                <p className="text-white/40 text-[10px] font-medium uppercase tracking-wider">{_t('profile.bestRank')}</p>
               </div>
             </div>
           </div>
@@ -1786,15 +1791,15 @@ export default function ExamPrepApp() {
                     <Crown className="w-5 h-5 text-white" />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-white font-bold text-sm">Upgrade to Phone Login</p>
-                    <p className="text-white/80 text-xs mt-0.5">Save progress & access from any device</p>
+                    <p className="text-white font-bold text-sm">{_t('profile.upgradeTitle')}</p>
+                    <p className="text-white/80 text-xs mt-0.5">{_t('profile.upgradeSub')}</p>
                   </div>
                   <Button
                     size="sm"
                     className="bg-white text-orange-600 hover:bg-white/90 rounded-xl font-bold px-3"
                     onClick={() => setShowLoginModal(true)}
                   >
-                    <Mail className="w-3 h-3 mr-1" /> Login
+                    <Mail className="w-3 h-3 mr-1" /> {_t('profile.login')}
                   </Button>
                 </div>
               </CardContent>
@@ -1809,14 +1814,14 @@ export default function ExamPrepApp() {
                   <div className="w-14 h-14 rounded-full bg-orange-50 flex items-center justify-center mx-auto mb-3">
                     <User className="w-7 h-7 text-orange-500" />
                   </div>
-                  <p className="font-bold text-base">Login to unlock all features</p>
-                  <p className="text-gray-400 text-xs mt-1">Track progress, compete & save data</p>
+                  <p className="font-bold text-base">{_t('profile.loginUnlock')}</p>
+                  <p className="text-gray-400 text-xs mt-1">{_t('profile.loginUnlockSub')}</p>
                 </div>
                 <Button
                   className="w-full h-11 bg-gradient-to-r from-orange-500 to-red-500 text-white rounded-xl font-semibold"
                   onClick={() => setShowLoginModal(true)}
                 >
-                  <Mail className="w-4 h-4 mr-2" /> Login with Email
+                  <Mail className="w-4 h-4 mr-2" /> {_t('profile.loginEmail')}
                 </Button>
               </CardContent>
             </Card>
@@ -1832,8 +1837,8 @@ export default function ExamPrepApp() {
                 <div className="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center mb-2">
                   <BookOpen className="w-5 h-5 text-blue-600" />
                 </div>
-                <p className="font-semibold text-sm">My Exams</p>
-                <p className="text-gray-400 text-[10px] mt-0.5">{categories.length} categories</p>
+                <p className="font-semibold text-sm">{_t('profile.myExams')}</p>
+                <p className="text-gray-400 text-[10px] mt-0.5">{categories.length} {_t('profile.categories')}</p>
               </CardContent>
             </Card>
             <Card
@@ -1844,15 +1849,15 @@ export default function ExamPrepApp() {
                 <div className="w-10 h-10 rounded-xl bg-amber-50 flex items-center justify-center mb-2">
                   <Trophy className="w-5 h-5 text-amber-600" />
                 </div>
-                <p className="font-semibold text-sm">Leaderboard</p>
-                <p className="text-gray-400 text-[10px] mt-0.5">View rankings</p>
+                <p className="font-semibold text-sm">{_t('leaderboard.title')}</p>
+                <p className="text-gray-400 text-[10px] mt-0.5">{_t('profile.viewRankings')}</p>
               </CardContent>
             </Card>
           </div>
 
           {/* Settings Section */}
           <div>
-            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider px-1 mb-2">Settings</p>
+            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider px-1 mb-2">{_t('profile.settings')}</p>
             <Card className="border-0 shadow-sm overflow-hidden">
               <CardContent className="p-0">
                 {/* Language */}
@@ -1864,8 +1869,8 @@ export default function ExamPrepApp() {
                     <BookOpen className="w-4 h-4 text-indigo-600" />
                   </div>
                   <div className="flex-1 text-left">
-                    <p className="font-semibold text-[13px]">Language</p>
-                    <p className="text-gray-400 text-[11px]">{selectedLanguage === 'en' ? 'English' : selectedLanguage === 'hi' ? 'हिन्दी (Hindi)' : 'বাংলা (Bangla)'}</p>
+                    <p className="font-semibold text-[13px]">{_t('profile.language')}</p>
+                    <p className="text-gray-400 text-[11px]">{lng === 'en' ? _t('lang.english') : lng === 'hi' ? _t('lang.hindi') : _t('lang.bangla')}</p>
                   </div>
                   <ChevronRight className="w-4 h-4 text-gray-300" />
                 </button>
@@ -1879,8 +1884,8 @@ export default function ExamPrepApp() {
                     <Shield className="w-4 h-4 text-purple-600" />
                   </div>
                   <div className="flex-1 text-left">
-                    <p className="font-semibold text-[13px]">About</p>
-                    <p className="text-gray-400 text-[11px]">App info & details</p>
+                    <p className="font-semibold text-[13px]">{_t('profile.about')}</p>
+                    <p className="text-gray-400 text-[11px]">{_t('profile.aboutSub')}</p>
                   </div>
                   <ChevronRight className="w-4 h-4 text-gray-300" />
                 </button>
@@ -1890,7 +1895,7 @@ export default function ExamPrepApp() {
 
           {/* Support Section */}
           <div>
-            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider px-1 mb-2">Support</p>
+            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider px-1 mb-2">{_t('profile.support')}</p>
             <Card className="border-0 shadow-sm overflow-hidden">
               <CardContent className="p-0">
                 <button
@@ -1901,8 +1906,8 @@ export default function ExamPrepApp() {
                     <HelpCircle className="w-4 h-4 text-teal-600" />
                   </div>
                   <div className="flex-1 text-left">
-                    <p className="font-semibold text-[13px]">Help & FAQ</p>
-                    <p className="text-gray-400 text-[11px]">Get answers to common questions</p>
+                    <p className="font-semibold text-[13px]">{_t('profile.helpFaq')}</p>
+                    <p className="text-gray-400 text-[11px]">{_t('profile.helpFaqSub')}</p>
                   </div>
                   <ChevronRight className="w-4 h-4 text-gray-300" />
                 </button>
@@ -1911,7 +1916,7 @@ export default function ExamPrepApp() {
                   className="w-full flex items-center gap-3 p-4 hover:bg-gray-50/80 transition-colors active:bg-gray-100"
                   onClick={() => {
                     if (navigator.share) {
-                      navigator.share({ title: 'ExamPrep Bharat', text: 'Prepare for government exams!', url: window.location.href })
+                      navigator.share({ title: _t('app.name'), text: _t('share.text'), url: window.location.href })
                     }
                   }}
                 >
@@ -1919,8 +1924,8 @@ export default function ExamPrepApp() {
                     <Share2 className="w-4 h-4 text-pink-600" />
                   </div>
                   <div className="flex-1 text-left">
-                    <p className="font-semibold text-[13px]">Share App</p>
-                    <p className="text-gray-400 text-[11px]">Tell your friends about us</p>
+                    <p className="font-semibold text-[13px]">{_t('profile.shareApp')}</p>
+                    <p className="text-gray-400 text-[11px]">{_t('profile.shareAppSub')}</p>
                   </div>
                   <ChevronRight className="w-4 h-4 text-gray-300" />
                 </button>
@@ -1935,12 +1940,12 @@ export default function ExamPrepApp() {
               className="w-full rounded-xl border-red-200 text-red-500 hover:bg-red-50 hover:text-red-600 h-11 font-semibold"
               onClick={() => auth.logout()}
             >
-              <LogOut className="w-4 h-4 mr-2" /> Logout
+              <LogOut className="w-4 h-4 mr-2" /> {_t('profile.logout')}
             </Button>
           )}
 
           {/* App Version */}
-          <p className="text-center text-gray-300 text-[10px] pt-2 pb-4">ExamPrep Bharat v1.0</p>
+          <p className="text-center text-gray-300 text-[10px] pt-2 pb-4">{_t('app.versionFull')}</p>
         </div>
 
         {/* Language Sheet */}
@@ -1948,12 +1953,12 @@ export default function ExamPrepApp() {
           <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-end justify-center" onClick={() => setShowLanguageSheet(false)}>
             <div className="bg-white rounded-t-[28px] w-full p-6 animate-slide-up" onClick={e => e.stopPropagation()}>
               <div className="w-10 h-1 rounded-full bg-gray-200 mx-auto mb-5" />
-              <h3 className="font-bold text-lg mb-4">Select Language</h3>
+              <h3 className="font-bold text-lg mb-4">{_t('lang.select')}</h3>
               <div className="space-y-1">
                 {[
-                  { code: 'en', name: 'English', flag: '🇬🇧', available: true },
-                  { code: 'hi', name: 'हिन्दी (Hindi)', flag: '🇮🇳', available: true },
-                  { code: 'bn', name: 'বাংলা (Bangla)', flag: '🇧🇩', available: true },
+                  { code: 'en', name: _t('lang.english'), flag: '🇬🇧', available: true },
+                  { code: 'hi', name: _t('lang.hindi'), flag: '🇮🇳', available: true },
+                  { code: 'bn', name: _t('lang.bangla'), flag: '🇧🇩', available: true },
                 ].map(lang => (
                   <button
                     key={lang.code}
@@ -1976,7 +1981,7 @@ export default function ExamPrepApp() {
                   >
                     <span className="text-xl">{lang.flag}</span>
                     <span className="font-medium text-sm flex-1">{lang.name}</span>
-                    {!lang.available && <Badge variant="secondary" className="text-[10px]">Coming Soon</Badge>}
+                    {!lang.available && <Badge variant="secondary" className="text-[10px]">{_t('lang.comingSoon')}</Badge>}
                     {selectedLanguage === lang.code && (
                       <div className="w-6 h-6 rounded-full bg-orange-500 flex items-center justify-center">
                         <CheckCircle2 className="w-4 h-4 text-white" />
@@ -1990,7 +1995,7 @@ export default function ExamPrepApp() {
                 className="w-full mt-5 rounded-xl h-11"
                 onClick={() => setShowLanguageSheet(false)}
               >
-                Cancel
+                {_t('lang.cancel')}
               </Button>
             </div>
           </div>
@@ -2005,17 +2010,17 @@ export default function ExamPrepApp() {
                 <div className="w-16 h-16 bg-gradient-to-br from-orange-500 to-red-500 rounded-2xl flex items-center justify-center mx-auto mb-3 shadow-lg shadow-orange-500/20">
                   <span className="text-white text-2xl font-bold">E</span>
                 </div>
-                <h3 className="font-bold text-lg">ExamPrep Bharat</h3>
-                <p className="text-gray-400 text-sm">Version 1.0</p>
+                <h3 className="font-bold text-lg">{_t('app.name')}</h3>
+                <p className="text-gray-400 text-sm">{_t('app.version')}</p>
               </div>
               <div className="space-y-2">
                 {[
-                  { label: 'Version', value: '1.0' },
-                  { label: 'Size', value: '~5 MB' },
-                  { label: 'Exams', value: '21+' },
-                  { label: 'Questions', value: '210+' },
-                  { label: 'Offline', value: 'Yes', green: true },
-                  { label: 'Ads', value: 'No', green: true },
+                  { label: _t('about.version'), value: '1.0' },
+                  { label: _t('about.size'), value: '~5 MB' },
+                  { label: _t('about.exams'), value: '21+' },
+                  { label: _t('about.questions'), value: '210+' },
+                  { label: _t('about.offline'), value: _t('about.yes'), green: true },
+                  { label: _t('about.ads'), value: _t('about.no'), green: true },
                 ].map(item => (
                   <div key={item.label} className="flex justify-between text-sm p-3 bg-gray-50 rounded-xl">
                     <span className="text-gray-500">{item.label}</span>
@@ -2023,13 +2028,13 @@ export default function ExamPrepApp() {
                   </div>
                 ))}
               </div>
-              <p className="text-center text-sm text-gray-400 mt-5">Made with ❤️ in India</p>
+              <p className="text-center text-sm text-gray-400 mt-5">{_t('app.madeIn')}</p>
               <Button
                 variant="outline"
                 className="w-full mt-4 rounded-xl h-11"
                 onClick={() => setShowAboutSheet(false)}
               >
-                Close
+                {_t('about.close')}
               </Button>
             </div>
           </div>
@@ -2044,10 +2049,10 @@ export default function ExamPrepApp() {
     if (!pages.includes(currentPage)) return null
 
     const navItems = [
-      { page: 'home' as Page, icon: Home, label: 'Home' },
-      { page: 'practice' as Page, icon: Zap, label: 'Practice' },
-      { page: 'tests' as Page, icon: ClipboardList, label: 'Tests' },
-      { page: 'leaderboard' as Page, icon: Trophy, label: 'Ranks' },
+      { page: 'home' as Page, icon: Home, label: _t('nav.home') },
+      { page: 'practice' as Page, icon: Zap, label: _t('nav.practice') },
+      { page: 'tests' as Page, icon: ClipboardList, label: _t('nav.tests') },
+      { page: 'leaderboard' as Page, icon: Trophy, label: _t('nav.ranks') },
     ]
 
     return (
@@ -2131,20 +2136,20 @@ export default function ExamPrepApp() {
                   <X className="w-4 h-4 text-white/60" />
                 </button>
               </div>
-              <p className="text-white font-bold text-base">ExamPrep Bharat</p>
-              <p className="text-white/40 text-xs mt-0.5">Your exam preparation partner</p>
+              <p className="text-white font-bold text-base">{_t('app.name')}</p>
+              <p className="text-white/40 text-xs mt-0.5">{_t('app.partner')}</p>
             </div>
 
             {/* Menu Items */}
             <div className="flex-1 overflow-y-auto py-2">
               {/* Main Navigation */}
               <div className="px-3 py-2">
-                <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider px-3 mb-1">Navigation</p>
+                <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider px-3 mb-1">{_t('menu.navigation')}</p>
                 {[
-                  { icon: Home, label: 'Home', page: 'home' as Page, active: currentPage === 'home' },
-                  { icon: BookOpen, label: 'All Exams', page: 'exams' as Page, active: currentPage === 'exams' },
-                  { icon: Trophy, label: 'Leaderboard', page: 'leaderboard' as Page, active: currentPage === 'leaderboard' },
-                  { icon: User, label: 'My Profile', page: 'profile' as Page, active: currentPage === 'profile' },
+                  { icon: Home, label: _t('menu.home'), page: 'home' as Page, active: currentPage === 'home' },
+                  { icon: BookOpen, label: _t('menu.allExams'), page: 'exams' as Page, active: currentPage === 'exams' },
+                  { icon: Trophy, label: _t('menu.leaderboard'), page: 'leaderboard' as Page, active: currentPage === 'leaderboard' },
+                  { icon: User, label: _t('menu.myProfile'), page: 'profile' as Page, active: currentPage === 'profile' },
                 ].map(item => (
                   <button
                     key={item.page}
@@ -2164,9 +2169,9 @@ export default function ExamPrepApp() {
 
               {/* Quick Actions */}
               <div className="px-3 py-2">
-                <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider px-3 mb-1">Quick Actions</p>
+                <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider px-3 mb-1">{_t('menu.quickActions')}</p>
                 {[
-                  { icon: Zap, label: 'Quick Practice', action: () => {
+                  { icon: Zap, label: _t('menu.quickPractice'), soon: false, action: () => {
                     const allCats = categories
                     const allExams = allCats.flatMap(c => c.exams)
                     if (allExams.length > 0) {
@@ -2175,9 +2180,9 @@ export default function ExamPrepApp() {
                       openExam(randomExam, randomCat)
                     }
                   }},
-                  { icon: BookmarkPlus, label: 'Bookmarked Questions', action: () => {} },
-                  { icon: Download, label: 'Offline Tests', action: () => {} },
-                  { icon: BarChart3, label: 'Performance Report', action: () => {} },
+                  { icon: BookmarkPlus, label: _t('menu.bookmarkedQ'), soon: true, action: () => {} },
+                  { icon: Download, label: _t('menu.offlineTests'), soon: true, action: () => {} },
+                  { icon: BarChart3, label: _t('menu.perfReport'), soon: true, action: () => {} },
                 ].map((item, i) => (
                   <button
                     key={i}
@@ -2186,8 +2191,8 @@ export default function ExamPrepApp() {
                   >
                     <item.icon className="w-5 h-5 text-gray-400" />
                     <span className="font-medium text-sm">{item.label}</span>
-                    {['BookmarkPlus', 'Download', 'BarChart3'].includes(item.label) && (
-                      <Badge variant="secondary" className="text-[9px] ml-auto">Soon</Badge>
+                    {item.soon && (
+                      <Badge variant="secondary" className="text-[9px] ml-auto">{_t('menu.soon')}</Badge>
                     )}
                   </button>
                 ))}
@@ -2197,18 +2202,18 @@ export default function ExamPrepApp() {
 
               {/* Settings & Support */}
               <div className="px-3 py-2">
-                <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider px-3 mb-1">Settings</p>
+                <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider px-3 mb-1">{_t('menu.settings')}</p>
                 {[
-                  { icon: BookOpen, label: 'Language', sub: selectedLanguage === 'en' ? 'English' : selectedLanguage === 'hi' ? 'हिन्दी (Hindi)' : 'বাংলা (Bangla)', action: () => setShowLanguageSheet(true) },
-                  { icon: Bell, label: 'Notifications', sub: unreadCount > 0 ? `${unreadCount} unread` : 'Manage alerts', action: () => { setShowSideMenu(false); setCurrentPage('home'); setTimeout(() => setShowNotificationPanel(true), 300) } },
-                  { icon: Wifi, label: 'Offline Mode', sub: 'Download tests', action: () => {} },
-                  { icon: HelpCircle, label: 'Help & FAQ', sub: 'Get support', action: () => setShowAboutSheet(true) },
-                  { icon: Share2, label: 'Share App', sub: 'Tell your friends', action: () => {
+                  { icon: BookOpen, id: 'language', label: _t('profile.language'), sub: lng === 'en' ? _t('lang.english') : lng === 'hi' ? _t('lang.hindi') : _t('lang.bangla'), action: () => setShowLanguageSheet(true) },
+                  { icon: Bell, id: 'notifications', label: _t('menu.notifications'), sub: unreadCount > 0 ? `${unreadCount} ${_t('menu.unread')}` : _t('menu.manageAlerts'), action: () => { setShowSideMenu(false); setCurrentPage('home'); setTimeout(() => setShowNotificationPanel(true), 300) } },
+                  { icon: Wifi, id: 'offline', label: _t('menu.offlineMode'), sub: _t('menu.downloadTests'), action: () => {} },
+                  { icon: HelpCircle, id: 'help', label: _t('menu.helpFaq'), sub: _t('menu.getSupport'), action: () => setShowAboutSheet(true) },
+                  { icon: Share2, id: 'share', label: _t('menu.shareApp'), sub: _t('menu.tellFriends'), action: () => {
                     if (navigator.share) {
-                      navigator.share({ title: 'ExamPrep Bharat', text: 'Prepare for government exams!', url: window.location.href })
+                      navigator.share({ title: _t('app.name'), text: _t('share.text'), url: window.location.href })
                     }
                   }},
-                  { icon: Shield, label: 'About', sub: 'Version 1.0', action: () => setShowAboutSheet(true) },
+                  { icon: Shield, id: 'about', label: _t('menu.about'), sub: _t('app.version'), action: () => setShowAboutSheet(true) },
                 ].map((item, i) => (
                   <button
                     key={i}
@@ -2220,7 +2225,7 @@ export default function ExamPrepApp() {
                       <span className="font-medium text-sm block">{item.label}</span>
                       {item.sub && <span className="text-gray-400 text-[11px]">{item.sub}</span>}
                     </div>
-                    {item.label === 'Notifications' && unreadCount > 0 ? (
+                    {item.id === 'notifications' && unreadCount > 0 ? (
                       <span className="w-5 h-5 bg-orange-500 rounded-full flex items-center justify-center text-white text-[10px] font-bold">{unreadCount}</span>
                     ) : (
                       <ChevronRight className="w-4 h-4 text-gray-300" />
@@ -2238,14 +2243,14 @@ export default function ExamPrepApp() {
                   className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-red-500 hover:bg-red-50 active:bg-red-100 transition-colors"
                 >
                   <LogOut className="w-5 h-5" />
-                  <span className="font-medium text-sm">Logout</span>
+                  <span className="font-medium text-sm">{_t('menu.logout')}</span>
                 </button>
               ) : (
                 <button
                   onClick={() => { setShowLoginModal(true); setShowSideMenu(false) }}
                   className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-gradient-to-r from-orange-500 to-red-500 text-white rounded-xl font-semibold text-sm"
                 >
-                  <Mail className="w-4 h-4" /> Login
+                  <Mail className="w-4 h-4" /> {_t('profile.login')}
                 </button>
               )}
             </div>
