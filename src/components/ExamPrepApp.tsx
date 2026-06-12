@@ -35,7 +35,7 @@ import {
 import { useFirebaseAuth } from '@/lib/use-firebase-auth'
 import LoginModal from '@/components/LoginModal'
 import { App } from '@capacitor/app'
-import { getAnnouncements as getLocalAnnouncements, getNotifications as getLocalNotifications } from '@/lib/admin-data'
+import { getAnnouncements as getLocalAnnouncements, getNotifications as getLocalNotifications, getReadNotifIds, markNotifAsRead, markAllNotifsAsRead } from '@/lib/admin-data'
 import { t, type Lang } from '@/lib/i18n'
 
 // ===== Types =====
@@ -259,20 +259,22 @@ export default function ExamPrepApp() {
       try {
         const cats = await fetchCategories()
         setCategories(cats)
+        const readIds = getReadNotifIds()
         if (isFirestore()) {
           const anns = await getFsAnnouncements()
           setAnnouncements(anns.map(a => ({ ...a, action: a.action as Page })))
           const notifs = await getFsNotifications()
-          setNotifications(notifs)
+          setNotifications(notifs.map(n => ({ ...n, read: n.read || readIds.has(n.id) })))
         } else {
           setAnnouncements(getLocalAnnouncements().map(a => ({ ...a, action: a.action as Page })))
-          setNotifications(getLocalNotifications())
+          setNotifications(getLocalNotifications().map(n => ({ ...n, read: n.read || readIds.has(n.id) })))
         }
       } catch (e) {
         console.error('Data load failed, using local fallback:', e)
+        const readIds = getReadNotifIds()
         setCategories(getLocalCategories())
         setAnnouncements(getLocalAnnouncements().map(a => ({ ...a, action: a.action as Page })))
-        setNotifications(getLocalNotifications())
+        setNotifications(getLocalNotifications().map(n => ({ ...n, read: n.read || readIds.has(n.id) })))
       }
     }
     loadData()
@@ -281,8 +283,9 @@ export default function ExamPrepApp() {
   // --- Listen for admin data changes (when admin panel updates localStorage) ---
   useEffect(() => {
     const handleStorageChange = () => {
+      const readIds = getReadNotifIds()
       setAnnouncements(getLocalAnnouncements().map(a => ({ ...a, action: a.action as Page })))
-      setNotifications(getLocalNotifications())
+      setNotifications(getLocalNotifications().map(n => ({ ...n, read: n.read || readIds.has(n.id) })))
     }
     window.addEventListener('storage', handleStorageChange)
     const interval = setInterval(handleStorageChange, 5000)
@@ -707,7 +710,7 @@ export default function ExamPrepApp() {
                 <div className="flex items-center gap-2">
                   {unreadCount > 0 && (
                     <button
-                      onClick={() => setNotifications(prev => prev.map(n => ({ ...n, read: true })))}
+                      onClick={() => { setNotifications(prev => prev.map(n => ({ ...n, read: true }))); markAllNotifsAsRead(notifications.map(n => n.id)) }}
                       className="text-[11px] text-orange-500 font-semibold hover:text-orange-600"
                     >
                       {_t('home.markAllRead')}
@@ -728,7 +731,7 @@ export default function ExamPrepApp() {
                   notifications.map(notification => (
                     <div
                       key={notification.id}
-                      onClick={() => setNotifications(prev => prev.map(n => n.id === notification.id ? { ...n, read: true } : n))}
+                      onClick={() => { setNotifications(prev => prev.map(n => n.id === notification.id ? { ...n, read: true } : n)); markNotifAsRead(notification.id) }}
                       className={`px-4 py-3 border-b border-gray-50 last:border-b-0 active:bg-gray-50 transition-colors cursor-pointer ${!notification.read ? 'bg-orange-50/50' : ''}`}
                     >
                       <div className="flex items-start gap-3">

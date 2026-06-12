@@ -22,6 +22,7 @@ export interface Notification {
 export const STORAGE_KEYS = {
   announcements: 'examprep_announcements',
   notifications: 'examprep_notifications',
+  readNotifs: 'examprep_read_notifications',
   adminAuth: 'examprep_admin_auth',
 } as const
 
@@ -67,4 +68,29 @@ export function saveAnnouncements(announcements: Announcement[]): void {
 export function saveNotifications(notifications: Notification[]): void {
   if (typeof window === 'undefined') return
   localStorage.setItem(STORAGE_KEYS.notifications, JSON.stringify(notifications))
+}
+
+// Track which notification IDs the user has read (persists across refreshes)
+export function getReadNotifIds(): Set<string> {
+  if (typeof window === 'undefined') return new Set()
+  try {
+    const stored = localStorage.getItem(STORAGE_KEYS.readNotifs)
+    return stored ? new Set(JSON.parse(stored)) : new Set()
+  } catch {
+    return new Set()
+  }
+}
+
+export function markNotifAsRead(id: string): void {
+  if (typeof window === 'undefined') return
+  const ids = getReadNotifIds()
+  ids.add(id)
+  localStorage.setItem(STORAGE_KEYS.readNotifs, JSON.stringify([...ids]))
+}
+
+export function markAllNotifsAsRead(ids: string[]): void {
+  if (typeof window === 'undefined') return
+  const existing = getReadNotifIds()
+  ids.forEach(id => existing.add(id))
+  localStorage.setItem(STORAGE_KEYS.readNotifs, JSON.stringify([...existing]))
 }
