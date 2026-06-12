@@ -48,3 +48,33 @@ Stage Summary:
 - Profile shows user phone number and logout button when logged in
 - Guest users see "Login with Phone" CTA
 - All flows verified with Agent Browser
+---
+Task ID: admin-separation
+Agent: Main Agent
+Task: Separate admin panel from main app into its own /admin route
+
+Work Log:
+- Explored entire project structure and identified admin code within ExamPrepApp.tsx (lines 139-1984)
+- Created /src/lib/admin-data.ts with shared types, storage keys, and localStorage helpers
+- Created /src/app/admin/layout.tsx with separate layout (no bottom nav, no side menu)
+- Created /src/app/admin/page.tsx with dynamic import of AdminPanel
+- Created /src/components/admin/AdminPanel.tsx with full admin panel (dashboard, announcements, notifications)
+- Removed 'admin' from Page type in ExamPrepApp.tsx
+- Removed all admin state variables (adminLoggedIn, adminPassword, adminTab, etc.)
+- Removed entire renderAdmin() function (~340 lines)
+- Removed admin case from switch statement
+- Removed "Admin Panel" button from Profile > Support section
+- Removed "Admin Access" button from Side Menu Drawer
+- Updated announcements/notifications to load from shared localStorage via admin-data.ts
+- Added storage event listener + polling to refresh app data when admin makes changes
+- Cleaned up unused imports (Lock, Crown, Edit3, Plus, Eye, EyeOff, etc.)
+- Built and tested both routes successfully
+
+Stage Summary:
+- Admin panel is now at /admin route - completely separate from the main app
+- Main app has zero admin code - no admin pages, links, or navigation
+- Data sharing between admin and app via localStorage (getAnnouncements/getNotifications)
+- Admin panel has its own layout with dashboard, announcements CRUD, notifications CRUD
+- Admin panel includes "Back to App" link and "View App" quick action
+- Admin panel has noindex/nofollow meta tags for security
+- Build passes successfully with both / and /admin routes
