@@ -518,6 +518,21 @@ export default function ExamPrepApp() {
                 </div>
               </div>
             </div>
+
+            {/* Right: Notification */}
+            <button
+              onClick={() => setShowNotificationPanel(!showNotificationPanel)}
+              onTouchEnd={(e) => { e.preventDefault(); setShowNotificationPanel(!showNotificationPanel) }}
+              className="w-10 h-10 rounded-lg bg-white/20 backdrop-blur flex items-center justify-center active:bg-white/30 transition-colors relative"
+              style={{ touchAction: 'manipulation', WebkitTapHighlightColor: 'transparent' }}
+            >
+              <Bell className="w-4 h-4 text-white" />
+              {unreadCount > 0 && (
+                <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 rounded-full flex items-center justify-center text-white text-[8px] font-bold border border-orange-500">
+                  {unreadCount}
+                </span>
+              )}
+            </button>
           </div>
 
           {/* Moving Announcements Marquee */}
@@ -2195,7 +2210,6 @@ export default function ExamPrepApp() {
                 <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider px-3 mb-1">{_t('menu.settings')}</p>
                 {[
                   { icon: BookOpen, id: 'language', label: _t('profile.language'), sub: lng === 'en' ? _t('lang.english') : lng === 'hi' ? _t('lang.hindi') : _t('lang.bangla'), action: () => setShowLanguageSheet(true) },
-                  { icon: Bell, id: 'notifications', label: _t('menu.notifications'), sub: unreadCount > 0 ? `${unreadCount} ${_t('menu.unread')}` : _t('menu.manageAlerts'), action: () => { setShowSideMenu(false); setCurrentPage('home'); setTimeout(() => setShowNotificationPanel(true), 300) } },
                   { icon: Wifi, id: 'offline', label: _t('menu.offlineMode'), sub: _t('menu.downloadTests'), action: () => {} },
                   { icon: HelpCircle, id: 'help', label: _t('menu.helpFaq'), sub: _t('menu.getSupport'), action: () => setShowAboutSheet(true) },
                   { icon: Share2, id: 'share', label: _t('menu.shareApp'), sub: _t('menu.tellFriends'), action: () => {
@@ -2217,11 +2231,7 @@ export default function ExamPrepApp() {
                       <span className="font-medium text-sm block">{item.label}</span>
                       {item.sub && <span className="text-gray-400 text-[11px]">{item.sub}</span>}
                     </div>
-                    {item.id === 'notifications' && unreadCount > 0 ? (
-                      <span className="w-5 h-5 bg-orange-500 rounded-full flex items-center justify-center text-white text-[10px] font-bold">{unreadCount}</span>
-                    ) : (
-                      <ChevronRight className="w-4 h-4 text-gray-300" />
-                    )}
+                    <ChevronRight className="w-4 h-4 text-gray-300" />
                   </button>
                 ))}
               </div>
