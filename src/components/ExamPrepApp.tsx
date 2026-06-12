@@ -3225,28 +3225,31 @@ export default function ExamPrepApp() {
           />
           {/* Drawer Panel */}
           <div className="absolute left-0 top-0 bottom-0 w-[280px] bg-white shadow-2xl flex flex-col" style={{ touchAction: 'manipulation' }}>
-            {/* Drawer Header - Premium Profile Card */}
-            <div className="relative px-5 pt-[calc(env(safe-area-inset-top,0px)+1.25rem)] pb-6 overflow-hidden" style={{ background: 'linear-gradient(135deg, #0f0c29 0%, #302b63 50%, #24243e 100%)' }}>
-              {/* Animated decorative elements */}
-              <div className="absolute -top-8 -right-8 w-32 h-32 rounded-full" style={{ background: 'radial-gradient(circle, rgba(251,146,60,0.2) 0%, transparent 70%)' }} />
-              <div className="absolute top-1/2 -left-4 w-24 h-24 rounded-full" style={{ background: 'radial-gradient(circle, rgba(139,92,246,0.15) 0%, transparent 70%)' }} />
-              <div className="absolute bottom-0 right-1/4 w-20 h-20 rounded-full" style={{ background: 'radial-gradient(circle, rgba(59,130,246,0.12) 0%, transparent 70%)' }} />
-              {/* Shimmer overlay */}
-              <div className="absolute inset-0 opacity-20" style={{ background: 'linear-gradient(105deg, transparent 40%, rgba(255,255,255,0.1) 45%, rgba(255,255,255,0.05) 50%, transparent 55%)' }} />
+            {/* Drawer Header - Compact Premium Profile */}
+            <div className="relative px-4 pt-[calc(env(safe-area-inset-top,0px)+0.75rem)] pb-3 overflow-hidden" style={{ background: 'linear-gradient(135deg, #0f0c29 0%, #302b63 50%, #24243e 100%)' }}>
+              {/* Decorative glow */}
+              <div className="absolute -top-4 -right-4 w-20 h-20 rounded-full" style={{ background: 'radial-gradient(circle, rgba(251,146,60,0.15) 0%, transparent 70%)' }} />
+              <div className="absolute bottom-0 left-2 w-14 h-14 rounded-full" style={{ background: 'radial-gradient(circle, rgba(139,92,246,0.1) 0%, transparent 70%)' }} />
 
-              {/* Close button */}
-              <div className="flex justify-end mb-3 relative z-10">
+              {/* Close + App branding row */}
+              <div className="flex items-center justify-between mb-2 relative z-10">
+                <div className="flex items-center gap-2">
+                  <div className="w-6 h-6 rounded-md bg-gradient-to-br from-orange-400 to-rose-500 flex items-center justify-center">
+                    <img src="/logo.png" alt="M" className="w-4 h-4 rounded-sm" />
+                  </div>
+                  <span className="text-white font-bold text-[13px]">{_t('app.name')}</span>
+                </div>
                 <button
                   onClick={() => setShowSideMenu(false)}
                   onTouchEnd={(e) => { e.preventDefault(); setShowSideMenu(false) }}
-                  className="w-8 h-8 rounded-full bg-white/10 backdrop-blur-sm flex items-center justify-center hover:bg-white/20 transition-colors"
+                  className="w-7 h-7 rounded-full bg-white/10 backdrop-blur-sm flex items-center justify-center"
                   style={{ touchAction: 'manipulation', WebkitTapHighlightColor: 'transparent' }}
                 >
-                  <X className="w-4 h-4 text-white/70" />
+                  <X className="w-3.5 h-3.5 text-white/70" />
                 </button>
               </div>
 
-              {/* Profile Section - Clickable to go to Profile page */}
+              {/* Profile Section - Clickable */}
               <button
                 onClick={() => { handleBottomNav('profile'); setShowSideMenu(false) }}
                 onTouchEnd={(e) => { e.preventDefault(); handleBottomNav('profile'); setShowSideMenu(false) }}
@@ -3254,53 +3257,39 @@ export default function ExamPrepApp() {
                 style={{ touchAction: 'manipulation', WebkitTapHighlightColor: 'transparent' }}
               >
                 {auth.isLoggedIn ? (
-                  <div className="flex flex-col items-center text-center">
+                  <div className="flex items-center gap-3">
                     {/* Avatar */}
-                    <div className="relative mb-3">
-                      <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-orange-400 via-rose-500 to-purple-600 flex items-center justify-center shadow-xl shadow-orange-500/30 ring-2 ring-white/20">
-                        <User className="w-8 h-8 text-white" />
+                    <div className="relative flex-shrink-0">
+                      <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-orange-400 via-rose-500 to-purple-600 flex items-center justify-center shadow-lg shadow-orange-500/20 ring-1 ring-white/20">
+                        <User className="w-5 h-5 text-white" />
                       </div>
-                      {/* Online badge */}
-                      <div className="absolute -bottom-0.5 -right-0.5 w-5 h-5 bg-emerald-400 rounded-full border-2 border-[#302b63] flex items-center justify-center">
-                        <CheckCircle2 className="w-3 h-3 text-white" />
-                      </div>
+                      <div className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 bg-emerald-400 rounded-full border-[1.5px] border-[#302b63]" />
                     </div>
                     {/* User info */}
-                    <p className="text-white font-bold text-[15px] tracking-tight">{auth.user?.displayName || auth.user?.email?.split('@')[0] || 'Student'}</p>
-                    <p className="text-white/40 text-[11px] mt-0.5 truncate max-w-[200px]">{auth.user?.email || ''}</p>
-                    {/* View Profile badge */}
-                    <div className="mt-2.5 inline-flex items-center gap-1.5 bg-white/10 backdrop-blur-sm rounded-full px-3 py-1">
-                      <Edit3 className="w-3 h-3 text-orange-300" />
-                      <span className="text-[10px] font-semibold text-orange-300">{_t('menu.myProfile')}</span>
-                      <ChevronRight className="w-3 h-3 text-orange-300/60" />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-white font-bold text-[13px] truncate">{auth.user?.displayName || auth.user?.email?.split('@')[0] || 'Student'}</p>
+                      <p className="text-white/35 text-[10px] truncate">{auth.user?.email || ''}</p>
+                    </div>
+                    {/* Edit icon */}
+                    <div className="flex-shrink-0 w-7 h-7 rounded-lg bg-white/10 flex items-center justify-center">
+                      <Edit3 className="w-3.5 h-3.5 text-orange-300" />
                     </div>
                   </div>
                 ) : (
-                  <div className="flex flex-col items-center text-center">
-                    {/* Guest avatar */}
-                    <div className="relative mb-3">
-                      <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-slate-600 to-slate-700 flex items-center justify-center shadow-xl ring-2 ring-white/10">
-                        <User className="w-8 h-8 text-white/50" />
-                      </div>
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-slate-700 flex items-center justify-center ring-1 ring-white/10 flex-shrink-0">
+                      <User className="w-5 h-5 text-white/40" />
                     </div>
-                    <p className="text-white/70 font-bold text-[15px]">{_t('home.loginTrack')}</p>
-                    <p className="text-white/30 text-[11px] mt-0.5">{_t('home.loginTrackSub')}</p>
-                    {/* Login button */}
-                    <div className="mt-2.5 inline-flex items-center gap-1.5 bg-gradient-to-r from-orange-500 to-rose-500 rounded-full px-4 py-1.5 shadow-lg shadow-orange-500/30">
+                    <div className="flex-1 min-w-0">
+                      <p className="text-white/60 font-semibold text-[12px]">{_t('home.loginTrack')}</p>
+                      <p className="text-white/25 text-[10px]">{_t('home.loginTrackSub')}</p>
+                    </div>
+                    <div className="flex-shrink-0 w-7 h-7 rounded-lg bg-gradient-to-r from-orange-500 to-rose-500 flex items-center justify-center shadow shadow-orange-500/30">
                       <Mail className="w-3 h-3 text-white" />
-                      <span className="text-[11px] font-bold text-white">{_t('profile.login')}</span>
                     </div>
                   </div>
                 )}
               </button>
-
-              {/* App branding */}
-              <div className="flex items-center justify-center gap-2 mt-4 relative z-10">
-                <div className="w-5 h-5 rounded-md bg-gradient-to-br from-orange-400 to-rose-500 flex items-center justify-center">
-                  <img src="/logo.png" alt="M" className="w-3.5 h-3.5 rounded-sm" />
-                </div>
-                <p className="text-white/30 text-[10px] font-medium tracking-wider">{_t('app.name')} • {_t('app.version')}</p>
-              </div>
             </div>
 
             {/* Menu Items */}
