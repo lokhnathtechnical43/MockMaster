@@ -2833,106 +2833,158 @@ export default function ExamPrepApp() {
           {/* Drawer Panel */}
           <div className="absolute left-0 top-0 bottom-0 w-[280px] bg-white shadow-2xl flex flex-col" style={{ touchAction: 'manipulation' }}>
             {/* Drawer Header */}
-            <div className="bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 px-5 pt-[calc(env(safe-area-inset-top,0px)+1.5rem)] pb-5">
-              <div className="flex items-center justify-between mb-4">
-                <img src="/logo.png" alt="MockMaster" className="w-10 h-10 rounded-xl shadow-lg shadow-orange-500/20" />
+            <div className="bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 px-5 pt-[calc(env(safe-area-inset-top,0px)+1.25rem)] pb-6 relative overflow-hidden">
+              {/* Decorative circles */}
+              <div className="absolute -top-6 -right-6 w-24 h-24 bg-orange-500/10 rounded-full blur-xl" />
+              <div className="absolute bottom-0 left-0 w-16 h-16 bg-blue-500/10 rounded-full blur-lg" />
+              <div className="flex items-center justify-between mb-5 relative z-10">
+                <div className="flex items-center gap-3">
+                  <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-orange-400 to-rose-500 flex items-center justify-center shadow-lg shadow-orange-500/30">
+                    <img src="/logo.png" alt="M" className="w-7 h-7 rounded-lg" />
+                  </div>
+                  <div>
+                    <p className="text-white font-extrabold text-[15px] tracking-tight">{_t('app.name')}</p>
+                    <p className="text-white/30 text-[10px] font-medium">{_t('app.partner')}</p>
+                  </div>
+                </div>
                 <button
                   onClick={() => setShowSideMenu(false)}
                   onTouchEnd={(e) => { e.preventDefault(); setShowSideMenu(false) }}
-                  className="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center"
+                  className="w-8 h-8 rounded-full bg-white/10 backdrop-blur-sm flex items-center justify-center hover:bg-white/20 transition-colors"
                   style={{ touchAction: 'manipulation', WebkitTapHighlightColor: 'transparent' }}
                 >
-                  <X className="w-4 h-4 text-white/60" />
+                  <X className="w-4 h-4 text-white/70" />
                 </button>
               </div>
-              <p className="text-white font-bold text-base">{_t('app.name')}</p>
-              <p className="text-white/40 text-xs mt-0.5">{_t('app.partner')}</p>
+              {/* User greeting row */}
+              {auth.isLoggedIn && (
+                <div className="flex items-center gap-2 bg-white/10 backdrop-blur-sm rounded-xl px-3 py-2 relative z-10">
+                  <div className="w-8 h-8 rounded-full bg-gradient-to-br from-emerald-400 to-teal-500 flex items-center justify-center">
+                    <User className="w-4 h-4 text-white" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-white text-[12px] font-bold truncate">{auth.user?.displayName || auth.user?.email?.split('@')[0] || 'Student'}</p>
+                    <p className="text-white/40 text-[10px] truncate">{auth.user?.email || ''}</p>
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Menu Items */}
-            <div className="flex-1 overflow-y-auto py-2">
+            <div className="flex-1 overflow-y-auto py-3 px-3">
               {/* Main Navigation */}
-              <div className="px-3 py-2">
-                <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider px-3 mb-1">{_t('menu.navigation')}</p>
+              <div className="mb-2">
+                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest px-3 mb-2">{_t('menu.navigation')}</p>
                 {[
-                  { icon: Home, label: _t('menu.home'), page: 'home' as Page, active: currentPage === 'home' },
-                  { icon: BookOpen, label: _t('menu.allExams'), page: 'exams' as Page, active: currentPage === 'exams' },
-                  { icon: Trophy, label: _t('menu.leaderboard'), page: 'leaderboard' as Page, active: currentPage === 'leaderboard' },
-                  { icon: User, label: _t('menu.myProfile'), page: 'profile' as Page, active: currentPage === 'profile' },
+                  { icon: Home, label: _t('menu.home'), page: 'home' as Page, active: currentPage === 'home', color: 'from-orange-500 to-amber-500', lightBg: 'bg-orange-50', activeText: 'text-orange-700', activeBg: 'bg-gradient-to-r from-orange-50 to-amber-50', iconLight: 'text-orange-500' },
+                  { icon: BookOpen, label: _t('menu.allExams'), page: 'exams' as Page, active: currentPage === 'exams', color: 'from-blue-500 to-indigo-500', lightBg: 'bg-blue-50', activeText: 'text-blue-700', activeBg: 'bg-gradient-to-r from-blue-50 to-indigo-50', iconLight: 'text-blue-500' },
+                  { icon: Trophy, label: _t('menu.leaderboard'), page: 'leaderboard' as Page, active: currentPage === 'leaderboard', color: 'from-yellow-500 to-orange-500', lightBg: 'bg-yellow-50', activeText: 'text-yellow-700', activeBg: 'bg-gradient-to-r from-yellow-50 to-orange-50', iconLight: 'text-yellow-600' },
+                  { icon: User, label: _t('menu.myProfile'), page: 'profile' as Page, active: currentPage === 'profile', color: 'from-purple-500 to-pink-500', lightBg: 'bg-purple-50', activeText: 'text-purple-700', activeBg: 'bg-gradient-to-r from-purple-50 to-pink-50', iconLight: 'text-purple-500' },
                 ].map(item => (
                   <button
                     key={item.page}
                     onClick={() => { handleBottomNav(item.page); setShowSideMenu(false) }}
                     onTouchEnd={(e) => { e.preventDefault(); handleBottomNav(item.page); setShowSideMenu(false) }}
-                    className={`w-full flex items-center gap-3 px-3 py-3 rounded-xl transition-colors ${
-                      item.active ? 'bg-orange-50 text-orange-600' : 'text-gray-600 hover:bg-gray-50 active:bg-gray-100'
+                    className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200 mb-0.5 ${
+                      item.active
+                        ? `${item.activeBg} ${item.activeText} shadow-sm border border-white/60`
+                        : 'text-gray-600 hover:bg-gray-50 active:bg-gray-100'
                     }`}
                     style={{ touchAction: 'manipulation', WebkitTapHighlightColor: 'transparent' }}
                   >
-                    <item.icon className={`w-5 h-5 ${item.active ? 'text-orange-500' : 'text-gray-400'}`} />
-                    <span className={`font-medium text-sm ${item.active ? 'font-semibold' : ''}`}>{item.label}</span>
-                    {item.active && <div className="ml-auto w-1.5 h-1.5 rounded-full bg-orange-500" />}
+                    <div className={`w-8 h-8 rounded-lg flex items-center justify-center transition-all ${
+                      item.active
+                        ? `bg-gradient-to-br ${item.color} shadow-sm`
+                        : 'bg-gray-100'
+                    }`}>
+                      <item.icon className={`w-4 h-4 ${item.active ? 'text-white' : 'text-gray-400'}`} />
+                    </div>
+                    <span className={`font-medium text-[13px] flex-1 text-left ${item.active ? 'font-bold' : ''}`}>{item.label}</span>
+                    {item.active && (
+                      <div className={`w-6 h-1.5 rounded-full bg-gradient-to-r ${item.color}`} />
+                    )}
                   </button>
                 ))}
               </div>
 
-              <div className="mx-5 border-t border-gray-100 my-1" />
+              <div className="flex items-center gap-2 px-3 my-2">
+                <div className="flex-1 h-px bg-gradient-to-r from-transparent via-gray-200 to-transparent" />
+              </div>
 
               {/* Quick Actions */}
-              <div className="px-3 py-2">
-                <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider px-3 mb-1">{_t('menu.quickActions')}</p>
+              <div className="mb-2">
+                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest px-3 mb-2">{_t('menu.quickActions')}</p>
                 {[
-                  { icon: Zap, label: _t('menu.quickPractice'), page: 'practice' as Page },
-                  { icon: BookmarkPlus, label: _t('menu.bookmarkedQ'), page: 'bookmarks' as Page },
-                  { icon: BarChart3, label: _t('menu.perfReport'), page: 'perf-report' as Page },
-                  { icon: FileText, label: _t('menu.prevPapers'), page: 'prev-papers' as Page },
-                  { icon: Target, label: _t('menu.yourExam'), page: 'your-exam' as Page },
-                  { icon: Clock, label: _t('menu.dailyRoutine'), page: 'daily-routine' as Page },
-                ].map((item, i) => (
-                  <button
-                    key={i}
-                    onClick={() => { navigateTo(item.page); setShowSideMenu(false) }}
-                    onTouchEnd={(e) => { e.preventDefault(); navigateTo(item.page); setShowSideMenu(false) }}
-                    className="w-full flex items-center gap-3 px-3 py-3 rounded-xl text-gray-600 hover:bg-gray-50 active:bg-gray-100 transition-colors"
-                    style={{ touchAction: 'manipulation', WebkitTapHighlightColor: 'transparent' }}
-                  >
-                    <item.icon className="w-5 h-5 text-gray-400" />
-                    <span className="font-medium text-sm">{item.label}</span>
-                    {currentPage === item.page && <div className="ml-auto w-1.5 h-1.5 rounded-full bg-orange-500" />}
-                  </button>
-                ))}
+                  { icon: Zap, label: _t('menu.quickPractice'), page: 'practice' as Page, gradient: 'from-amber-400 to-orange-500', lightBg: 'bg-amber-50', textColor: 'text-amber-700', iconText: 'text-amber-500' },
+                  { icon: BookmarkPlus, label: _t('menu.bookmarkedQ'), page: 'bookmarks' as Page, gradient: 'from-rose-400 to-pink-500', lightBg: 'bg-rose-50', textColor: 'text-rose-700', iconText: 'text-rose-500' },
+                  { icon: BarChart3, label: _t('menu.perfReport'), page: 'perf-report' as Page, gradient: 'from-emerald-400 to-teal-500', lightBg: 'bg-emerald-50', textColor: 'text-emerald-700', iconText: 'text-emerald-500' },
+                  { icon: FileText, label: _t('menu.prevPapers'), page: 'prev-papers' as Page, gradient: 'from-blue-400 to-cyan-500', lightBg: 'bg-blue-50', textColor: 'text-blue-700', iconText: 'text-blue-500' },
+                  { icon: Target, label: _t('menu.yourExam'), page: 'your-exam' as Page, gradient: 'from-violet-400 to-purple-500', lightBg: 'bg-violet-50', textColor: 'text-violet-700', iconText: 'text-violet-500' },
+                  { icon: Clock, label: _t('menu.dailyRoutine'), page: 'daily-routine' as Page, gradient: 'from-sky-400 to-blue-500', lightBg: 'bg-sky-50', textColor: 'text-sky-700', iconText: 'text-sky-500' },
+                ].map((item, i) => {
+                  const isActive = currentPage === item.page
+                  return (
+                    <button
+                      key={i}
+                      onClick={() => { navigateTo(item.page); setShowSideMenu(false) }}
+                      onTouchEnd={(e) => { e.preventDefault(); navigateTo(item.page); setShowSideMenu(false) }}
+                      className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200 mb-0.5 ${
+                        isActive
+                          ? `${item.lightBg} ${item.textColor} shadow-sm border border-white/60`
+                          : 'text-gray-600 hover:bg-gray-50 active:bg-gray-100'
+                      }`}
+                      style={{ touchAction: 'manipulation', WebkitTapHighlightColor: 'transparent' }}
+                    >
+                      <div className={`w-8 h-8 rounded-lg flex items-center justify-center transition-all ${
+                        isActive
+                          ? `bg-gradient-to-br ${item.gradient} shadow-sm`
+                          : 'bg-gray-100'
+                      }`}>
+                        <item.icon className={`w-4 h-4 ${isActive ? 'text-white' : 'text-gray-400'}`} />
+                      </div>
+                      <span className={`font-medium text-[13px] flex-1 text-left ${isActive ? 'font-bold' : ''}`}>{item.label}</span>
+                      {isActive && (
+                        <div className={`w-6 h-1.5 rounded-full bg-gradient-to-r ${item.gradient}`} />
+                      )}
+                    </button>
+                  )
+                })}
               </div>
 
-              <div className="mx-5 border-t border-gray-100 my-1" />
+              <div className="flex items-center gap-2 px-3 my-2">
+                <div className="flex-1 h-px bg-gradient-to-r from-transparent via-gray-200 to-transparent" />
+              </div>
 
               {/* Settings & Support */}
-              <div className="px-3 py-2">
-                <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider px-3 mb-1">{_t('menu.settings')}</p>
+              <div className="mb-2">
+                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest px-3 mb-2">{_t('menu.settings')}</p>
                 {[
-                  { icon: BookOpen, id: 'language', label: _t('profile.language'), sub: lng === 'en' ? _t('lang.english') : lng === 'hi' ? _t('lang.hindi') : _t('lang.bangla'), action: () => setShowLanguageSheet(true), soon: false },
-                  { icon: Wifi, id: 'offline', label: _t('menu.offlineMode'), sub: _t('menu.downloadTests'), action: () => {}, soon: true },
-                  { icon: HelpCircle, id: 'help', label: _t('menu.helpFaq'), sub: _t('menu.getSupport'), action: () => setShowFaqSheet(true), soon: false },
+                  { icon: BookOpen, id: 'language', label: _t('profile.language'), sub: lng === 'en' ? _t('lang.english') : lng === 'hi' ? _t('lang.hindi') : _t('lang.bangla'), action: () => setShowLanguageSheet(true), soon: false, gradient: 'from-indigo-400 to-blue-500', lightBg: 'bg-indigo-50', iconInactive: 'text-indigo-400' },
+                  { icon: Wifi, id: 'offline', label: _t('menu.offlineMode'), sub: _t('menu.downloadTests'), action: () => {}, soon: true, gradient: 'from-teal-400 to-emerald-500', lightBg: 'bg-teal-50', iconInactive: 'text-teal-400' },
+                  { icon: HelpCircle, id: 'help', label: _t('menu.helpFaq'), sub: _t('menu.getSupport'), action: () => setShowFaqSheet(true), soon: false, gradient: 'from-cyan-400 to-sky-500', lightBg: 'bg-cyan-50', iconInactive: 'text-cyan-400' },
                   { icon: Share2, id: 'share', label: _t('menu.shareApp'), sub: _t('menu.tellFriends'), action: () => {
                     if (navigator.share) {
                       navigator.share({ title: _t('app.name'), text: _t('share.text'), url: window.location.href })
                     }
-                  }, soon: false },
-                  { icon: Shield, id: 'about', label: _t('menu.about'), sub: _t('app.version'), action: () => setShowAboutSheet(true), soon: false },
+                  }, soon: false, gradient: 'from-pink-400 to-rose-500', lightBg: 'bg-pink-50', iconInactive: 'text-pink-400' },
+                  { icon: Shield, id: 'about', label: _t('menu.about'), sub: _t('app.version'), action: () => setShowAboutSheet(true), soon: false, gradient: 'from-slate-400 to-gray-500', lightBg: 'bg-slate-50', iconInactive: 'text-slate-400' },
                 ].map((item, i) => (
                   <button
                     key={i}
                     onClick={() => { if (!item.soon) { setShowSideMenu(false); setTimeout(() => item.action(), 150) } }}
                     onTouchEnd={(e) => { e.preventDefault(); if (!item.soon) { setShowSideMenu(false); setTimeout(() => item.action(), 150) } }}
-                    className={`w-full flex items-center gap-3 px-3 py-3 rounded-xl text-gray-600 hover:bg-gray-50 active:bg-gray-100 transition-colors ${item.soon ? 'opacity-70' : ''}`}
+                    className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200 mb-0.5 ${item.soon ? 'opacity-60' : 'text-gray-600 hover:bg-gray-50 active:bg-gray-100'}`}
                     style={{ touchAction: 'manipulation', WebkitTapHighlightColor: 'transparent' }}
                   >
-                    <item.icon className="w-5 h-5 text-gray-400" />
+                    <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${item.soon ? 'bg-gray-100' : item.lightBg}`}>
+                      <item.icon className={`w-4 h-4 ${item.soon ? 'text-gray-300' : item.iconInactive}`} />
+                    </div>
                     <div className="flex-1 text-left">
-                      <span className="font-medium text-sm block">{item.label}</span>
-                      {item.sub && <span className="text-gray-400 text-[11px]">{item.sub}</span>}
+                      <span className="font-medium text-[13px] block">{item.label}</span>
+                      {item.sub && <span className="text-gray-400 text-[10px]">{item.sub}</span>}
                     </div>
                     {item.soon ? (
-                      <Badge variant="secondary" className="text-[9px]">{_t('menu.soon')}</Badge>
+                      <span className="text-[9px] font-bold text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full">{_t('menu.soon')}</span>
                     ) : (
                       <ChevronRight className="w-4 h-4 text-gray-300" />
                     )}
@@ -2942,22 +2994,24 @@ export default function ExamPrepApp() {
             </div>
 
             {/* Drawer Footer */}
-            <div className="border-t border-gray-100 px-5 py-4">
+            <div className="px-4 py-4 bg-gradient-to-r from-gray-50 to-slate-50">
               {auth.isLoggedIn ? (
                 <button
                   onClick={() => { auth.logout(); setShowSideMenu(false) }}
                   onTouchEnd={(e) => { e.preventDefault(); auth.logout(); setShowSideMenu(false) }}
-                  className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-red-500 hover:bg-red-50 active:bg-red-100 transition-colors"
+                  className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-red-600 bg-red-50 hover:bg-red-100 active:bg-red-200 transition-all border border-red-100"
                   style={{ touchAction: 'manipulation', WebkitTapHighlightColor: 'transparent' }}
                 >
-                  <LogOut className="w-5 h-5" />
-                  <span className="font-medium text-sm">{_t('menu.logout')}</span>
+                  <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-red-400 to-rose-500 flex items-center justify-center shadow-sm">
+                    <LogOut className="w-4 h-4 text-white" />
+                  </div>
+                  <span className="font-bold text-[13px]">{_t('menu.logout')}</span>
                 </button>
               ) : (
                 <button
                   onClick={() => { setShowLoginModal(true); setShowSideMenu(false) }}
                   onTouchEnd={(e) => { e.preventDefault(); setShowLoginModal(true); setShowSideMenu(false) }}
-                  className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-gradient-to-r from-orange-500 to-red-500 text-white rounded-xl font-semibold text-sm"
+                  className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-gradient-to-r from-orange-500 via-rose-500 to-pink-500 text-white rounded-xl font-bold text-[13px] shadow-lg shadow-orange-500/25 active:scale-[0.98] transition-all"
                   style={{ touchAction: 'manipulation', WebkitTapHighlightColor: 'transparent' }}
                 >
                   <Mail className="w-4 h-4" /> {_t('profile.login')}
