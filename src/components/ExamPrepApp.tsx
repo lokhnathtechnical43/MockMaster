@@ -432,25 +432,37 @@ export default function ExamPrepApp() {
             </button>
           </div>
 
-          {/* Compact Quick Stats */}
-          {auth.isLoggedIn && stats.testsTaken > 0 && (
-            <div className="bg-white/10 backdrop-blur rounded-xl p-2.5 flex items-center justify-around mt-2.5">
-              <div className="text-center">
-                <p className="text-white font-bold text-sm">{stats.testsTaken}</p>
-                <p className="text-orange-100 text-[9px]">Tests</p>
+          {/* Moving Announcements Marquee */}
+          <div className="bg-white/10 backdrop-blur rounded-lg mt-2.5 overflow-hidden">
+            <div className="flex items-center">
+              <div className="bg-white/15 px-2 py-1.5 flex items-center flex-shrink-0">
+                <Flame className="w-3.5 h-3.5 text-yellow-300" />
               </div>
-              <div className="w-px h-5 bg-white/20" />
-              <div className="text-center">
-                <p className="text-white font-bold text-sm">{stats.avgScore}%</p>
-                <p className="text-orange-100 text-[9px]">Avg Score</p>
-              </div>
-              <div className="w-px h-5 bg-white/20" />
-              <div className="text-center">
-                <p className="text-white font-bold text-sm">#{stats.bestRank}</p>
-                <p className="text-orange-100 text-[9px]">Best Rank</p>
+              <div className="overflow-hidden flex-1 py-1.5">
+                <div className="flex animate-marquee whitespace-nowrap">
+                  {announcements.map(a => (
+                    <button
+                      key={a.id}
+                      onClick={() => handleBottomNav(a.action)}
+                      className="mx-6 text-[11px] font-medium text-white/90 active:text-white"
+                    >
+                      {a.title} — {a.subtitle}
+                    </button>
+                  ))}
+                  {/* Duplicate for seamless loop */}
+                  {announcements.map(a => (
+                    <button
+                      key={`dup-${a.id}`}
+                      onClick={() => handleBottomNav(a.action)}
+                      className="mx-6 text-[11px] font-medium text-white/90 active:text-white"
+                    >
+                      {a.title} — {a.subtitle}
+                    </button>
+                  ))}
+                </div>
               </div>
             </div>
-          )}
+          </div>
         </div>
 
         {/* Notification Panel */}
@@ -530,62 +542,6 @@ export default function ExamPrepApp() {
             </div>
           </div>
         )}
-
-        {/* Announcements - Image Banner Carousel */}
-        <div className="px-4 mt-3 mb-1">
-          <div className="relative">
-            {/* Banner Cards - Horizontal Scroll */}
-            <div className="flex gap-3 overflow-x-auto scrollbar-hide snap-x snap-mandatory pb-2 -mx-1 px-1">
-              {announcements.map((a, index) => (
-                <button
-                  key={a.id}
-                  onClick={() => handleBottomNav(a.action)}
-                  className="flex-shrink-0 w-[75vw] max-w-[300px] snap-center"
-                >
-                  <div className={`bg-gradient-to-br ${a.gradient} rounded-2xl overflow-hidden shadow-md active:scale-[0.98] transition-transform`}>
-                    {/* Image Area */}
-                    <div className="h-28 relative flex items-center justify-center overflow-hidden">
-                      {/* Background Pattern */}
-                      <div className="absolute inset-0 opacity-10">
-                        <div className="absolute top-2 left-4 w-20 h-20 rounded-full border-4 border-white" />
-                        <div className="absolute bottom-1 right-6 w-16 h-16 rounded-full border-4 border-white" />
-                        <div className="absolute top-8 right-12 w-8 h-8 rounded-full bg-white" />
-                      </div>
-                      {/* Icon based on type */}
-                      <div className="relative z-10 flex flex-col items-center">
-                        <div className="w-14 h-14 bg-white/20 backdrop-blur rounded-2xl flex items-center justify-center mb-1.5">
-                          {a.image === 'ssc' && <BookOpen className="w-7 h-7 text-white" />}
-                          {a.image === 'banking' && <Building className="w-7 h-7 text-white" />}
-                          {a.image === 'leaderboard' && <Trophy className="w-7 h-7 text-white" />}
-                          {a.image === 'practice' && <Zap className="w-7 h-7 text-white" />}
-                        </div>
-                        <p className="text-white/60 text-[9px] font-medium tracking-wider uppercase">Tap to open</p>
-                      </div>
-                    </div>
-                    {/* Text Area */}
-                    <div className="px-3 py-2.5 bg-black/10">
-                      <p className="text-white font-bold text-sm leading-tight">{a.title}</p>
-                      <p className="text-white/70 text-[11px] mt-0.5">{a.subtitle}</p>
-                    </div>
-                  </div>
-                </button>
-              ))}
-            </div>
-
-            {/* Dots Indicator */}
-            <div className="flex items-center justify-center gap-1.5 mt-1">
-              {announcements.map((_, i) => (
-                <div
-                  key={i}
-                  className={`h-1.5 rounded-full transition-all duration-300 ${
-                    i === activeAnnouncement ? 'w-4 bg-orange-500' : 'w-1.5 bg-gray-300'
-                  }`
-                  }
-                />
-              ))}
-            </div>
-          </div>
-        </div>
 
         <div className="px-4 mt-4 space-y-6">
           {/* Quick Practice Card */}
