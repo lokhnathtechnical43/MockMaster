@@ -28,11 +28,15 @@ export function useFirebaseAuth() {
 
   useEffect(() => {
     // Check for local guest user first
-    const localGuest = localStorage.getItem(GUEST_USER_KEY)
-    if (localGuest) {
-      setIsLocalGuest(true)
-      setAuthState({ user: null, loading: false })
-      return
+    try {
+      const localGuest = localStorage.getItem(GUEST_USER_KEY)
+      if (localGuest) {
+        setIsLocalGuest(true)
+        setAuthState({ user: null, loading: false })
+        return
+      }
+    } catch (e) {
+      console.warn('[Auth] localStorage not available')
     }
 
     // Only listen to Firebase auth if Firebase is configured
@@ -41,10 +45,15 @@ export function useFirebaseAuth() {
       return
     }
 
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
-      setAuthState({ user, loading: false })
-    })
-    return () => unsubscribe()
+    try {
+      const unsubscribe = onAuthStateChanged(auth, (user) => {
+        setAuthState({ user, loading: false })
+      })
+      return () => unsubscribe()
+    } catch (error) {
+      console.error('[Auth] onAuthStateChanged failed:', error)
+      setAuthState({ user: null, loading: false })
+    }
   }, [])
 
   // Login with Email + Password
