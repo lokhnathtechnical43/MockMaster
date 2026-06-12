@@ -1282,35 +1282,39 @@ export default function ExamPrepApp() {
         <div className="bg-white border-t px-4 py-3 space-y-2">
           <div className="flex items-center gap-2">
             <Button
-              variant="outline"
               size="sm"
-              className={`rounded-xl flex-1 ${bookmarkedQs.includes(question.id) ? 'bg-orange-50 border-orange-300 text-orange-600' : ''}`}
+              className={`rounded-xl flex-1 font-semibold shadow-sm transition-all active:scale-95 ${
+                bookmarkedQs.includes(question.id)
+                  ? 'bg-gradient-to-r from-amber-500 to-orange-500 text-white border-0 shadow-amber-200'
+                  : 'bg-amber-50 text-amber-700 border-2 border-amber-300 hover:bg-amber-100'
+              }`}
               onClick={() => toggleBookmark(question.id)}
             >
               <BookmarkPlus className="w-4 h-4 mr-1" />
               {bookmarkedQs.includes(question.id) ? _t('testTaking.bookmarked') : _t('testTaking.bookmark')}
             </Button>
             <Button
-              variant="outline"
               size="sm"
-              className="rounded-xl flex-1"
+              className={`rounded-xl flex-1 font-semibold shadow-sm transition-all active:scale-95 ${
+                markedForReview.has(question.id)
+                  ? 'bg-gradient-to-r from-purple-500 to-violet-500 text-white border-0 shadow-purple-200'
+                  : 'bg-purple-50 text-purple-700 border-2 border-purple-300 hover:bg-purple-100'
+              }`}
               onClick={() => toggleReview(question.id)}
             >
               <BookMarked className="w-4 h-4 mr-1" />
               {markedForReview.has(question.id) ? _t('testTaking.unmark') : _t('testTaking.mark')}
             </Button>
             <Button
-              variant="outline"
               size="sm"
-              className="rounded-xl flex-1"
+              className="rounded-xl flex-1 font-semibold shadow-sm transition-all active:scale-95 bg-red-50 text-red-600 border-2 border-red-300 hover:bg-red-100"
               onClick={() => clearAnswer(question.id)}
             >
               <RefreshCw className="w-4 h-4 mr-1" /> {_t('testTaking.clear')}
             </Button>
             <Button
-              variant="outline"
               size="sm"
-              className="rounded-xl flex-1"
+              className="rounded-xl flex-1 font-semibold shadow-sm transition-all active:scale-95 bg-sky-50 text-sky-700 border-2 border-sky-300 hover:bg-sky-100"
               onClick={() => {
                 if (currentQuestionIndex < questions.length - 1) {
                   setCurrentQuestionIndex(prev => prev + 1)
@@ -1322,23 +1326,22 @@ export default function ExamPrepApp() {
           </div>
           <div className="flex items-center gap-2">
             <Button
-              variant="outline"
               size="sm"
-              className="rounded-xl flex-1"
+              className="rounded-xl flex-1 font-semibold shadow-sm transition-all active:scale-95 bg-indigo-50 text-indigo-700 border-2 border-indigo-300 hover:bg-indigo-100 disabled:opacity-40 disabled:bg-gray-50 disabled:text-gray-400 disabled:border-gray-200"
               disabled={currentQuestionIndex === 0}
               onClick={() => setCurrentQuestionIndex(prev => prev - 1)}
             >
               <ChevronLeft className="w-4 h-4 mr-1" /> {_t('testTaking.previous')}
             </Button>
             <Button
-              className="rounded-xl bg-gradient-to-r from-orange-500 to-red-500 text-white px-4"
+              className="rounded-xl font-bold shadow-md transition-all active:scale-95 bg-gradient-to-r from-red-500 to-rose-600 text-white px-4 hover:from-red-600 hover:to-rose-700"
               onClick={handleFinishTest}
             >
               {_t('testTaking.submit')}
             </Button>
             <Button
               size="sm"
-              className="rounded-xl flex-1 bg-gradient-to-r from-orange-500 to-orange-600 text-white"
+              className="rounded-xl flex-1 font-bold shadow-md transition-all active:scale-95 bg-gradient-to-r from-green-500 to-emerald-600 text-white border-0 hover:from-green-600 hover:to-emerald-700 disabled:opacity-40"
               disabled={currentQuestionIndex === questions.length - 1}
               onClick={() => setCurrentQuestionIndex(prev => prev + 1)}
             >
