@@ -4,51 +4,49 @@ import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
-import { Phone, Shield, ArrowLeft, Loader2, User } from 'lucide-react'
+import { Mail, Shield, ArrowLeft, Loader2, User, Lock, UserPlus, Eye, EyeOff } from 'lucide-react'
 
 interface LoginModalProps {
-  otpSent: boolean
   error: string
-  sendingOtp: boolean
-  verifyingOtp: boolean
+  loginLoading: boolean
+  signupLoading: boolean
   guestLoading: boolean
-  onSendOtp: (phone: string) => void
-  onVerifyOtp: (otp: string) => void
+  onLogin: (email: string, password: string) => void
+  onSignUp: (email: string, password: string, name: string) => void
   onGuestLogin: () => void
-  onReset: () => void
   onClose: () => void
 }
 
 export default function LoginModal({
-  otpSent,
   error,
-  sendingOtp,
-  verifyingOtp,
+  loginLoading,
+  signupLoading,
   guestLoading,
-  onSendOtp,
-  onVerifyOtp,
+  onLogin,
+  onSignUp,
   onGuestLogin,
-  onReset,
   onClose
 }: LoginModalProps) {
-  const [phone, setPhone] = useState('')
-  const [otp, setOtp] = useState('')
+  const [mode, setMode] = useState<'login' | 'signup'>('login')
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+  const [name, setName] = useState('')
+  const [showPassword, setShowPassword] = useState(false)
 
-  const handleSendOtp = () => {
-    if (phone.length >= 10) {
-      onSendOtp(phone)
+  const handleLogin = () => {
+    if (email && password) {
+      onLogin(email, password)
     }
   }
 
-  const handleVerifyOtp = () => {
-    if (otp.length >= 6) {
-      onVerifyOtp(otp)
+  const handleSignUp = () => {
+    if (email && password && name) {
+      onSignUp(email, password, name)
     }
   }
 
   return (
     <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-      <div id="recaptcha-container" />
       <Card className="w-full max-w-sm border-0 shadow-2xl">
         <CardContent className="p-6">
           <div className="flex items-center gap-3 mb-4">
@@ -58,28 +56,46 @@ export default function LoginModal({
             <h2 className="text-lg font-bold">Login to ExamPrep Bharat</h2>
           </div>
 
-          {!otpSent ? (
-            /* Phone Number Input */
+          {mode === 'login' ? (
+            /* Login Form */
             <div className="space-y-4">
               <div className="text-center mb-4">
                 <div className="w-16 h-16 bg-orange-100 rounded-full flex items-center justify-center mx-auto mb-3">
-                  <Phone className="w-8 h-8 text-orange-600" />
+                  <Mail className="w-8 h-8 text-orange-600" />
                 </div>
-                <p className="text-sm text-gray-600">Enter your phone number to login</p>
+                <p className="text-sm text-gray-600">Login with your email & password</p>
               </div>
 
-              <div className="flex gap-2">
-                <div className="flex items-center px-3 bg-gray-100 rounded-lg text-sm font-medium text-gray-600">
-                  +91
+              <div className="space-y-3">
+                <div className="relative">
+                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                  <Input
+                    type="email"
+                    placeholder="Enter your email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    className="pl-10 h-11"
+                  />
                 </div>
-                <Input
-                  type="tel"
-                  placeholder="Enter 10-digit number"
-                  value={phone}
-                  onChange={(e) => setPhone(e.target.value.replace(/\D/g, '').slice(0, 10))}
-                  className="flex-1"
-                  maxLength={10}
-                />
+
+                <div className="relative">
+                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                  <Input
+                    type={showPassword ? 'text' : 'password'}
+                    placeholder="Enter your password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    className="pl-10 pr-10 h-11"
+                    onKeyDown={(e) => e.key === 'Enter' && handleLogin()}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                  >
+                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
               </div>
 
               {error && (
@@ -87,20 +103,33 @@ export default function LoginModal({
               )}
 
               <Button
-                onClick={handleSendOtp}
-                disabled={phone.length < 10 || sendingOtp}
+                onClick={handleLogin}
+                disabled={!email || !password || loginLoading}
                 className="w-full bg-orange-600 hover:bg-orange-700 text-white h-11 rounded-xl"
               >
-                {sendingOtp ? (
-                  <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Sending OTP...</>
+                {loginLoading ? (
+                  <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Logging in...</>
                 ) : (
-                  'Send OTP'
+                  <><Lock className="w-4 h-4 mr-2" /> Login</>
                 )}
               </Button>
 
               <div className="flex items-center gap-2 text-xs text-gray-400 justify-center">
                 <Shield className="w-3 h-3" />
-                <span>Your number is safe with us</span>
+                <span>Your data is safe with us</span>
+              </div>
+
+              {/* Switch to Signup */}
+              <div className="text-center">
+                <p className="text-sm text-gray-500">
+                  Don&apos;t have an account?{' '}
+                  <button
+                    onClick={() => setMode('signup')}
+                    className="text-orange-600 font-semibold hover:underline"
+                  >
+                    Sign Up
+                  </button>
+                </p>
               </div>
 
               {/* Divider */}
@@ -129,58 +158,94 @@ export default function LoginModal({
 
               <p className="text-xs text-gray-400 text-center">
                 Guest mode: Take tests & see results instantly.<br/>
-                Phone login: Save progress across devices.
+                Email login: Save progress across devices.
               </p>
             </div>
           ) : (
-            /* OTP Verification */
+            /* Sign Up Form */
             <div className="space-y-4">
               <div className="text-center mb-4">
                 <div className="w-16 h-16 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-3">
-                  <Shield className="w-8 h-8 text-emerald-600" />
+                  <UserPlus className="w-8 h-8 text-emerald-600" />
                 </div>
-                <p className="text-sm text-gray-600">OTP sent to +91 {phone}</p>
+                <p className="text-sm text-gray-600">Create your free account</p>
               </div>
 
-              <Input
-                type="text"
-                placeholder="Enter 6-digit OTP"
-                value={otp}
-                onChange={(e) => setOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
-                className="text-center text-2xl tracking-widest h-14"
-                maxLength={6}
-              />
+              <div className="space-y-3">
+                <div className="relative">
+                  <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                  <Input
+                    type="text"
+                    placeholder="Enter your name"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    className="pl-10 h-11"
+                  />
+                </div>
+
+                <div className="relative">
+                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                  <Input
+                    type="email"
+                    placeholder="Enter your email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    className="pl-10 h-11"
+                  />
+                </div>
+
+                <div className="relative">
+                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                  <Input
+                    type={showPassword ? 'text' : 'password'}
+                    placeholder="Create a password (min 6 chars)"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    className="pl-10 pr-10 h-11"
+                    onKeyDown={(e) => e.key === 'Enter' && handleSignUp()}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                  >
+                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
+              </div>
 
               {error && (
                 <p className="text-red-500 text-sm text-center">{error}</p>
               )}
 
               <Button
-                onClick={handleVerifyOtp}
-                disabled={otp.length < 6 || verifyingOtp}
+                onClick={handleSignUp}
+                disabled={!email || !password || !name || signupLoading}
                 className="w-full bg-emerald-600 hover:bg-emerald-700 text-white h-11 rounded-xl"
               >
-                {verifyingOtp ? (
-                  <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Verifying...</>
+                {signupLoading ? (
+                  <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Creating account...</>
                 ) : (
-                  'Verify OTP'
+                  <><UserPlus className="w-4 h-4 mr-2" /> Sign Up</>
                 )}
               </Button>
 
-              <div className="flex items-center justify-between">
-                <button
-                  onClick={onReset}
-                  className="text-sm text-orange-600 hover:underline"
-                >
-                  Change Number
-                </button>
-                <button
-                  onClick={() => onSendOtp(phone)}
-                  className="text-sm text-gray-500 hover:underline"
-                  disabled={sendingOtp}
-                >
-                  Resend OTP
-                </button>
+              <div className="flex items-center gap-2 text-xs text-gray-400 justify-center">
+                <Shield className="w-3 h-3" />
+                <span>Your data is safe with us</span>
+              </div>
+
+              {/* Switch to Login */}
+              <div className="text-center">
+                <p className="text-sm text-gray-500">
+                  Already have an account?{' '}
+                  <button
+                    onClick={() => setMode('login')}
+                    className="text-orange-600 font-semibold hover:underline"
+                  >
+                    Login
+                  </button>
+                </p>
               </div>
 
               {/* Divider */}
@@ -193,7 +258,7 @@ export default function LoginModal({
                 </div>
               </div>
 
-              {/* Skip to Guest */}
+              {/* Guest Login */}
               <Button
                 onClick={onGuestLogin}
                 disabled={guestLoading}

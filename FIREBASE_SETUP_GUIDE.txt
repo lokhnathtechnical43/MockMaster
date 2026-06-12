@@ -75,16 +75,11 @@ Console-এ সেটআপ করা বাকি। এই গাইড ধা
 1. Firebase Console → "Authentication" ক্লিক করো
 2. "Get started" ক্লিক করো
 3. "Sign-in method" ট্যাবে যাও
-4. "Phone" provider এ ক্লিক করো
+4. "Email/Password" provider এ ক্লিক করো
 5. "Enable" toggle ON করো
 6. "Save" ক্লিক করো
 
-Test Phone Numbers (ডেভেলপমেন্টের জন্য):
-7. Authentication → Settings → "Phone numbers for testing"
-8. একটি test phone number যোগ করো:
-   - Phone: +91 9999999999
-   - Code: 123456
-   ⚠️ এই number শুধু testing এ কাজ করবে, production এ না
+⚠️ তুমি প্রথম test user অ্যাপ থেকেই Sign Up করতে পারবে!
 
 =====================================================
   ধাপ ৫: Firebase Storage চালু করো (ইমেজ আপলোডের জন্য)
@@ -156,7 +151,7 @@ firestore.indexes.json → Firestore query indexes
 
 src/lib/firebase.ts  → Firebase initialization (env vars থেকে পড়ে)
 src/lib/firestore-service.ts → Firestore CRUD operations
-src/lib/use-firebase-auth.ts → Phone OTP + Guest auth
+src/lib/use-firebase-auth.ts → Email/Password + Guest auth
 src/components/admin/SettingsTab.tsx → Firebase status & test
 
 =====================================================
@@ -164,10 +159,16 @@ src/components/admin/SettingsTab.tsx → Firebase status & test
 =====================================================
 
 Problem: "Firebase: Error (auth/operation-not-allowed)"
-Solution: Firebase Console → Authentication → Phone provider ON করো
+Solution: Firebase Console → Authentication → Email/Password provider ON করো
 
-Problem: "Firebase: Error (auth/invalid-phone-number)"
-Solution: Phone number অবশ্যই +91 prefix দিয়ে দিবে (বা 10-digit)
+Problem: "Firebase: Error (auth/email-already-in-use)"
+Solution: এই email দিয়ে আগেই account আছে, Login করো
+
+Problem: "Firebase: Error (auth/weak-password)"
+Solution: Password কমপক্ষে ৬ অক্ষরের হতে হবে
+
+Problem: "Firebase: Error (auth/invalid-credential)"
+Solution: Email বা password ভুল আছে, আবার চেষ্টা করো
 
 Problem: "Firestore: Missing or insufficient permissions"
 Solution: firestore.rules deploy করো (ধাপ ৬)

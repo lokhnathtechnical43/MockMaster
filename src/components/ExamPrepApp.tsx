@@ -479,7 +479,11 @@ export default function ExamPrepApp() {
   function getAvatarDisplay() {
     if (auth.isGuest) return 'G'
     const display = auth.getUserDisplay()
-    if (display && display.startsWith('+91')) return display.slice(-2)
+    if (display) {
+      // For email: first letter before @, for name: first letter
+      if (display.includes('@')) return display.charAt(0).toUpperCase()
+      return display.charAt(0).toUpperCase()
+    }
     return 'G'
   }
 
@@ -1689,7 +1693,8 @@ export default function ExamPrepApp() {
   function renderProfile() {
     const stats = getUserStats()
     const userDisplay = auth.getUserDisplay()
-    const isPhoneUser = !auth.isGuest && auth.isLoggedIn
+    const userEmail = auth.getUserEmail()
+    const isEmailUser = !auth.isGuest && auth.isLoggedIn
 
     return (
       <div className="pb-20">
@@ -1717,7 +1722,7 @@ export default function ExamPrepApp() {
                 <div className="w-16 h-16 rounded-full bg-gradient-to-br from-orange-400 to-red-500 flex items-center justify-center shadow-lg shadow-orange-500/20">
                   <span className="text-white font-bold text-xl">{getAvatarDisplay()}</span>
                 </div>
-                {isPhoneUser && (
+                {isEmailUser && (
                   <div className="absolute -bottom-1 -right-1 w-6 h-6 rounded-full bg-emerald-500 flex items-center justify-center border-2 border-slate-900">
                     <CheckCircle2 className="w-3 h-3 text-white" />
                   </div>
@@ -1725,10 +1730,10 @@ export default function ExamPrepApp() {
               </div>
               <div className="flex-1 min-w-0">
                 <p className="text-white font-bold text-lg truncate">
-                  {isPhoneUser ? `+91 ${userDisplay?.slice(-10)}` : 'Guest User'}
+                  {isEmailUser ? (userDisplay || userEmail) : 'Guest User'}
                 </p>
                 <div className="flex items-center gap-2 mt-1">
-                  {isPhoneUser ? (
+                  {isEmailUser ? (
                     <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 text-xs font-medium">
                       <Shield className="w-3 h-3" /> Verified
                     </span>
@@ -2234,15 +2239,13 @@ export default function ExamPrepApp() {
       {/* Login Modal */}
       {showLoginModal && (
         <LoginModal
-          otpSent={auth.otpSent}
           error={auth.error}
-          sendingOtp={auth.sendingOtp}
-          verifyingOtp={auth.verifyingOtp}
+          loginLoading={auth.loginLoading}
+          signupLoading={auth.signupLoading}
           guestLoading={auth.guestLoading}
-          onSendOtp={auth.sendOtp}
-          onVerifyOtp={auth.verifyOtp}
+          onLogin={auth.loginWithEmail}
+          onSignUp={auth.signUpWithEmail}
           onGuestLogin={auth.loginAsGuest}
-          onReset={auth.resetOtp}
           onClose={() => setShowLoginModal(false)}
         />
       )}

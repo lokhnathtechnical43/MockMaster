@@ -3,8 +3,9 @@
 import { useState, useEffect } from 'react'
 import { auth, isFirebaseReady } from '@/lib/firebase'
 import {
-  RecaptchaVerifier,
-  signInWithPhoneNumber,
+  signInWithEmailAndPassword,
+  createUserWithEmailAndPassword,
+  updateProfile,
   onAuthStateChanged,
   signOut as firebaseSignOut,
   User
@@ -19,11 +20,9 @@ const GUEST_USER_KEY = 'examprep_guest_user'
 
 export function useFirebaseAuth() {
   const [authState, setAuthState] = useState<AuthState>({ user: null, loading: true })
-  const [otpSent, setOtpSent] = useState(false)
-  const [verificationId, setVerificationId] = useState<string>('')
   const [error, setError] = useState('')
-  const [sendingOtp, setSendingOtp] = useState(false)
-  const [verifyingOtp, setVerifyingOtp] = useState(false)
+  const [loginLoading, setLoginLoading] = useState(false)
+  const [signupLoading, setSignupLoading] = useState(false)
   const [guestLoading, setGuestLoading] = useState(false)
   const [isLocalGuest, setIsLocalGuest] = useState(false)
 
@@ -48,95 +47,76 @@ export function useFirebaseAuth() {
     return () => unsubscribe()
   }, [])
 
-  const setupRecaptcha = () => {
-    if (typeof window === 'undefined') return null
-    if (!auth || !isFirebaseReady()) return null
-    if ((window as any).recaptchaVerifier) {
-      return (window as any).recaptchaVerifier
-    }
-    try {
-      const recaptchaVerifier = new RecaptchaVerifier(auth, 'recaptcha-container', {
-        size: 'invisible',
-        callback: () => { /* reCAPTCHA solved */ }
-      })
-      ;(window as any).recaptchaVerifier = recaptchaVerifier
-      return recaptchaVerifier
-    } catch (e) {
-      console.error('Recaptcha setup error:', e)
-      return null
-    }
-  }
-
-  const sendOtp = async (phoneNumber: string) => {
+  // Login with Email + Password
+  const loginWithEmail = async (email: string, password: string) => {
     if (!auth || !isFirebaseReady()) {
       setError('Firebase is not configured. Please use Guest mode instead.')
       return
     }
     setError('')
-    setSendingOtp(true)
+    setLoginLoading(true)
     try {
-      const formattedPhone = phoneNumber.startsWith('+') ? phoneNumber : `+91${phoneNumber}`
-      const recaptchaVerifier = setupRecaptcha()
-      if (!recaptchaVerifier) {
-        setError('Failed to setup verification. Please refresh the page.')
-        setSendingOtp(false)
-        return
-      }
-
-      const confirmationResult = await signInWithPhoneNumber(auth, formattedPhone, recaptchaVerifier)
-      setVerificationId(confirmationResult.verificationId)
-      ;(window as any).confirmationResult = confirmationResult
-      setOtpSent(true)
-    } catch (err: any) {
-      console.error('Send OTP error:', err)
-      if (err.code === 'auth/invalid-phone-number') {
-        setError('Invalid phone number. Please enter a valid 10-digit number.')
-      } else if (err.code === 'auth/too-many-requests') {
-        setError('Too many requests. Please try again later.')
-      } else if (err.code === 'auth/quota-exceeded') {
-        setError('SMS quota exceeded. Please try again later.')
-      } else if (err.code === 'auth/operation-not-allowed' || err.code === 'auth/admin-restricted-operation') {
-        setError('Phone login not available yet. Please use Guest mode instead.')
-      } else {
-        setError('Failed to send OTP. Please try Guest mode instead.')
-      }
-    }
-    setSendingOtp(false)
-  }
-
-  const verifyOtp = async (otp: string) => {
-    setError('')
-    setVerifyingOtp(true)
-    try {
-      const confirmationResult = (window as any).confirmationResult
-      if (!confirmationResult) {
-        setError('Session expired. Please request OTP again.')
-        setVerifyingOtp(false)
-        return
-      }
-      await confirmationResult.confirm(otp)
-      // Clear local guest if phone login succeeds
+      await signInWithEmailAndPassword(auth, email, password)
+      // Clear local guest if email login succeeds
       localStorage.removeItem(GUEST_USER_KEY)
       setIsLocalGuest(false)
-      setOtpSent(false)
     } catch (err: any) {
-      console.error('Verify OTP error:', err)
-      if (err.code === 'auth/invalid-verification-code') {
-        setError('Invalid OTP. Please check and try again.')
-      } else if (err.code === 'auth/code-expired') {
-        setError('OTP expired. Please request a new one.')
+      console.error('Login error:', err)
+      if (err.code === 'auth/user-not-found') {
+        setError('No account found with this email. Please sign up first.')
+      } else if (err.code === 'auth/wrong-password' || err.code === 'auth/invalid-credential') {
+        setError('Incorrect password. Please try again.')
+      } else if (err.code === 'auth/invalid-email') {
+        setError('Invalid email address.')
+      } else if (err.code === 'auth/too-many-requests') {
+        setError('Too many failed attempts. Please try again later.')
+      } else if (err.code === 'auth/user-disabled') {
+        setError('This account has been disabled. Contact support.')
       } else {
-        setError('Verification failed. Please try again.')
+        setError('Login failed. Please try again.')
       }
     }
-    setVerifyingOtp(false)
+    setLoginLoading(false)
+  }
+
+  // Sign Up with Email + Password + Name
+  const signUpWithEmail = async (email: string, password: string, name: string) => {
+    if (!auth || !isFirebaseReady()) {
+      setError('Firebase is not configured. Please use Guest mode instead.')
+      return
+    }
+    setError('')
+    setSignupLoading(true)
+    try {
+      const credential = await createUserWithEmailAndPassword(auth, email, password)
+      // Set display name
+      if (credential.user) {
+        await updateProfile(credential.user, { displayName: name })
+      }
+      // Clear local guest if signup succeeds
+      localStorage.removeItem(GUEST_USER_KEY)
+      setIsLocalGuest(false)
+    } catch (err: any) {
+      console.error('Signup error:', err)
+      if (err.code === 'auth/email-already-in-use') {
+        setError('This email is already registered. Please login instead.')
+      } else if (err.code === 'auth/weak-password') {
+        setError('Password is too weak. Use at least 6 characters.')
+      } else if (err.code === 'auth/invalid-email') {
+        setError('Invalid email address.')
+      } else if (err.code === 'auth/operation-not-allowed') {
+        setError('Email login not available yet. Please use Guest mode.')
+      } else {
+        setError('Sign up failed. Please try again.')
+      }
+    }
+    setSignupLoading(false)
   }
 
   const loginAsGuest = async () => {
     setError('')
     setGuestLoading(true)
     try {
-      // Create a local guest user (no Firebase needed)
       const guestId = 'guest_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8)
       const guestData = {
         id: guestId,
@@ -155,10 +135,8 @@ export function useFirebaseAuth() {
 
   const logout = async () => {
     try {
-      // Clear local guest
       localStorage.removeItem(GUEST_USER_KEY)
       setIsLocalGuest(false)
-      // Also sign out from Firebase if logged in
       if (authState.user && auth) {
         await firebaseSignOut(auth)
       }
@@ -167,26 +145,24 @@ export function useFirebaseAuth() {
     }
   }
 
-  const resetOtp = () => {
-    setOtpSent(false)
-    setVerificationId('')
-    setError('')
-    if ((window as any).recaptchaVerifier) {
-      ;(window as any).recaptchaVerifier = null
-    }
-  }
-
   // User is logged in if either Firebase user exists OR local guest
   const isLoggedIn = !!authState.user || isLocalGuest
   const isGuest = isLocalGuest || (authState.user?.isAnonymous ?? false)
 
-  // Check if phone login is available (Firebase must be configured)
-  const isPhoneLoginAvailable = isFirebaseReady()
+  // Check if email login is available (Firebase must be configured)
+  const isEmailLoginAvailable = isFirebaseReady()
 
-  // Get display name/phone
+  // Get display name/email
   const getUserDisplay = () => {
-    if (authState.user?.phoneNumber) return authState.user.phoneNumber
+    if (authState.user?.displayName) return authState.user.displayName
+    if (authState.user?.email) return authState.user.email
     if (isLocalGuest) return 'Guest User'
+    return null
+  }
+
+  // Get user email
+  const getUserEmail = () => {
+    if (authState.user?.email) return authState.user.email
     return null
   }
 
@@ -206,20 +182,19 @@ export function useFirebaseAuth() {
   return {
     user: authState.user,
     loading: authState.loading,
-    otpSent,
     error,
-    sendingOtp,
-    verifyingOtp,
+    loginLoading,
+    signupLoading,
     guestLoading,
     isLoggedIn,
     isGuest,
-    isPhoneLoginAvailable,
+    isEmailLoginAvailable,
     getUserDisplay,
+    getUserEmail,
     getUserId,
-    sendOtp,
-    verifyOtp,
+    loginWithEmail,
+    signUpWithEmail,
     loginAsGuest,
     logout,
-    resetOtp
   }
 }

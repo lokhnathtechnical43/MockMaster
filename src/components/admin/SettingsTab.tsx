@@ -201,7 +201,7 @@ export default function SettingsTab() {
                 <li>Copy the firebaseConfig values</li>
                 <li>Paste them in <span className="font-mono">.env.local</span></li>
                 <li>Enable Firestore Database in console</li>
-                <li>Enable Phone Auth in console</li>
+                <li>Enable Email/Password Auth in console</li>
                 <li>Restart dev server</li>
               </ol>
             </div>
@@ -357,7 +357,7 @@ export default function SettingsTab() {
               <p className="font-bold text-gray-700 mb-1">Required in Firebase Console:</p>
               <ul className="space-y-1 text-gray-600 list-disc list-inside">
                 <li>Firestore Database — Create in production or test mode</li>
-                <li>Authentication — Enable Phone provider</li>
+                <li>Authentication — Enable Email/Password provider</li>
                 <li>Storage — Enable (for image uploads)</li>
                 <li>Web App — Register and copy config</li>
               </ul>
