@@ -573,15 +573,14 @@ export default function ExamPrepApp() {
         {/* Announcements - Image Banner Carousel */}
         <div className="px-4 mt-3 mb-1">
           <div className="relative">
-            {/* Banner Cards - Horizontal Scroll */}
+            {/* Banner Cards - Full Width Single Item */}
             <div
               ref={carouselRef}
               onScroll={() => {
                 if (carouselRef.current) {
-                  const cardWidth = carouselRef.current.children[0]?.getBoundingClientRect().width || 250
-                  const gap = 12
+                  const cardWidth = carouselRef.current.children[0]?.getBoundingClientRect().width || 300
                   const scrollPos = carouselRef.current.scrollLeft
-                  const newIndex = Math.round(scrollPos / (cardWidth + gap))
+                  const newIndex = Math.round(scrollPos / cardWidth)
                   if (newIndex !== activeAnnouncement && newIndex >= 0 && newIndex < announcements.length) {
                     setActiveAnnouncement(newIndex)
                   }
@@ -593,46 +592,48 @@ export default function ExamPrepApp() {
                   setActiveAnnouncement(prev => {
                     const next = (prev + 1) % announcements.length
                     if (carouselRef.current) {
-                      const cardWidth = carouselRef.current.children[0]?.getBoundingClientRect().width || 250
-                      const gap = 12
-                      carouselRef.current.scrollTo({ left: next * (cardWidth + gap), behavior: 'smooth' })
+                      const cardWidth = carouselRef.current.children[0]?.getBoundingClientRect().width || 300
+                      carouselRef.current.scrollTo({ left: next * cardWidth, behavior: 'smooth' })
                     }
                     return next
                   })
                 }, 3000)
               }}
-              className="flex gap-3 overflow-x-auto scrollbar-hide snap-x snap-mandatory pb-2 -mx-1 px-1"
+              className="flex overflow-x-auto scrollbar-hide snap-x snap-mandatory"
             >
               {announcements.map((a, index) => (
                 <button
                   key={a.id}
                   onClick={() => handleBottomNav(a.action)}
-                  className="flex-shrink-0 w-[75vw] max-w-[300px] snap-center"
+                  className="flex-shrink-0 w-full snap-center px-1"
                 >
                   <div className={`bg-gradient-to-br ${a.gradient} rounded-2xl overflow-hidden shadow-md active:scale-[0.98] transition-transform`}>
-                    {/* Image Area */}
-                    <div className="h-28 relative flex items-center justify-center overflow-hidden">
+                    {/* Image Area - Bigger */}
+                    <div className="h-36 relative flex items-center justify-center overflow-hidden">
                       {/* Background Pattern */}
                       <div className="absolute inset-0 opacity-10">
-                        <div className="absolute top-2 left-4 w-20 h-20 rounded-full border-4 border-white" />
-                        <div className="absolute bottom-1 right-6 w-16 h-16 rounded-full border-4 border-white" />
-                        <div className="absolute top-8 right-12 w-8 h-8 rounded-full bg-white" />
+                        <div className="absolute top-3 left-6 w-24 h-24 rounded-full border-4 border-white" />
+                        <div className="absolute bottom-2 right-8 w-20 h-20 rounded-full border-4 border-white" />
+                        <div className="absolute top-10 right-16 w-10 h-10 rounded-full bg-white" />
+                        <div className="absolute bottom-4 left-20 w-6 h-6 rounded-full bg-white" />
                       </div>
-                      {/* Icon based on type */}
-                      <div className="relative z-10 flex flex-col items-center">
-                        <div className="w-14 h-14 bg-white/20 backdrop-blur rounded-2xl flex items-center justify-center mb-1.5">
-                          {a.image === 'ssc' && <BookOpen className="w-7 h-7 text-white" />}
-                          {a.image === 'banking' && <Building className="w-7 h-7 text-white" />}
-                          {a.image === 'leaderboard' && <Trophy className="w-7 h-7 text-white" />}
-                          {a.image === 'practice' && <Zap className="w-7 h-7 text-white" />}
+                      {/* Icon + Text */}
+                      <div className="relative z-10 flex items-center gap-4 px-4">
+                        <div className="w-16 h-16 bg-white/20 backdrop-blur rounded-2xl flex items-center justify-center flex-shrink-0">
+                          {a.image === 'ssc' && <BookOpen className="w-8 h-8 text-white" />}
+                          {a.image === 'banking' && <Building className="w-8 h-8 text-white" />}
+                          {a.image === 'leaderboard' && <Trophy className="w-8 h-8 text-white" />}
+                          {a.image === 'practice' && <Zap className="w-8 h-8 text-white" />}
                         </div>
-                        <p className="text-white/60 text-[9px] font-medium tracking-wider uppercase">Tap to open</p>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-white font-bold text-base leading-tight">{a.title}</p>
+                          <p className="text-white/80 text-xs mt-1">{a.subtitle}</p>
+                          <div className="flex items-center gap-1 mt-2">
+                            <span className="text-white/50 text-[10px]">Tap to explore</span>
+                            <ChevronRight className="w-3 h-3 text-white/50" />
+                          </div>
+                        </div>
                       </div>
-                    </div>
-                    {/* Text Area */}
-                    <div className="px-3 py-2.5 bg-black/10">
-                      <p className="text-white font-bold text-sm leading-tight">{a.title}</p>
-                      <p className="text-white/70 text-[11px] mt-0.5">{a.subtitle}</p>
                     </div>
                   </div>
                 </button>
