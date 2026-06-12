@@ -4,15 +4,17 @@ import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
-import { Phone, Shield, ArrowLeft, Loader2 } from 'lucide-react'
+import { Phone, Shield, ArrowLeft, Loader2, User } from 'lucide-react'
 
 interface LoginModalProps {
   otpSent: boolean
   error: string
   sendingOtp: boolean
   verifyingOtp: boolean
+  guestLoading: boolean
   onSendOtp: (phone: string) => void
   onVerifyOtp: (otp: string) => void
+  onGuestLogin: () => void
   onReset: () => void
   onClose: () => void
 }
@@ -22,8 +24,10 @@ export default function LoginModal({
   error,
   sendingOtp,
   verifyingOtp,
+  guestLoading,
   onSendOtp,
   onVerifyOtp,
+  onGuestLogin,
   onReset,
   onClose
 }: LoginModalProps) {
@@ -98,6 +102,35 @@ export default function LoginModal({
                 <Shield className="w-3 h-3" />
                 <span>Your number is safe with us</span>
               </div>
+
+              {/* Divider */}
+              <div className="relative my-2">
+                <div className="absolute inset-0 flex items-center">
+                  <div className="w-full border-t border-gray-200"></div>
+                </div>
+                <div className="relative flex justify-center text-xs">
+                  <span className="bg-white px-2 text-gray-400">OR</span>
+                </div>
+              </div>
+
+              {/* Guest Login */}
+              <Button
+                onClick={onGuestLogin}
+                disabled={guestLoading}
+                variant="outline"
+                className="w-full h-11 rounded-xl border-2 border-dashed border-orange-300 text-orange-600 hover:bg-orange-50 hover:border-orange-400"
+              >
+                {guestLoading ? (
+                  <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Logging in...</>
+                ) : (
+                  <><User className="w-4 h-4 mr-2" /> Continue as Guest</>
+                )}
+              </Button>
+
+              <p className="text-xs text-gray-400 text-center">
+                Guest mode: Take tests & see results instantly.<br/>
+                Phone login: Save progress across devices.
+              </p>
             </div>
           ) : (
             /* OTP Verification */
@@ -149,6 +182,30 @@ export default function LoginModal({
                   Resend OTP
                 </button>
               </div>
+
+              {/* Divider */}
+              <div className="relative my-2">
+                <div className="absolute inset-0 flex items-center">
+                  <div className="w-full border-t border-gray-200"></div>
+                </div>
+                <div className="relative flex justify-center text-xs">
+                  <span className="bg-white px-2 text-gray-400">OR</span>
+                </div>
+              </div>
+
+              {/* Skip to Guest */}
+              <Button
+                onClick={onGuestLogin}
+                disabled={guestLoading}
+                variant="outline"
+                className="w-full h-11 rounded-xl border-2 border-dashed border-orange-300 text-orange-600 hover:bg-orange-50 hover:border-orange-400"
+              >
+                {guestLoading ? (
+                  <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Logging in...</>
+                ) : (
+                  <><User className="w-4 h-4 mr-2" /> Skip & Continue as Guest</>
+                )}
+              </Button>
             </div>
           )}
         </CardContent>

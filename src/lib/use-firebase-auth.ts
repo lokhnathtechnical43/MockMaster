@@ -5,6 +5,7 @@ import { auth } from '@/lib/firebase'
 import {
   RecaptchaVerifier,
   signInWithPhoneNumber,
+  signInAnonymously,
   onAuthStateChanged,
   signOut,
   User
@@ -22,6 +23,7 @@ export function useFirebaseAuth() {
   const [error, setError] = useState('')
   const [sendingOtp, setSendingOtp] = useState(false)
   const [verifyingOtp, setVerifyingOtp] = useState(false)
+  const [guestLoading, setGuestLoading] = useState(false)
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
@@ -75,8 +77,10 @@ export function useFirebaseAuth() {
         setError('Too many requests. Please try again later.')
       } else if (err.code === 'auth/quota-exceeded') {
         setError('SMS quota exceeded. Please try again later.')
+      } else if (err.code === 'auth/operation-not-allowed') {
+        setError('Phone login not available yet. Please use Guest mode instead.')
       } else {
-        setError('Failed to send OTP. Please try again.')
+        setError('Failed to send OTP. Please try again or use Guest mode.')
       }
     }
     setSendingOtp(false)
@@ -107,6 +111,22 @@ export function useFirebaseAuth() {
     setVerifyingOtp(false)
   }
 
+  const loginAsGuest = async () => {
+    setError('')
+    setGuestLoading(true)
+    try {
+      await signInAnonymously(auth)
+    } catch (err: any) {
+      console.error('Guest login error:', err)
+      if (err.code === 'auth/operation-not-allowed') {
+        setError('Guest login is not enabled. Please enable Anonymous Auth in Firebase Console.')
+      } else {
+        setError('Failed to login as guest. Please try again.')
+      }
+    }
+    setGuestLoading(false)
+  }
+
   const logout = async () => {
     try {
       await signOut(auth)
@@ -125,6 +145,9 @@ export function useFirebaseAuth() {
     }
   }
 
+  // Check if user is a guest (anonymous)
+  const isGuest = authState.user?.isAnonymous ?? false
+
   return {
     user: authState.user,
     loading: authState.loading,
@@ -132,8 +155,11 @@ export function useFirebaseAuth() {
     error,
     sendingOtp,
     verifyingOtp,
+    guestLoading,
+    isGuest,
     sendOtp,
     verifyOtp,
+    loginAsGuest,
     logout,
     resetOtp
   }

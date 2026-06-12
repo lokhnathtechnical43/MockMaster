@@ -13,7 +13,7 @@ import {
   ChevronRight, ChevronLeft, Home, BarChart3, User, ArrowLeft,
   Play, Zap, Target, Award, Timer, RefreshCw,
   BookMarked, GraduationCap, Shield, Building, Train, ShieldCheck,
-  Swords, LogOut, Loader2
+  Swords, LogOut, Loader2, Phone
 } from 'lucide-react'
 import { useFirebaseAuth } from '@/lib/use-firebase-auth'
 import LoginModal from '@/components/LoginModal'
@@ -74,7 +74,7 @@ export default function ExamPrepBharat() {
   const [showLoginModal, setShowLoginModal] = useState(false)
 
   // Firebase Auth
-  const { user, loading: authLoading, otpSent, error: authError, sendingOtp, verifyingOtp, sendOtp, verifyOtp, logout, resetOtp } = useFirebaseAuth()
+  const { user, loading: authLoading, otpSent, error: authError, sendingOtp, verifyingOtp, guestLoading, isGuest, sendOtp, verifyOtp, loginAsGuest, logout, resetOtp } = useFirebaseAuth()
 
   // Test taking state
   const [currentQuestion, setCurrentQuestion] = useState(0)
@@ -250,7 +250,7 @@ export default function ExamPrepBharat() {
               <p className="text-orange-100 text-sm">Mock Tests for Indian Exams</p>
             </div>
             <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center cursor-pointer" onClick={() => user ? setPage('profile') : setShowLoginModal(true)}>
-              {user ? <span className="text-sm font-bold">{user.phoneNumber?.slice(-2) || 'U'}</span> : <User className="w-5 h-5" />}
+              {user ? <span className="text-sm font-bold">{isGuest ? 'G' : (user.phoneNumber?.slice(-2) || 'U')}</span> : <User className="w-5 h-5" />}
             </div>
           </div>
           <div className="bg-white/10 backdrop-blur-sm rounded-xl p-3 flex items-center gap-3">
@@ -949,18 +949,40 @@ export default function ExamPrepBharat() {
         {user ? (
           <Card className="border-0 shadow-sm">
             <CardContent className="p-4 space-y-3">
-              <div className="flex items-center gap-3 p-3 bg-emerald-50 rounded-xl">
-                <div className="w-10 h-10 bg-emerald-100 rounded-full flex items-center justify-center">
-                  <CheckCircle2 className="w-5 h-5 text-emerald-600" />
+              {isGuest ? (
+                <div className="space-y-3">
+                  <div className="flex items-center gap-3 p-3 bg-amber-50 rounded-xl">
+                    <div className="w-10 h-10 bg-amber-100 rounded-full flex items-center justify-center">
+                      <User className="w-5 h-5 text-amber-600" />
+                    </div>
+                    <div>
+                      <p className="font-medium text-sm text-amber-700">Guest User</p>
+                      <p className="text-xs text-amber-600">Login with phone to save progress</p>
+                    </div>
+                  </div>
+                  <Button onClick={() => setShowLoginModal(true)} className="w-full rounded-xl h-11 bg-orange-600 hover:bg-orange-700 text-white">
+                    <Phone className="w-4 h-4 mr-2" /> Upgrade to Phone Login
+                  </Button>
+                  <Button onClick={logout} variant="outline" className="w-full rounded-xl h-11 text-red-600 border-red-200 hover:bg-red-50">
+                    <LogOut className="w-4 h-4 mr-2" /> Logout
+                  </Button>
                 </div>
-                <div>
-                  <p className="font-medium text-sm text-emerald-700">Logged In</p>
-                  <p className="text-xs text-emerald-600">{user.phoneNumber}</p>
-                </div>
-              </div>
-              <Button onClick={logout} variant="outline" className="w-full rounded-xl h-11 text-red-600 border-red-200 hover:bg-red-50">
-                <LogOut className="w-4 h-4 mr-2" /> Logout
-              </Button>
+              ) : (
+                <>
+                  <div className="flex items-center gap-3 p-3 bg-emerald-50 rounded-xl">
+                    <div className="w-10 h-10 bg-emerald-100 rounded-full flex items-center justify-center">
+                      <CheckCircle2 className="w-5 h-5 text-emerald-600" />
+                    </div>
+                    <div>
+                      <p className="font-medium text-sm text-emerald-700">Logged In</p>
+                      <p className="text-xs text-emerald-600">{user.phoneNumber}</p>
+                    </div>
+                  </div>
+                  <Button onClick={logout} variant="outline" className="w-full rounded-xl h-11 text-red-600 border-red-200 hover:bg-red-50">
+                    <LogOut className="w-4 h-4 mr-2" /> Logout
+                  </Button>
+                </>
+              )}
             </CardContent>
           </Card>
         ) : (
@@ -1029,8 +1051,10 @@ export default function ExamPrepBharat() {
           error={authError}
           sendingOtp={sendingOtp}
           verifyingOtp={verifyingOtp}
+          guestLoading={guestLoading}
           onSendOtp={sendOtp}
           onVerifyOtp={verifyOtp}
+          onGuestLogin={loginAsGuest}
           onReset={resetOtp}
           onClose={() => { setShowLoginModal(false); resetOtp() }}
         />
