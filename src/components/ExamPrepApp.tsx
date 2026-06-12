@@ -97,6 +97,8 @@ export default function ExamPrepApp() {
   const [timeLeft, setTimeLeft] = useState(0)
   const [testActive, setTestActive] = useState(false)
   const timerRef = useRef<NodeJS.Timeout | null>(null)
+  const carouselRef = useRef<HTMLDivElement | null>(null)
+  const carouselTimerRef = useRef<NodeJS.Timeout | null>(null)
 
   // --- Results ---
   const [lastResult, setLastResult] = useState<TestResult | null>(null)
@@ -138,6 +140,31 @@ export default function ExamPrepApp() {
   useEffect(() => {
     setCategories(getCategories())
   }, [])
+
+  // --- Auto-scroll carousel ---
+  useEffect(() => {
+    const startCarousel = () => {
+      carouselTimerRef.current = setInterval(() => {
+        setActiveAnnouncement(prev => {
+          const next = (prev + 1) % announcements.length
+          // Scroll the carousel container
+          if (carouselRef.current) {
+            const cardWidth = carouselRef.current.children[0]?.getBoundingClientRect().width || 250
+            const gap = 12 // gap-3 = 12px
+            carouselRef.current.scrollTo({
+              left: next * (cardWidth + gap),
+              behavior: 'smooth'
+            })
+          }
+          return next
+        })
+      }, 3000) // 3 seconds interval
+    }
+    startCarousel()
+    return () => {
+      if (carouselTimerRef.current) clearInterval(carouselTimerRef.current)
+    }
+  }, [announcements.length])
 
   // --- Navigation ---
   const navigateTo = useCallback((page: Page) => {
@@ -547,7 +574,35 @@ export default function ExamPrepApp() {
         <div className="px-4 mt-3 mb-1">
           <div className="relative">
             {/* Banner Cards - Horizontal Scroll */}
-            <div className="flex gap-3 overflow-x-auto scrollbar-hide snap-x snap-mandatory pb-2 -mx-1 px-1">
+            <div
+              ref={carouselRef}
+              onScroll={() => {
+                if (carouselRef.current) {
+                  const cardWidth = carouselRef.current.children[0]?.getBoundingClientRect().width || 250
+                  const gap = 12
+                  const scrollPos = carouselRef.current.scrollLeft
+                  const newIndex = Math.round(scrollPos / (cardWidth + gap))
+                  if (newIndex !== activeAnnouncement && newIndex >= 0 && newIndex < announcements.length) {
+                    setActiveAnnouncement(newIndex)
+                  }
+                }
+              }}
+              onTouchStart={() => { if (carouselTimerRef.current) clearInterval(carouselTimerRef.current) }}
+              onTouchEnd={() => {
+                carouselTimerRef.current = setInterval(() => {
+                  setActiveAnnouncement(prev => {
+                    const next = (prev + 1) % announcements.length
+                    if (carouselRef.current) {
+                      const cardWidth = carouselRef.current.children[0]?.getBoundingClientRect().width || 250
+                      const gap = 12
+                      carouselRef.current.scrollTo({ left: next * (cardWidth + gap), behavior: 'smooth' })
+                    }
+                    return next
+                  })
+                }, 3000)
+              }}
+              className="flex gap-3 overflow-x-auto scrollbar-hide snap-x snap-mandatory pb-2 -mx-1 px-1"
+            >
               {announcements.map((a, index) => (
                 <button
                   key={a.id}
@@ -587,8 +642,16 @@ export default function ExamPrepApp() {
             {/* Dots Indicator */}
             <div className="flex items-center justify-center gap-1.5 mt-1">
               {announcements.map((_, i) => (
-                <div
+                <button
                   key={i}
+                  onClick={() => {
+                    setActiveAnnouncement(i)
+                    if (carouselRef.current) {
+                      const cardWidth = carouselRef.current.children[0]?.getBoundingClientRect().width || 250
+                      const gap = 12
+                      carouselRef.current.scrollTo({ left: i * (cardWidth + gap), behavior: 'smooth' })
+                    }
+                  }}
                   className={`h-1.5 rounded-full transition-all duration-300 ${
                     i === activeAnnouncement ? 'w-4 bg-orange-500' : 'w-1.5 bg-gray-300'
                   }`}
