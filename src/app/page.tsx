@@ -50,6 +50,7 @@ const categoryColors: Record<string, string> = {
 
 export default function ExamPrepBharat() {
   const [page, setPage] = useState<PageView>('home')
+  const [pageHistory, setPageHistory] = useState<PageView[]>([])
   const [categories, setCategories] = useState<ExamCategory[]>([])
   const [selectedCategory, setSelectedCategory] = useState<ExamCategory | null>(null)
   const [selectedExam, setSelectedExam] = useState<ExamWithCount | null>(null)
@@ -61,6 +62,49 @@ export default function ExamPrepBharat() {
 
   // Firebase Auth
   const { user, loading: authLoading, otpSent, error: authError, sendingOtp, verifyingOtp, guestLoading, isGuest, isLoggedIn, getUserDisplay, getUserId, sendOtp, verifyOtp, loginAsGuest, logout, resetOtp } = useFirebaseAuth()
+
+  // Navigation with history tracking
+  const navigateTo = useCallback((newPage: PageView) => {
+    setPageHistory(prev => [...prev, page])
+    setPage(newPage)
+  }, [page])
+
+  const goBack = useCallback(() => {
+    if (pageHistory.length > 0) {
+      const prevPage = pageHistory[pageHistory.length - 1]
+      setPageHistory(prev => prev.slice(0, -1))
+      setPage(prevPage)
+    }
+    // If no history, stay on current page (don't exit app)
+  }, [pageHistory])
+
+  // Handle Capacitor/Mobile back button
+  useEffect(() => {
+    const handlePopState = (e: PopStateEvent) => {
+      e.preventDefault()
+      if (showLoginModal) {
+        setShowLoginModal(false)
+        resetOtp()
+        return
+      }
+      if (page !== 'home') {
+        goBack()
+      }
+    }
+
+    // Push initial state so we can catch back button
+    window.history.pushState({ page: 'home' }, '')
+    window.addEventListener('popstate', handlePopState)
+
+    return () => {
+      window.removeEventListener('popstate', handlePopState)
+    }
+  }, [page, pageHistory, showLoginModal, goBack, resetOtp])
+
+  // Update history state whenever page changes
+  useEffect(() => {
+    window.history.pushState({ page }, '')
+  }, [page])
 
   // Test taking state
   const [currentQuestion, setCurrentQuestion] = useState(0)
@@ -112,18 +156,18 @@ export default function ExamPrepBharat() {
   // Navigation helpers
   const goToExams = (category: ExamCategory) => {
     setSelectedCategory(category)
-    setPage('exams')
+    navigateTo('exams')
   }
 
   const goToTests = (exam: ExamWithCount) => {
     setSelectedExam(exam)
     fetchTests(exam.id)
-    setPage('tests')
+    navigateTo('tests')
   }
 
   const goToTestInfo = (test: TestWithExam) => {
     fetchTestDetail(test.id)
-    setPage('test-info')
+    navigateTo('test-info')
   }
 
   const startTest = () => {
@@ -135,7 +179,7 @@ export default function ExamPrepBharat() {
     setTestStarted(true)
     setTestCompleted(false)
     setShowResult(false)
-    setPage('test-taking')
+    navigateTo('test-taking')
   }
 
   const submitTest = useCallback(() => {
@@ -174,7 +218,7 @@ export default function ExamPrepBharat() {
       answers
     })
 
-    setPage('results')
+    navigateTo('results')
   }, [selectedTest, answers, timeLeft])
 
   // Timer
@@ -228,7 +272,7 @@ export default function ExamPrepBharat() {
               <h1 className="text-2xl font-bold">ExamPrep Bharat</h1>
               <p className="text-orange-100 text-sm">Mock Tests for Indian Exams</p>
             </div>
-            <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center cursor-pointer" onClick={() => isLoggedIn ? setPage('profile') : setShowLoginModal(true)}>
+            <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center cursor-pointer" onClick={() => isLoggedIn ? navigateTo('profile') : setShowLoginModal(true)}>
               {isLoggedIn ? <span className="text-sm font-bold">{isGuest ? 'G' : (user?.phoneNumber?.slice(-2) || 'U')}</span> : <User className="w-5 h-5" />}
             </div>
           </div>
@@ -359,7 +403,7 @@ export default function ExamPrepBharat() {
     <div className="min-h-screen bg-gray-50">
       <div className="bg-white shadow-sm sticky top-0 z-40">
         <div className="max-w-lg mx-auto px-4 py-3 flex items-center gap-3">
-          <button onClick={() => setPage('home')} className="w-8 h-8 rounded-full hover:bg-gray-100 flex items-center justify-center">
+          <button onClick={() => goBack()} className="w-8 h-8 rounded-full hover:bg-gray-100 flex items-center justify-center">
             <ArrowLeft className="w-5 h-5" />
           </button>
           <div>
@@ -421,7 +465,7 @@ export default function ExamPrepBharat() {
     <div className="min-h-screen bg-gray-50">
       <div className="bg-white shadow-sm sticky top-0 z-40">
         <div className="max-w-lg mx-auto px-4 py-3 flex items-center gap-3">
-          <button onClick={() => setPage('exams')} className="w-8 h-8 rounded-full hover:bg-gray-100 flex items-center justify-center">
+          <button onClick={() => goBack()} className="w-8 h-8 rounded-full hover:bg-gray-100 flex items-center justify-center">
             <ArrowLeft className="w-5 h-5" />
           </button>
           <div>
@@ -477,7 +521,7 @@ export default function ExamPrepBharat() {
       <div className="min-h-screen bg-gray-50">
         <div className="bg-white shadow-sm sticky top-0 z-40">
           <div className="max-w-lg mx-auto px-4 py-3 flex items-center gap-3">
-            <button onClick={() => setPage('tests')} className="w-8 h-8 rounded-full hover:bg-gray-100 flex items-center justify-center">
+            <button onClick={() => goBack()} className="w-8 h-8 rounded-full hover:bg-gray-100 flex items-center justify-center">
               <ArrowLeft className="w-5 h-5" />
             </button>
             <h1 className="font-bold text-lg">Test Details</h1>
@@ -749,10 +793,10 @@ export default function ExamPrepBharat() {
 
           {/* Action Buttons */}
           <div className="flex gap-3">
-            <Button onClick={() => { setPage('leaderboard'); fetchLeaderboard(selectedTest.id) }} className="flex-1 bg-purple-600 hover:bg-purple-700 text-white rounded-xl h-11">
+            <Button onClick={() => { navigateTo('leaderboard'); fetchLeaderboard(selectedTest.id) }} className="flex-1 bg-purple-600 hover:bg-purple-700 text-white rounded-xl h-11">
               <Trophy className="w-4 h-4 mr-2" /> Leaderboard
             </Button>
-            <Button onClick={() => setPage('home')} variant="outline" className="flex-1 rounded-xl h-11">
+            <Button onClick={() => { setPageHistory([]); setPage('home') }} variant="outline" className="flex-1 rounded-xl h-11">
               <Home className="w-4 h-4 mr-2" /> Home
             </Button>
           </div>
@@ -766,7 +810,7 @@ export default function ExamPrepBharat() {
     <div className="min-h-screen bg-gray-50">
       <div className="bg-white shadow-sm sticky top-0 z-40">
         <div className="max-w-lg mx-auto px-4 py-3 flex items-center gap-3">
-          <button onClick={() => setPage('home')} className="w-8 h-8 rounded-full hover:bg-gray-100 flex items-center justify-center">
+          <button onClick={() => goBack()} className="w-8 h-8 rounded-full hover:bg-gray-100 flex items-center justify-center">
             <ArrowLeft className="w-5 h-5" />
           </button>
           <h1 className="font-bold text-lg">Leaderboard</h1>
@@ -848,7 +892,7 @@ export default function ExamPrepBharat() {
       <div className="bg-gradient-to-r from-orange-600 to-red-600 text-white px-4 py-4 pb-6 rounded-b-3xl">
         <div className="max-w-lg mx-auto">
           <div className="flex items-center gap-3 mb-4">
-            <button onClick={() => setPage('home')} className="w-8 h-8 rounded-full hover:bg-white/20 flex items-center justify-center">
+            <button onClick={() => goBack()} className="w-8 h-8 rounded-full hover:bg-white/20 flex items-center justify-center">
               <ArrowLeft className="w-5 h-5" />
             </button>
             <h1 className="font-bold text-lg">Profile</h1>
@@ -1007,12 +1051,15 @@ export default function ExamPrepBharat() {
               <button
                 key={nav.page}
                 onClick={() => {
+                  // Bottom nav = go to root page, reset history
+                  setPageHistory([])
                   if (nav.page === 'exams' && categories.length > 0) {
                     if (!selectedCategory) setSelectedCategory(categories[0])
-                    setPage('exams')
-                  } else {
-                    setPage(nav.page)
                   }
+                  if (nav.page === 'leaderboard') {
+                    fetchLeaderboard(selectedTest?.id || '')
+                  }
+                  setPage(nav.page)
                 }}
                 className={`flex-1 flex flex-col items-center py-2 gap-1 ${page === nav.page || (nav.page === 'exams' && ['exams', 'tests', 'test-info'].includes(page)) ? 'text-orange-600' : 'text-gray-400'}`}
               >
