@@ -608,8 +608,8 @@ export default function ExamPrepApp() {
                   className="flex-shrink-0 w-full snap-center px-1"
                 >
                   <div className={`bg-gradient-to-br ${a.gradient} rounded-2xl overflow-hidden shadow-md active:scale-[0.98] transition-transform`}>
-                    {/* Image Area - Bigger */}
-                    <div className="h-36 relative flex items-center justify-center overflow-hidden">
+                    {/* Image Area */}
+                    <div className="h-32 relative flex items-center justify-center overflow-hidden">
                       {/* Background Pattern */}
                       <div className="absolute inset-0 opacity-10">
                         <div className="absolute top-3 left-6 w-24 h-24 rounded-full border-4 border-white" />
