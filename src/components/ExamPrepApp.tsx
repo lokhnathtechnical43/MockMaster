@@ -687,52 +687,41 @@ export default function ExamPrepApp() {
               </button>
             </div>
 
-            {/* Centered Student Profile */}
-            <div className="mt-3 flex flex-col items-center">
-              {/* Avatar with glow ring */}
-              <div className="relative">
-                <div className="absolute inset-0 w-[72px] h-[72px] rounded-full bg-white/20 blur-md scale-110" />
-                <div className="relative w-[68px] h-[68px] rounded-full bg-gradient-to-br from-orange-300 via-rose-400 to-purple-500 p-[2.5px] shadow-lg shadow-orange-400/30">
-                  <div className="w-full h-full rounded-full bg-gradient-to-br from-slate-900/90 to-indigo-900/90 flex items-center justify-center overflow-hidden">
-                    {auth.isLoggedIn && auth.user?.photoURL ? (
-                      <img src={auth.user.photoURL} alt="Profile" className="w-full h-full rounded-full object-cover" />
-                    ) : (
-                      <span className="text-white text-2xl font-extrabold">{getAvatarDisplay()}</span>
-                    )}
+            {/* Welcome + Stats Row */}
+            <div className="mt-3 flex items-end justify-between">
+              <div className="flex items-center gap-3">
+                {/* Student Avatar */}
+                <div className="relative flex-shrink-0">
+                  <div className="w-12 h-12 rounded-full bg-gradient-to-br from-orange-300 via-rose-400 to-purple-500 p-[2px] shadow-lg shadow-orange-400/20">
+                    <div className="w-full h-full rounded-full bg-gradient-to-br from-slate-900/90 to-indigo-900/90 flex items-center justify-center overflow-hidden">
+                      {auth.isLoggedIn && auth.user?.photoURL ? (
+                        <img src={auth.user.photoURL} alt="Profile" className="w-full h-full rounded-full object-cover" />
+                      ) : (
+                        <span className="text-white text-lg font-extrabold">{getAvatarDisplay()}</span>
+                      )}
+                    </div>
                   </div>
+                  {auth.isLoggedIn && (
+                    <div className="absolute bottom-0 right-0 w-3 h-3 bg-emerald-400 rounded-full border-2 border-orange-500" />
+                  )}
                 </div>
-                {/* Online indicator */}
-                {auth.isLoggedIn && (
-                  <div className="absolute bottom-0 right-0 w-5 h-5 bg-emerald-400 rounded-full border-[2.5px] border-orange-500 shadow-sm" />
-                )}
+                <div>
+                  <p className="text-white/80 text-sm">{greeting} 👋</p>
+                  <p className="text-white text-xl font-extrabold mt-0.5">{auth.isLoggedIn ? (auth.user?.displayName || auth.user?.email?.split('@')[0] || auth.getUserDisplay() || 'Student') : 'Student'}</p>
+                </div>
               </div>
-              {/* Greeting + Name */}
-              <p className="text-white/70 text-[11px] mt-2 font-medium">{greeting}</p>
-              <p className="text-white text-lg font-extrabold mt-0.5 leading-tight text-center">
-                {auth.isLoggedIn ? (auth.user?.displayName || auth.user?.email?.split('@')[0] || auth.getUserDisplay() || 'Student') : 'Student'}
-              </p>
-              {/* Stats Row - centered pills */}
-              <div className="flex items-center gap-2 mt-2">
-                <div className="bg-white/15 backdrop-blur-sm rounded-full px-3 py-1 text-center flex items-center gap-1.5">
-                  <BookOpen className="w-3 h-3 text-white/70" />
-                  <div>
-                    <p className="text-white font-extrabold text-sm leading-none">{stats.testsTaken}</p>
-                    <p className="text-white/60 text-[8px] mt-0.5">{_t('home.testsDone')}</p>
-                  </div>
+              <div className="flex items-center gap-1.5">
+                <div className="bg-white/15 backdrop-blur rounded-xl px-3 py-2 text-center">
+                  <p className="text-white font-extrabold text-lg leading-none">{stats.testsTaken}</p>
+                  <p className="text-white/70 text-[9px] mt-0.5">{_t('home.testsDone')}</p>
                 </div>
-                <div className="bg-white/15 backdrop-blur-sm rounded-full px-3 py-1 text-center flex items-center gap-1.5">
-                  <Target className="w-3 h-3 text-white/70" />
-                  <div>
-                    <p className="text-white font-extrabold text-sm leading-none">{stats.avgScore}%</p>
-                    <p className="text-white/60 text-[8px] mt-0.5">{_t('home.accuracy')}</p>
-                  </div>
+                <div className="bg-white/15 backdrop-blur rounded-xl px-3 py-2 text-center">
+                  <p className="text-white font-extrabold text-lg leading-none">{stats.avgScore}%</p>
+                  <p className="text-white/70 text-[9px] mt-0.5">{_t('home.accuracy')}</p>
                 </div>
-                <div className="bg-white/15 backdrop-blur-sm rounded-full px-3 py-1 text-center flex items-center gap-1.5">
-                  <Trophy className="w-3 h-3 text-white/70" />
-                  <div>
-                    <p className="text-white font-extrabold text-sm leading-none">#{stats.bestRank}</p>
-                    <p className="text-white/60 text-[8px] mt-0.5">{_t('home.bestRank')}</p>
-                  </div>
+                <div className="bg-white/15 backdrop-blur rounded-xl px-3 py-2 text-center">
+                  <p className="text-white font-extrabold text-lg leading-none">#{stats.bestRank}</p>
+                  <p className="text-white/70 text-[9px] mt-0.5">{_t('home.bestRank')}</p>
                 </div>
               </div>
             </div>
