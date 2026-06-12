@@ -17,7 +17,7 @@ import {
   ChevronDown, Star, Flame, TrendingUp, Calendar, Gift,
   HelpCircle, Share2, MessageCircle, Crown,
   Menu, BookmarkPlus, Download, BarChart3, Wifi,
-  ClipboardList, PenTool
+  ClipboardList, PenTool, Calculator
 } from 'lucide-react'
 import {
   getCategories as getLocalCategories, getTestsByExam as getLocalTestsByExam,
@@ -1132,59 +1132,133 @@ export default function ExamPrepApp() {
         </div>
 
         <div className="px-4 mt-4 space-y-4">
-          {/* Marking Scheme */}
-          <Card className="border-0 shadow-sm">
-            <CardHeader className="pb-2 pt-4 px-4">
-              <CardTitle className="text-base">{_t('testInfo.information')}</CardTitle>
-            </CardHeader>
-            <CardContent className="px-4 pb-4 space-y-3">
-              <div className="flex justify-between text-sm">
-                <span className="text-gray-500">{_t('testInfo.totalQ')}</span>
-                <span className="font-semibold">{selectedTest.totalQuestions}</span>
-              </div>
-              <div className="flex justify-between text-sm">
-                <span className="text-gray-500">{_t('testInfo.duration')}</span>
-                <span className="font-semibold">{selectedTest.duration} {_t('testInfo.minutes')}</span>
-              </div>
-              <div className="flex justify-between text-sm">
-                <span className="text-gray-500">{_t('testInfo.difficulty')}</span>
-                <Badge variant="secondary">{selectedTest.difficulty}</Badge>
-              </div>
-              <Separator />
-              <div className="flex justify-between text-sm">
-                <span className="text-gray-500">{_t('testInfo.correctAns')}</span>
-                <span className="font-semibold text-emerald-600">+{selectedTest.correctMarks} {_t('testInfo.marks')}</span>
-              </div>
-              <div className="flex justify-between text-sm">
-                <span className="text-gray-500">{_t('testInfo.wrongAns')}</span>
-                <span className="font-semibold text-red-600">{selectedTest.wrongMarks} {_t('testInfo.marks')}</span>
-              </div>
-              <div className="flex justify-between text-sm">
-                <span className="text-gray-500">{_t('testInfo.skipped')}</span>
-                <span className="font-semibold text-gray-400">{selectedTest.skipMarks} {_t('testInfo.marks')}</span>
+          {/* Test Information - Professional Card */}
+          <Card className="border-0 shadow-md overflow-hidden">
+            <div className="bg-gradient-to-r from-indigo-500 to-purple-500 px-4 py-3">
+              <h3 className="text-white font-bold flex items-center gap-2">
+                <FileText className="w-5 h-5" />
+                {_t('testInfo.information')}
+              </h3>
+            </div>
+            <CardContent className="p-0">
+              <div className="grid grid-cols-2 gap-0">
+                <div className="p-4 border-b border-r border-gray-100">
+                  <div className="flex items-center gap-2 mb-1">
+                    <div className="w-7 h-7 rounded-lg bg-blue-50 flex items-center justify-center">
+                      <BookOpen className="w-3.5 h-3.5 text-blue-600" />
+                    </div>
+                    <span className="text-[11px] text-gray-400 uppercase tracking-wider font-medium">{_t('testInfo.totalQ')}</span>
+                  </div>
+                  <p className="text-xl font-bold text-gray-800 ml-9">{selectedTest.totalQuestions}</p>
+                </div>
+                <div className="p-4 border-b border-gray-100">
+                  <div className="flex items-center gap-2 mb-1">
+                    <div className="w-7 h-7 rounded-lg bg-violet-50 flex items-center justify-center">
+                      <Clock className="w-3.5 h-3.5 text-violet-600" />
+                    </div>
+                    <span className="text-[11px] text-gray-400 uppercase tracking-wider font-medium">{_t('testInfo.duration')}</span>
+                  </div>
+                  <p className="text-xl font-bold text-gray-800 ml-9">{selectedTest.duration} {_t('testInfo.minutes')}</p>
+                </div>
+                <div className="p-4 border-r border-gray-100">
+                  <div className="flex items-center gap-2 mb-1">
+                    <div className="w-7 h-7 rounded-lg bg-amber-50 flex items-center justify-center">
+                      <Target className="w-3.5 h-3.5 text-amber-600" />
+                    </div>
+                    <span className="text-[11px] text-gray-400 uppercase tracking-wider font-medium">{_t('testInfo.difficulty')}</span>
+                  </div>
+                  <div className="ml-9">
+                    <Badge className={`${selectedTest.difficulty === 'Easy' ? 'bg-emerald-100 text-emerald-700 border-emerald-200' : selectedTest.difficulty === 'Medium' ? 'bg-amber-100 text-amber-700 border-amber-200' : 'bg-red-100 text-red-700 border-red-200'} border text-xs font-bold`}>
+                      {selectedTest.difficulty}
+                    </Badge>
+                  </div>
+                </div>
+                <div className="p-4">
+                  <div className="flex items-center gap-2 mb-1">
+                    <div className="w-7 h-7 rounded-lg bg-orange-50 flex items-center justify-center">
+                      <Award className="w-3.5 h-3.5 text-orange-600" />
+                    </div>
+                    <span className="text-[11px] text-gray-400 uppercase tracking-wider font-medium">{_t('testInfo.maxScore')}</span>
+                  </div>
+                  <p className="text-xl font-bold text-orange-600 ml-9">{selectedTest.totalQuestions * selectedTest.correctMarks}</p>
+                </div>
               </div>
             </CardContent>
           </Card>
 
-          {/* Max Score */}
-          <Card className="border-0 shadow-sm">
-            <CardContent className="p-4 flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-orange-50 flex items-center justify-center">
-                <Award className="w-5 h-5 text-orange-600" />
+          {/* Marking Scheme - Professional Card */}
+          <Card className="border-0 shadow-md overflow-hidden">
+            <div className="bg-gradient-to-r from-emerald-500 to-teal-500 px-4 py-3">
+              <h3 className="text-white font-bold flex items-center gap-2">
+                <Calculator className="w-5 h-5" />
+                Marking Scheme
+              </h3>
+            </div>
+            <CardContent className="p-4 space-y-3">
+              <div className="flex items-center justify-between p-3 bg-emerald-50 rounded-xl border border-emerald-100">
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-full bg-emerald-500 flex items-center justify-center">
+                    <CheckCircle2 className="w-5 h-5 text-white" />
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-500">{_t('testInfo.correctAns')}</p>
+                    <p className="font-semibold text-gray-800">{_t('testInfo.correctAns')}</p>
+                  </div>
+                </div>
+                <span className="text-lg font-bold text-emerald-600">+{selectedTest.correctMarks}</span>
               </div>
-              <div>
-                <p className="text-xs text-gray-500">{_t('testInfo.maxScore')}</p>
-                <p className="font-bold text-lg">{selectedTest.totalQuestions * selectedTest.correctMarks} {_t('testInfo.marks')}</p>
+              <div className="flex items-center justify-between p-3 bg-red-50 rounded-xl border border-red-100">
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-full bg-red-500 flex items-center justify-center">
+                    <XCircle className="w-5 h-5 text-white" />
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-500">{_t('testInfo.wrongAns')}</p>
+                    <p className="font-semibold text-gray-800">{_t('testInfo.wrongAns')}</p>
+                  </div>
+                </div>
+                <span className="text-lg font-bold text-red-600">-{selectedTest.wrongMarks}</span>
+              </div>
+              <div className="flex items-center justify-between p-3 bg-gray-50 rounded-xl border border-gray-100">
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-full bg-gray-400 flex items-center justify-center">
+                    <SkipForward className="w-5 h-5 text-white" />
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-500">{_t('testInfo.skipped')}</p>
+                    <p className="font-semibold text-gray-800">{_t('testInfo.skipped')}</p>
+                  </div>
+                </div>
+                <span className="text-lg font-bold text-gray-400">{selectedTest.skipMarks}</span>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Max Score Highlight Card */}
+          <Card className="border-0 shadow-md bg-gradient-to-r from-orange-500 to-red-500 overflow-hidden">
+            <CardContent className="p-5 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 rounded-2xl bg-white/20 flex items-center justify-center">
+                  <Trophy className="w-6 h-6 text-white" />
+                </div>
+                <div>
+                  <p className="text-white/80 text-xs font-medium uppercase tracking-wider">{_t('testInfo.maxScore')}</p>
+                  <p className="text-white font-bold text-2xl">{selectedTest.totalQuestions * selectedTest.correctMarks} {_t('testInfo.marks')}</p>
+                </div>
+              </div>
+              <div className="text-right">
+                <p className="text-white/70 text-[10px] uppercase tracking-wider">{_t('testInfo.totalQ')}</p>
+                <p className="text-white font-bold text-lg">{selectedTest.totalQuestions}</p>
               </div>
             </CardContent>
           </Card>
 
           {/* Start Button */}
           <Button
-            className="w-full h-12 bg-gradient-to-r from-orange-500 to-red-500 text-white rounded-2xl text-base font-semibold"
+            className="w-full h-14 bg-gradient-to-r from-orange-500 to-red-500 text-white rounded-2xl text-lg font-bold shadow-lg shadow-orange-200 hover:shadow-xl hover:shadow-orange-300 transition-all active:scale-[0.98]"
             onClick={() => startTest(selectedTest)}
           >
-            <Play className="w-5 h-5 mr-2" /> {_t('testInfo.startNow')}
+            <Play className="w-6 h-6 mr-2" /> {_t('testInfo.startNow')}
           </Button>
         </div>
       </div>
