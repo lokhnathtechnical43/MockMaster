@@ -1,0 +1,26 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+
+    // Helper: Check if user is authenticated
+    function isAuth() {
+      return request.auth != null;
+    }
+
+    // Images - anyone can read, authenticated users can upload
+    match /images/{imageId} {
+      allow read: if true;
+      allow write: if isAuth()
+        && request.resource.size < 5 * 1024 * 1024  // Max 5MB
+        && request.resource.contentType.matches('image/.*');
+    }
+
+    // Profile photos - users can manage their own
+    match /profiles/{userId}/{imageId} {
+      allow read: if true;
+      allow write: if isAuth() && userId == request.auth.uid
+        && request.resource.size < 2 * 1024 * 1024  // Max 2MB
+        && request.resource.contentType.matches('image/.*');
+    }
+  }
+}

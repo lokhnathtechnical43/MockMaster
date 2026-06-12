@@ -1,0 +1,187 @@
+=====================================================
+  FIREBASE COMPLETE SETUP GUIDE - ExamPrep Bharat
+=====================================================
+
+তোমার প্রজেক্টে কোড তো হয়ে গেছে, কিন্তু Firebase
+Console-এ সেটআপ করা বাকি। এই গাইড ধাপে ধাপে ফলো করো।
+
+=====================================================
+  ধাপ ১: Firebase প্রজেক্ট তৈরি
+=====================================================
+
+1. ব্রাউজারে যাও: https://console.firebase.google.com
+2. Google account দিয়ে login করো
+3. "Create a project" বা "Add project" ক্লিক করো
+4. Project name দাও: examprep-bharat (বা তোমার পছন্দের নাম)
+5. "Continue" ক্লিক করো
+6. Google Analytics: Enable করো (optional, recommended)
+7. "Create project" ক্লিক করো → Wait for setup
+8. "Continue" ক্লিক করো
+
+=====================================================
+  ধাপ ২: Web App রেজিস্টার করো (API Keys পাওয়ার জন্য)
+=====================================================
+
+1. Project Overview পেজে ⚙️ (Gear icon) → "Project settings"
+2. নিচে স্ক্রল করো → "Your apps" সেকশন
+3. Web icon (</>) ক্লিক করো
+4. App nickname দাও: examprep-bharat-web
+5. "Also set up Firebase Hosting" — চেক রাখো (optional)
+6. "Register app" ক্লিক করো
+7. firebaseConfig object দেখাবে — এটা কপি করো!
+
+   এরকম দেখাবে:
+   const firebaseConfig = {
+     apiKey: "AIzaSy...",
+     authDomain: "examprep-bharat.firebaseapp.com",
+     projectId: "examprep-bharat",
+     storageBucket: "examprep-bharat.firebasestorage.app",
+     messagingSenderId: "739166898850",
+     appId: "1:739166898850:web:..."
+   };
+
+8. এই values গুলো .env.local ফাইলে বসাও:
+
+   /home/z/my-project/.env.local
+
+   NEXT_PUBLIC_FIREBASE_API_KEY=AIzaSy...
+   NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=examprep-bharat.firebaseapp.com
+   NEXT_PUBLIC_FIREBASE_PROJECT_ID=examprep-bharat
+   NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=examprep-bharat.firebasestorage.app
+   NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=739166898850
+   NEXT_PUBLIC_FIREBASE_APP_ID=1:739166898850:web:...
+
+9. Dev server restart করো: npm run dev
+
+=====================================================
+  ধাপ ৩: Firestore Database চালু করো
+=====================================================
+
+1. Firebase Console এ যাও
+2. বামে "Firestore Database" ক্লিক করো
+3. "Create Database" ক্লিক করো
+4. Mode সিলেক্ট করো:
+   - ডেভেলপমেন্টের জন্য: "Start in test mode" (সব কেউ access করতে পারবে)
+   - প্রোডাকশনের জন্য: "Start in production mode" (rules লাগবে)
+5. Location সিলেক্ট করো:
+   - india-র জন্য: asia-south1 (Mumbai) বা asia-south2 (Delhi)
+   - ⚠️ একবার সিলেক্ট করলে আর পরিবর্তন করা যাবে না!
+6. "Done" ক্লিক করো
+
+=====================================================
+  ধাপ ৪: Firebase Authentication চালু করো
+=====================================================
+
+1. Firebase Console → "Authentication" ক্লিক করো
+2. "Get started" ক্লিক করো
+3. "Sign-in method" ট্যাবে যাও
+4. "Phone" provider এ ক্লিক করো
+5. "Enable" toggle ON করো
+6. "Save" ক্লিক করো
+
+Test Phone Numbers (ডেভেলপমেন্টের জন্য):
+7. Authentication → Settings → "Phone numbers for testing"
+8. একটি test phone number যোগ করো:
+   - Phone: +91 9999999999
+   - Code: 123456
+   ⚠️ এই number শুধু testing এ কাজ করবে, production এ না
+
+=====================================================
+  ধাপ ৫: Firebase Storage চালু করো (ইমেজ আপলোডের জন্য)
+=====================================================
+
+1. Firebase Console → "Storage" ক্লিক করো
+2. "Get started" ক্লিক করো
+3. Security rules সিলেক্ট:
+   - Test mode: start in test mode (ডেভেলপমেন্টের জন্য)
+   - Production: signed-in users only
+4. Location: Firestore এর একই location সিলেক্ট করো
+5. "Done" ক্লিক করো
+
+=====================================================
+  ধাপ ৬: Firestore Security Rules Deploy করো
+=====================================================
+
+প্রজেক্টে তোমার জন্য rules ফাইল তৈরি করা আছে।
+Deploy করতে:
+
+Option A: Firebase CLI দিয়ে (recommended)
+1. npm install -g firebase-tools
+2. firebase login
+3. firebase init → Firestore rules সিলেক্ট
+4. firebase deploy --only firestore:rules
+
+Option B: Firebase Console এ manually
+1. Firestore Database → Rules ট্যাব
+2. firestore.rules ফাইলের content কপি-পেস্ট করো
+3. "Publish" ক্লিক করো
+
+=====================================================
+  ধাপ ৭: Firestore-এ Data Seed করো
+=====================================================
+
+Firebase Console সেটআপ হয়ে গেলে:
+
+1. Dev server চালু করো: npm run dev
+2. ব্রাউজারে যাও: http://localhost:3000/admin
+3. Login করো (password: admin123)
+4. "Settings" ট্যাবে যাও
+5. "Test Connection" ক্লিক করো → Connected দেখাবে
+6. "Use Firestore" toggle ON করো
+7. "Seed Firestore from Local Data" ক্লিক করো
+8. সব exam data Firestore-এ upload হয়ে যাবে!
+
+=====================================================
+  ধাপ ৮: Verify করো সব কাজ করছে
+=====================================================
+
+1. Firebase Console → Firestore Database → Data ট্যাব
+   - categories, exams, tests, questions collections দেখাবে
+2. Main app: http://localhost:3000
+   - Exam data Firestore থেকে আসবে
+3. Admin: http://localhost:3000/admin
+   - Analytics, Users data Firestore থেকে আসবে
+
+=====================================================
+  ফাইল রেফারেন্স (প্রজেক্টে কি কি আছে)
+=====================================================
+
+.env.local           → তোমার Firebase API keys (git-ignore করা)
+.env.local.example   → Template (git-এ commit হবে)
+firebase.json        → Firebase CLI deployment config
+firestore.rules      → Firestore security rules
+storage.rules        → Storage security rules
+.firebaserc          → Project ID alias
+firestore.indexes.json → Firestore query indexes
+
+src/lib/firebase.ts  → Firebase initialization (env vars থেকে পড়ে)
+src/lib/firestore-service.ts → Firestore CRUD operations
+src/lib/use-firebase-auth.ts → Phone OTP + Guest auth
+src/components/admin/SettingsTab.tsx → Firebase status & test
+
+=====================================================
+  TROUBLESHOOTING
+=====================================================
+
+Problem: "Firebase: Error (auth/operation-not-allowed)"
+Solution: Firebase Console → Authentication → Phone provider ON করো
+
+Problem: "Firebase: Error (auth/invalid-phone-number)"
+Solution: Phone number অবশ্যই +91 prefix দিয়ে দিবে (বা 10-digit)
+
+Problem: "Firestore: Missing or insufficient permissions"
+Solution: firestore.rules deploy করো (ধাপ ৬)
+
+Problem: Connection test failed
+Solution:
+  1. .env.local এ সব values সঠিক আছে কিনা check করো
+  2. Dev server restart করো
+  3. Firestore Database created আছে কিনা verify করো
+
+Problem: Seed কাজ করছে না
+Solution:
+  1. Firestore ON করো Settings এ
+  2. Connection test pass করো
+  3. Console এ error দেখো
+
+=====================================================

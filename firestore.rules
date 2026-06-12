@@ -1,0 +1,83 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Helper: Check if user is authenticated
+    function isAuth() {
+      return request.auth != null;
+    }
+
+    // Helper: Check if user is admin (stored in users collection)
+    function isAdmin() {
+      return isAuth() &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
+
+    // ===========================
+    // Categories - Anyone can read, admin can write
+    // ===========================
+    match /categories/{categoryId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // ===========================
+    // Exams - Anyone can read, admin can write
+    // ===========================
+    match /exams/{examId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // ===========================
+    // Tests - Anyone can read, admin can write
+    // ===========================
+    match /tests/{testId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // ===========================
+    // Questions - Anyone can read, admin can write
+    // ===========================
+    match /questions/{questionId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // ===========================
+    // Results - Users can read/write own results, admin can read all
+    // ===========================
+    match /results/{resultId} {
+      allow read: if isAuth() && (resource.data.userId == request.auth.uid || isAdmin());
+      allow create: if isAuth() && request.resource.data.userId == request.auth.uid;
+      allow update, delete: if isAdmin();
+    }
+
+    // ===========================
+    // Users - Users can read/write own profile, admin can read all
+    // ===========================
+    match /users/{userId} {
+      allow read: if isAuth() && (userId == request.auth.uid || isAdmin());
+      allow create: if isAuth() && userId == request.auth.uid;
+      allow update: if isAuth() && userId == request.auth.uid;
+      allow delete: if isAdmin();
+    }
+
+    // ===========================
+    // Announcements - Anyone can read, admin can write
+    // ===========================
+    match /announcements/{announcementId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // ===========================
+    // Notifications - Anyone can read, admin can write
+    // ===========================
+    match /notifications/{notificationId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+  }
+}

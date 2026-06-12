@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { auth } from '@/lib/firebase'
+import { auth, isFirebaseReady } from '@/lib/firebase'
 import {
   RecaptchaVerifier,
   signInWithPhoneNumber,
@@ -36,6 +36,12 @@ export function useFirebaseAuth() {
       return
     }
 
+    // Only listen to Firebase auth if Firebase is configured
+    if (!auth || !isFirebaseReady()) {
+      setAuthState({ user: null, loading: false })
+      return
+    }
+
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       setAuthState({ user, loading: false })
     })
@@ -44,6 +50,7 @@ export function useFirebaseAuth() {
 
   const setupRecaptcha = () => {
     if (typeof window === 'undefined') return null
+    if (!auth || !isFirebaseReady()) return null
     if ((window as any).recaptchaVerifier) {
       return (window as any).recaptchaVerifier
     }
@@ -61,6 +68,10 @@ export function useFirebaseAuth() {
   }
 
   const sendOtp = async (phoneNumber: string) => {
+    if (!auth || !isFirebaseReady()) {
+      setError('Firebase is not configured. Please use Guest mode instead.')
+      return
+    }
     setError('')
     setSendingOtp(true)
     try {
@@ -148,7 +159,7 @@ export function useFirebaseAuth() {
       localStorage.removeItem(GUEST_USER_KEY)
       setIsLocalGuest(false)
       // Also sign out from Firebase if logged in
-      if (authState.user) {
+      if (authState.user && auth) {
         await firebaseSignOut(auth)
       }
     } catch (err) {
@@ -168,6 +179,9 @@ export function useFirebaseAuth() {
   // User is logged in if either Firebase user exists OR local guest
   const isLoggedIn = !!authState.user || isLocalGuest
   const isGuest = isLocalGuest || (authState.user?.isAnonymous ?? false)
+
+  // Check if phone login is available (Firebase must be configured)
+  const isPhoneLoginAvailable = isFirebaseReady()
 
   // Get display name/phone
   const getUserDisplay = () => {
@@ -199,6 +213,7 @@ export function useFirebaseAuth() {
     guestLoading,
     isLoggedIn,
     isGuest,
+    isPhoneLoginAvailable,
     getUserDisplay,
     getUserId,
     sendOtp,

@@ -20,7 +20,7 @@ import {
   DocumentData,
   QueryConstraint,
 } from 'firebase/firestore'
-import { db } from '@/lib/firebase'
+import { db, isFirebaseReady } from '@/lib/firebase'
 import {
   LocalExamCategory,
   LocalExam,
@@ -210,7 +210,7 @@ async function firestoreOperation<T>(
   firestoreFn: () => Promise<T>,
   fallbackFn: () => T
 ): Promise<T> {
-  if (!useFirestore) {
+  if (!useFirestore || !isFirebaseReady() || !db) {
     return fallbackFn()
   }
   try {
@@ -1087,6 +1087,10 @@ export async function getDailyStats(days: number = 7): Promise<DailyStats[]> {
  * Useful for initial setup.
  */
 export async function seedFirestoreIfEmpty(): Promise<boolean> {
+  if (!db || !isFirebaseReady()) {
+    console.error('[Firestore] Cannot seed: Firebase is not configured. Add config to .env.local')
+    return false
+  }
   try {
     const catSnap = await getDocs(collection(db, COLLECTIONS.categories))
     if (catSnap.size > 0) return false // Already seeded
