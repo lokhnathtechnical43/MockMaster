@@ -645,8 +645,8 @@ export default function ExamPrepApp() {
 
     return (
       <div className="pb-20">
-        {/* Professional Header with Stats - Fixed */}
-        <div className="fixed top-0 left-0 right-0 z-50 bg-gradient-to-br from-orange-500 via-red-500 to-rose-500 px-4 pt-[calc(env(safe-area-inset-top,0px)+0.5rem)] pb-3 rounded-b-[1.5rem] relative overflow-hidden" style={{ touchAction: 'manipulation' }}>
+        {/* Professional Header with Stats - Sticky */}
+        <div className="sticky top-0 z-50 bg-gradient-to-br from-orange-500 via-red-500 to-rose-500 px-4 pt-[calc(env(safe-area-inset-top,0px)+0.5rem)] pb-3 rounded-b-[1.5rem]" style={{ touchAction: 'manipulation' }}>
           {/* Decorative circles */}
           <div className="absolute top-0 right-0 w-40 h-40 bg-white/5 rounded-full -translate-y-1/2 translate-x-1/4" />
           <div className="absolute bottom-0 left-0 w-32 h-32 bg-white/5 rounded-full translate-y-1/2 -translate-x-1/4" />
@@ -712,9 +712,6 @@ export default function ExamPrepApp() {
             </div>
           </div>
         </div>
-
-        {/* Spacer for fixed header */}
-        <div className="h-[120px]" />
 
         {/* Notification Panel */}
         {showNotificationPanel && (
