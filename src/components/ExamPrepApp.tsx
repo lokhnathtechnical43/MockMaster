@@ -645,8 +645,8 @@ export default function ExamPrepApp() {
 
     return (
       <div className="pb-20">
-        {/* Professional Header with Stats */}
-        <div className="bg-gradient-to-br from-orange-500 via-red-500 to-rose-500 px-4 pt-[calc(env(safe-area-inset-top,0px)+0.5rem)] pb-5 rounded-b-[1.5rem] relative overflow-hidden">
+        {/* Professional Header with Stats - Fixed */}
+        <div className="fixed top-0 left-0 right-0 z-50 bg-gradient-to-br from-orange-500 via-red-500 to-rose-500 px-4 pt-[calc(env(safe-area-inset-top,0px)+0.5rem)] pb-3 rounded-b-[1.5rem] relative overflow-hidden" style={{ touchAction: 'manipulation' }}>
           {/* Decorative circles */}
           <div className="absolute top-0 right-0 w-40 h-40 bg-white/5 rounded-full -translate-y-1/2 translate-x-1/4" />
           <div className="absolute bottom-0 left-0 w-32 h-32 bg-white/5 rounded-full translate-y-1/2 -translate-x-1/4" />
@@ -688,30 +688,33 @@ export default function ExamPrepApp() {
             </div>
 
             {/* Welcome + Stats Row */}
-            <div className="mt-3 flex items-end justify-between">
+            <div className="mt-2 flex items-end justify-between">
               <div>
-                <p className="text-white/80 text-sm">{greeting} 👋</p>
+                <p className="text-white/80 text-xs">{greeting} 👋</p>
                 {auth.isLoggedIn && (
-                  <p className="text-white text-xl font-extrabold mt-0.5">{auth.user?.displayName || auth.user?.email?.split('@')[0] || auth.getUserDisplay()}</p>
+                  <p className="text-white text-base font-extrabold mt-0.5 leading-tight">{auth.user?.displayName || auth.user?.email?.split('@')[0] || auth.getUserDisplay()}</p>
                 )}
               </div>
-              <div className="flex items-center gap-1.5">
-                <div className="bg-white/15 backdrop-blur rounded-xl px-3 py-2 text-center">
-                  <p className="text-white font-extrabold text-lg leading-none">{stats.testsTaken}</p>
-                  <p className="text-white/70 text-[9px] mt-0.5">{_t('home.testsDone')}</p>
+              <div className="flex items-center gap-1">
+                <div className="bg-white/15 backdrop-blur rounded-lg px-2 py-1.5 text-center">
+                  <p className="text-white font-extrabold text-sm leading-none">{stats.testsTaken}</p>
+                  <p className="text-white/70 text-[7px] mt-0.5">{_t('home.testsDone')}</p>
                 </div>
-                <div className="bg-white/15 backdrop-blur rounded-xl px-3 py-2 text-center">
-                  <p className="text-white font-extrabold text-lg leading-none">{stats.avgScore}%</p>
-                  <p className="text-white/70 text-[9px] mt-0.5">{_t('home.accuracy')}</p>
+                <div className="bg-white/15 backdrop-blur rounded-lg px-2 py-1.5 text-center">
+                  <p className="text-white font-extrabold text-sm leading-none">{stats.avgScore}%</p>
+                  <p className="text-white/70 text-[7px] mt-0.5">{_t('home.accuracy')}</p>
                 </div>
-                <div className="bg-white/15 backdrop-blur rounded-xl px-3 py-2 text-center">
-                  <p className="text-white font-extrabold text-lg leading-none">#{stats.bestRank}</p>
-                  <p className="text-white/70 text-[9px] mt-0.5">{_t('home.bestRank')}</p>
+                <div className="bg-white/15 backdrop-blur rounded-lg px-2 py-1.5 text-center">
+                  <p className="text-white font-extrabold text-sm leading-none">#{stats.bestRank}</p>
+                  <p className="text-white/70 text-[7px] mt-0.5">{_t('home.bestRank')}</p>
                 </div>
               </div>
             </div>
           </div>
         </div>
+
+        {/* Spacer for fixed header */}
+        <div className="h-[120px]" />
 
         {/* Notification Panel */}
         {showNotificationPanel && (
