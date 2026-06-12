@@ -197,6 +197,125 @@
   padding-bottom: env(safe-area-inset-bottom, 0px);
 }
 
+/* ===== Splash Screen Animations ===== */
+@keyframes book-open-left {
+  0% {
+    transform: rotateY(0deg);
+  }
+  100% {
+    transform: rotateY(-180deg);
+  }
+}
+
+@keyframes book-open-right {
+  0% {
+    transform: rotateY(0deg);
+  }
+  100% {
+    transform: rotateY(180deg);
+  }
+}
+
+@keyframes splash-logo-enter {
+  0% {
+    transform: scale(0.3);
+    opacity: 0;
+  }
+  50% {
+    transform: scale(1.1);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes splash-text-enter {
+  0% {
+    transform: translateY(20px);
+    opacity: 0;
+  }
+  100% {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+@keyframes splash-pulse {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 0.6;
+  }
+  50% {
+    transform: scale(1.05);
+    opacity: 1;
+  }
+}
+
+@keyframes splash-dots {
+  0%, 20% { content: '.'; }
+  40% { content: '..'; }
+  60%, 100% { content: '...'; }
+}
+
+@keyframes splash-fade-out {
+  0% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    visibility: hidden;
+  }
+}
+
+@keyframes splash-shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+.animate-book-open-left {
+  animation: book-open-left 0.8s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+  transform-origin: right center;
+  backface-visibility: hidden;
+}
+
+.animate-book-open-right {
+  animation: book-open-right 0.8s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+  transform-origin: left center;
+  backface-visibility: hidden;
+}
+
+.animate-splash-logo {
+  animation: splash-logo-enter 0.8s cubic-bezier(0.16, 1, 0.3, 1) 0.2s both;
+}
+
+.animate-splash-text {
+  animation: splash-text-enter 0.6s cubic-bezier(0.16, 1, 0.3, 1) 0.6s both;
+}
+
+.animate-splash-text-delay {
+  animation: splash-text-enter 0.6s cubic-bezier(0.16, 1, 0.3, 1) 0.9s both;
+}
+
+.animate-splash-pulse {
+  animation: splash-pulse 1.5s ease-in-out infinite;
+}
+
+.animate-splash-fade-out {
+  animation: splash-fade-out 0.5s ease-out forwards;
+}
+
+.animate-splash-shimmer {
+  background: linear-gradient(90deg, transparent 25%, rgba(255,255,255,0.3) 50%, transparent 75%);
+  background-size: 200% 100%;
+  animation: splash-shimmer 1.5s infinite;
+}
+
 /* Marquee ticker animation */
 @keyframes marquee {
   0% {

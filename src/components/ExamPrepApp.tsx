@@ -151,6 +151,10 @@ export default function ExamPrepApp() {
   const [showSideMenu, setShowSideMenu] = useState(false)
   const [showNotificationPanel, setShowNotificationPanel] = useState(false)
 
+  // --- Splash Screen ---
+  const [showSplash, setShowSplash] = useState(true)
+  const [splashFading, setSplashFading] = useState(false)
+
   // --- Bookmarks & User Preferences (localStorage) ---
   const [bookmarkedQs, setBookmarkedQs] = useState<string[]>([])
   const [userExamId, setUserExamId] = useState<string>('')
@@ -178,6 +182,17 @@ export default function ExamPrepApp() {
       setCurrentPage('home')
     }
   }, [auth.isLoggedIn])
+
+  // Splash screen auto-dismiss after animation
+  useEffect(() => {
+    const fadeTimer = setTimeout(() => {
+      setSplashFading(true)
+    }, 2500)
+    const removeTimer = setTimeout(() => {
+      setShowSplash(false)
+    }, 3000)
+    return () => { clearTimeout(fadeTimer); clearTimeout(removeTimer) }
+  }, [])
 
   // Load bookmarks & preferences from localStorage
   useEffect(() => {
@@ -2999,6 +3014,111 @@ export default function ExamPrepApp() {
 
   return (
     <div className="min-h-screen min-h-dvh bg-gray-50 relative w-full overflow-x-hidden" style={{ touchAction: 'manipulation' }}>
+      {/* ===== Splash Screen ===== */}
+      {showSplash && (
+        <div className={`fixed inset-0 z-[200] flex items-center justify-center bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 ${splashFading ? 'animate-splash-fade-out' : ''}`} style={{ perspective: '1200px' }}>
+          {/* Decorative background elements */}
+          <div className="absolute top-1/4 left-1/4 w-48 h-48 bg-orange-500/8 rounded-full blur-3xl" />
+          <div className="absolute bottom-1/4 right-1/4 w-40 h-40 bg-blue-500/8 rounded-full blur-3xl" />
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-72 h-72 bg-purple-500/5 rounded-full blur-3xl" />
+
+          <div className="flex flex-col items-center relative z-10">
+            {/* Book opening animation container */}
+            <div className="relative w-40 h-52 mb-8" style={{ perspective: '1200px', transformStyle: 'preserve-3d' }}>
+              {/* Book spine (center) */}
+              <div className="absolute left-1/2 top-0 bottom-0 w-1 -translate-x-1/2 bg-gradient-to-b from-amber-600 via-amber-700 to-amber-800 rounded-sm z-10 shadow-lg shadow-amber-900/50" />
+
+              {/* Left page (behind) */}
+              <div className="absolute inset-0 right-1/2 mr-0.5 rounded-l-lg bg-gradient-to-br from-amber-50 to-orange-50 shadow-inner border border-amber-200/50 overflow-hidden">
+                <div className="absolute inset-2 flex flex-col gap-1.5 pt-3 px-2">
+                  <div className="h-1 bg-amber-200/60 rounded-full w-3/4" />
+                  <div className="h-1 bg-amber-200/40 rounded-full w-full" />
+                  <div className="h-1 bg-amber-200/40 rounded-full w-5/6" />
+                  <div className="h-1 bg-amber-200/40 rounded-full w-full" />
+                  <div className="h-3" />
+                  <div className="h-1 bg-amber-200/60 rounded-full w-2/3" />
+                  <div className="h-1 bg-amber-200/40 rounded-full w-full" />
+                  <div className="h-1 bg-amber-200/40 rounded-full w-4/5" />
+                  <div className="h-3" />
+                  <div className="h-1 bg-amber-200/40 rounded-full w-full" />
+                  <div className="h-1 bg-amber-200/40 rounded-full w-3/4" />
+                </div>
+              </div>
+
+              {/* Right page (behind) */}
+              <div className="absolute inset-0 left-1/2 ml-0.5 rounded-r-lg bg-gradient-to-bl from-amber-50 to-orange-50 shadow-inner border border-amber-200/50 overflow-hidden">
+                <div className="absolute inset-2 flex flex-col items-center justify-center">
+                  {/* Question icon pattern */}
+                  <div className="w-8 h-8 rounded-full bg-orange-100 flex items-center justify-center mb-2">
+                    <span className="text-orange-400 font-bold text-sm">?</span>
+                  </div>
+                  <div className="h-1 bg-amber-200/40 rounded-full w-3/4 mb-1" />
+                  <div className="h-1 bg-amber-200/40 rounded-full w-full mb-1" />
+                  <div className="h-1 bg-amber-200/40 rounded-full w-5/6 mb-3" />
+                  <div className="flex gap-1">
+                    <div className="w-5 h-5 rounded bg-emerald-100 border border-emerald-200" />
+                    <div className="w-5 h-5 rounded bg-red-100 border border-red-200" />
+                  </div>
+                </div>
+              </div>
+
+              {/* Left cover (opens left) */}
+              <div className="absolute inset-0 right-1/2 mr-0.5 rounded-l-xl bg-gradient-to-br from-orange-500 via-rose-500 to-red-600 shadow-xl animate-book-open-left origin-right" style={{ transformStyle: 'preserve-3d', animationDelay: '0.8s' }}>
+                <div className="absolute inset-0 flex items-center justify-center rounded-l-xl overflow-hidden">
+                  <div className="animate-splash-shimmer absolute inset-0" />
+                  <div className="flex flex-col items-center">
+                    <BookOpen className="w-10 h-10 text-white/90 mb-1" />
+                    <div className="h-0.5 w-8 bg-white/40 rounded-full" />
+                  </div>
+                </div>
+                {/* Spine edge */}
+                <div className="absolute right-0 top-0 bottom-0 w-1 bg-gradient-to-b from-orange-700 to-red-800" />
+              </div>
+
+              {/* Right cover (opens right) */}
+              <div className="absolute inset-0 left-1/2 ml-0.5 rounded-r-xl bg-gradient-to-bl from-orange-500 via-rose-500 to-red-600 shadow-xl animate-book-open-right origin-left" style={{ transformStyle: 'preserve-3d', animationDelay: '0.8s' }}>
+                <div className="absolute inset-0 flex items-center justify-center rounded-r-xl overflow-hidden">
+                  <div className="animate-splash-shimmer absolute inset-0" />
+                  <div className="flex flex-col items-center">
+                    <Trophy className="w-10 h-10 text-white/90 mb-1" />
+                    <div className="h-0.5 w-8 bg-white/40 rounded-full" />
+                  </div>
+                </div>
+                {/* Spine edge */}
+                <div className="absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b from-orange-700 to-red-800" />
+              </div>
+            </div>
+
+            {/* Logo */}
+            <div className="animate-splash-logo mb-5">
+              <div className="w-24 h-24 rounded-3xl bg-gradient-to-br from-orange-400 via-rose-500 to-pink-500 flex items-center justify-center shadow-2xl shadow-orange-500/30 ring-3 ring-white/20">
+                <img src="/logo.png" alt="MockMaster" className="w-16 h-16 rounded-2xl" />
+              </div>
+            </div>
+
+            {/* App Name */}
+            <h1 className="animate-splash-text text-white font-extrabold text-3xl tracking-tight mb-2">
+              MockMaster
+            </h1>
+
+            {/* Tagline */}
+            <p className="animate-splash-text-delay text-white/50 text-sm font-medium tracking-wide">
+              Your Exam Preparation Partner
+            </p>
+
+            {/* Loading indicator */}
+            <div className="animate-splash-text-delay mt-8 flex items-center gap-2">
+              <div className="flex gap-1">
+                <div className="w-2 h-2 rounded-full bg-orange-400 animate-splash-pulse" style={{ animationDelay: '0s' }} />
+                <div className="w-2 h-2 rounded-full bg-rose-400 animate-splash-pulse" style={{ animationDelay: '0.3s' }} />
+                <div className="w-2 h-2 rounded-full bg-pink-400 animate-splash-pulse" style={{ animationDelay: '0.6s' }} />
+              </div>
+              <span className="text-white/30 text-xs font-medium">Loading</span>
+            </div>
+          </div>
+        </div>
+      )}
+
       {renderPage()}
       {renderBottomNav()}
 
