@@ -1,0 +1,995 @@
+     1→'use client'
+     2→
+     3→import { useState, useEffect, useCallback, useRef } from 'react'
+     4→import { Button } from '@/components/ui/button'
+     5→import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+     6→import { Badge } from '@/components/ui/badge'
+     7→import { Progress } from '@/components/ui/progress'
+     8→import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+     9→import { ScrollArea } from '@/components/ui/scroll-area'
+    10→import { Separator } from '@/components/ui/separator'
+    11→import {
+    12→  BookOpen, Trophy, Clock, CheckCircle2, XCircle, SkipForward,
+    13→  ChevronRight, ChevronLeft, Home, BarChart3, User, ArrowLeft,
+    14→  Play, Zap, Target, Award, Timer, RefreshCw,
+    15→  BookMarked, GraduationCap, Shield, Building, Train, ShieldCheck,
+    16→  Swords
+    17→} from 'lucide-react'
+    18→
+    19→// Types
+    20→interface ExamCategory {
+    21→  id: string; name: string; slug: string; icon: string | null; description: string | null; order: number;
+    22→  exams: ExamWithCount[]
+    23→}
+    24→interface ExamWithCount {
+    25→  id: string; name: string; slug: string; description: string | null; totalQuestions: number | null; duration: number | null; markingScheme: string | null;
+    26→  _count: { tests: number }
+    27→}
+    28→interface TestWithExam {
+    29→  id: string; title: string; slug: string; description: string | null; totalQuestions: number; duration: number; markingCorrect: number; markingWrong: number; difficulty: string; isFree: boolean; isLive: boolean;
+    30→  exam: { id: string; name: string; slug: string }
+    31→}
+    32→interface Question {
+    33→  id: string; questionText: string; questionImage: string | null; optionA: string; optionB: string; optionC: string; optionD: string; correctAnswer: string; explanation: string | null; subject: string | null; order: number;
+    34→}
+    35→interface TestDetail {
+    36→  id: string; title: string; totalQuestions: number; duration: number; markingCorrect: number; markingWrong: number; markingSkipped: number;
+    37→  exam: { id: string; name: string };
+    38→  questions: Question[]
+    39→}
+    40→
+    41→type PageView = 'home' | 'exams' | 'tests' | 'test-info' | 'test-taking' | 'results' | 'leaderboard' | 'profile'
+    42→
+    43→const categoryIcons: Record<string, React.ReactNode> = {
+    44→  'ssc': <BookOpen className="w-5 h-5" />,
+    45→  'banking': <Building className="w-5 h-5" />,
+    46→  'railways': <Train className="w-5 h-5" />,
+    47→  'state-govt': <GraduationCap className="w-5 h-5" />,
+    48→  'teaching': <BookMarked className="w-5 h-5" />,
+    49→  'defence': <Swords className="w-5 h-5" />,
+    50→  'police': <ShieldCheck className="w-5 h-5" />,
+    51→}
+    52→
+    53→const categoryColors: Record<string, string> = {
+    54→  'ssc': 'bg-orange-500',
+    55→  'banking': 'bg-emerald-500',
+    56→  'railways': 'bg-blue-500',
+    57→  'state-govt': 'bg-purple-500',
+    58→  'teaching': 'bg-pink-500',
+    59→  'defence': 'bg-amber-600',
+    60→  'police': 'bg-red-500',
+    61→}
+    62→
+    63→export default function ExamPrepBharat() {
+    64→  const [page, setPage] = useState<PageView>('home')
+    65→  const [categories, setCategories] = useState<ExamCategory[]>([])
+    66→  const [selectedCategory, setSelectedCategory] = useState<ExamCategory | null>(null)
+    67→  const [selectedExam, setSelectedExam] = useState<ExamWithCount | null>(null)
+    68→  const [tests, setTests] = useState<TestWithExam[]>([])
+    69→  const [selectedTest, setSelectedTest] = useState<TestDetail | null>(null)
+    70→  const [loading, setLoading] = useState(false)
+    71→  const [seeded, setSeeded] = useState(false)
+    72→
+    73→  // Test taking state
+    74→  const [currentQuestion, setCurrentQuestion] = useState(0)
+    75→  const [answers, setAnswers] = useState<Record<string, string>>({})
+    76→  const [markedForReview, setMarkedForReview] = useState<Set<string>>(new Set())
+    77→  const [timeLeft, setTimeLeft] = useState(0)
+    78→  const [testStarted, setTestStarted] = useState(false)
+    79→  const [testCompleted, setTestCompleted] = useState(false)
+    80→  const [showResult, setShowResult] = useState(false)
+    81→  const [resultData, setResultData] = useState<any>(null)
+    82→  const [leaderboard, setLeaderboard] = useState<any[]>([])
+    83→  const timerRef = useRef<NodeJS.Timeout | null>(null)
+    84→
+    85→  // Seed database on first load
+    86→  useEffect(() => {
+    87→    if (!seeded) {
+    88→      fetch('/api/seed').then(r => r.json()).then(() => {
+    89→        setSeeded(true)
+    90→        fetchCategories()
+    91→      }).catch(() => {
+    92→        setSeeded(true)
+    93→        fetchCategories()
+    94→      })
+    95→    }
+    96→  }, [seeded])
+    97→
+    98→  const fetchCategories = async () => {
+    99→    setLoading(true)
+   100→    try {
+   101→      const res = await fetch('/api/exams')
+   102→      const data = await res.json()
+   103→      setCategories(data)
+   104→    } catch (e) { console.error(e) }
+   105→    setLoading(false)
+   106→  }
+   107→
+   108→  const fetchTests = async (examId: string) => {
+   109→    setLoading(true)
+   110→    try {
+   111→      const res = await fetch(`/api/tests?examId=${examId}`)
+   112→      const data = await res.json()
+   113→      setTests(data)
+   114→    } catch (e) { console.error(e) }
+   115→    setLoading(false)
+   116→  }
+   117→
+   118→  const fetchTestDetail = async (testId: string) => {
+   119→    setLoading(true)
+   120→    try {
+   121→      const res = await fetch(`/api/tests?testId=${testId}`)
+   122→      const data = await res.json()
+   123→      setSelectedTest(data)
+   124→    } catch (e) { console.error(e) }
+   125→    setLoading(false)
+   126→  }
+   127→
+   128→  const fetchLeaderboard = async (testId: string) => {
+   129→    try {
+   130→      const res = await fetch(`/api/results?testId=${testId}`)
+   131→      const data = await res.json()
+   132→      setLeaderboard(data)
+   133→    } catch (e) { console.error(e) }
+   134→  }
+   135→
+   136→  // Navigation helpers
+   137→  const goToExams = (category: ExamCategory) => {
+   138→    setSelectedCategory(category)
+   139→    setPage('exams')
+   140→  }
+   141→
+   142→  const goToTests = (exam: ExamWithCount) => {
+   143→    setSelectedExam(exam)
+   144→    fetchTests(exam.id)
+   145→    setPage('tests')
+   146→  }
+   147→
+   148→  const goToTestInfo = (test: TestWithExam) => {
+   149→    fetchTestDetail(test.id)
+   150→    setPage('test-info')
+   151→  }
+   152→
+   153→  const startTest = () => {
+   154→    if (!selectedTest) return
+   155→    setCurrentQuestion(0)
+   156→    setAnswers({})
+   157→    setMarkedForReview(new Set())
+   158→    setTimeLeft(selectedTest.duration * 60)
+   159→    setTestStarted(true)
+   160→    setTestCompleted(false)
+   161→    setShowResult(false)
+   162→    setPage('test-taking')
+   163→  }
+   164→
+   165→  const submitTest = useCallback(() => {
+   166→    if (!selectedTest) return
+   167→    if (timerRef.current) clearInterval(timerRef.current)
+   168→
+   169→    const questions = selectedTest.questions
+   170→    let correct = 0, wrong = 0, skipped = 0
+   171→    questions.forEach(q => {
+   172→      const ans = answers[q.id]
+   173→      if (!ans || ans === 'skip') { skipped++ }
+   174→      else if (ans === q.correctAnswer) { correct++ }
+   175→      else { wrong++ }
+   176→    })
+   177→
+   178→    const score = correct * selectedTest.markingCorrect - wrong * selectedTest.markingWrong
+   179→    const maxScore = questions.length * selectedTest.markingCorrect
+   180→    const timeTaken = selectedTest.duration * 60 - timeLeft
+   181→
+   182→    setResultData({ correct, wrong, skipped, score, maxScore, timeTaken, total: questions.length })
+   183→    setTestCompleted(true)
+   184→
+   185→    // Save result
+   186→    fetch('/api/results', {
+   187→      method: 'POST',
+   188→      headers: { 'Content-Type': 'application/json' },
+   189→      body: JSON.stringify({ testId: selectedTest.id, correctCount: correct, wrongCount: wrong, skippedCount: skipped, score, maxScore, timeTaken, answers, totalQuestions: questions.length })
+   190→    }).catch(console.error)
+   191→
+   192→    setPage('results')
+   193→  }, [selectedTest, answers, timeLeft])
+   194→
+   195→  // Timer
+   196→  useEffect(() => {
+   197→    if (testStarted && !testCompleted && timeLeft > 0) {
+   198→      timerRef.current = setInterval(() => {
+   199→        setTimeLeft(prev => {
+   200→          if (prev <= 1) {
+   201→            clearInterval(timerRef.current!)
+   202→            return 0
+   203→          }
+   204→          return prev - 1
+   205→        })
+   206→      }, 1000)
+   207→      return () => { if (timerRef.current) clearInterval(timerRef.current) }
+   208→    }
+   209→    if (timeLeft === 0 && testStarted && !testCompleted) {
+   210→      submitTest()
+   211→    }
+   212→  }, [testStarted, testCompleted, timeLeft, submitTest])
+   213→
+   214→  const formatTime = (seconds: number) => {
+   215→    const m = Math.floor(seconds / 60)
+   216→    const s = seconds % 60
+   217→    return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`
+   218→  }
+   219→
+   220→  const selectAnswer = (questionId: string, answer: string) => {
+   221→    setAnswers(prev => ({ ...prev, [questionId]: answer }))
+   222→  }
+   223→
+   224→  const toggleReview = (questionId: string) => {
+   225→    setMarkedForReview(prev => {
+   226→      const next = new Set(prev)
+   227→      if (next.has(questionId)) next.delete(questionId)
+   228→      else next.add(questionId)
+   229→      return next
+   230→    })
+   231→  }
+   232→
+   233→  // ============= RENDER PAGES =============
+   234→
+   235→  // HOME PAGE
+   236→  const renderHome = () => (
+   237→    <div className="min-h-screen bg-gradient-to-b from-orange-50 to-white">
+   238→      {/* Header */}
+   239→      <div className="bg-gradient-to-r from-orange-600 to-red-600 text-white px-4 py-6 pb-8 rounded-b-3xl shadow-lg">
+   240→        <div className="max-w-lg mx-auto">
+   241→          <div className="flex items-center justify-between mb-4">
+   242→            <div>
+   243→              <h1 className="text-2xl font-bold">ExamPrep Bharat</h1>
+   244→              <p className="text-orange-100 text-sm">Mock Tests for Indian Exams</p>
+   245→            </div>
+   246→            <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center">
+   247→              <User className="w-5 h-5" />
+   248→            </div>
+   249→          </div>
+   250→          <div className="bg-white/10 backdrop-blur-sm rounded-xl p-3 flex items-center gap-3">
+   251→            <Zap className="w-5 h-5 text-yellow-300" />
+   252→            <div>
+   253→              <p className="text-sm font-medium">Free Mock Tests Available</p>
+   254→              <p className="text-xs text-orange-100">Practice 20+ exams now</p>
+   255→            </div>
+   256→          </div>
+   257→        </div>
+   258→      </div>
+   259→
+   260→      <div className="max-w-lg mx-auto px-4 -mt-4 space-y-6 pb-20">
+   261→        {/* Quick Stats */}
+   262→        <div className="grid grid-cols-3 gap-3">
+   263→          <Card className="text-center border-0 shadow-md">
+   264→            <CardContent className="p-3">
+   265→              <p className="text-2xl font-bold text-orange-600">{categories.reduce((a, c) => a + c.exams.length, 0)}</p>
+   266→              <p className="text-xs text-gray-500">Exams</p>
+   267→            </CardContent>
+   268→          </Card>
+   269→          <Card className="text-center border-0 shadow-md">
+   270→            <CardContent className="p-3">
+   271→              <p className="text-2xl font-bold text-emerald-600">Free</p>
+   272→              <p className="text-xs text-gray-500">All Tests</p>
+   273→            </CardContent>
+   274→          </Card>
+   275→          <Card className="text-center border-0 shadow-md">
+   276→            <CardContent className="p-3">
+   277→              <p className="text-2xl font-bold text-blue-600">3</p>
+   278→              <p className="text-xs text-gray-500">Languages</p>
+   279→            </CardContent>
+   280→          </Card>
+   281→        </div>
+   282→
+   283→        {/* Exam Categories */}
+   284→        <div>
+   285→          <h2 className="text-lg font-bold mb-3 flex items-center gap-2">
+   286→            <Target className="w-5 h-5 text-orange-600" />
+   287→            Exam Categories
+   288→          </h2>
+   289→          <div className="grid grid-cols-2 gap-3">
+   290→            {categories.map(cat => (
+   291→              <Card
+   292→                key={cat.id}
+   293→                className="cursor-pointer hover:shadow-lg transition-all border-0 shadow-sm active:scale-95"
+   294→                onClick={() => goToExams(cat)}
+   295→              >
+   296→                <CardContent className="p-4 flex items-center gap-3">
+   297→                  <div className={`w-10 h-10 rounded-lg ${categoryColors[cat.slug] || 'bg-gray-500'} text-white flex items-center justify-center text-lg`}>
+   298→                    {cat.icon || '📋'}
+   299→                  </div>
+   300→                  <div className="flex-1 min-w-0">
+   301→                    <p className="font-semibold text-sm truncate">{cat.name}</p>
+   302→                    <p className="text-xs text-gray-500">{cat.exams.length} exams</p>
+   303→                  </div>
+   304→                  <ChevronRight className="w-4 h-4 text-gray-400" />
+   305→                </CardContent>
+   306→              </Card>
+   307→            ))}
+   308→          </div>
+   309→        </div>
+   310→
+   311→        {/* Trending Exams */}
+   312→        <div>
+   313→          <h2 className="text-lg font-bold mb-3 flex items-center gap-2">
+   314→            <Zap className="w-5 h-5 text-red-500" />
+   315→            Trending Exams
+   316→          </h2>
+   317→          <div className="space-y-2">
+   318→            {categories.flatMap(c => c.exams).slice(0, 5).map(exam => (
+   319→              <Card key={exam.id} className="cursor-pointer hover:shadow-md transition-all border-0 shadow-sm active:scale-[0.98]"
+   320→                onClick={() => {
+   321→                  const cat = categories.find(c => c.exams.some(e => e.id === exam.id))
+   322→                  if (cat) { setSelectedCategory(cat); goToTests(exam) }
+   323→                }}>
+   324→                <CardContent className="p-3 flex items-center justify-between">
+   325→                  <div className="flex items-center gap-3">
+   326→                    <div className="w-8 h-8 bg-orange-100 rounded-lg flex items-center justify-center text-orange-600 font-bold text-xs">
+   327→                      {exam.name.split(' ').map(w => w[0]).join('').slice(0, 2)}
+   328→                    </div>
+   329→                    <div>
+   330→                      <p className="font-medium text-sm">{exam.name}</p>
+   331→                      <p className="text-xs text-gray-500">{exam._count.tests} tests available</p>
+   332→                    </div>
+   333→                  </div>
+   334→                  <ChevronRight className="w-4 h-4 text-gray-400" />
+   335→                </CardContent>
+   336→              </Card>
+   337→            ))}
+   338→          </div>
+   339→        </div>
+   340→
+   341→        {/* Features */}
+   342→        <div>
+   343→          <h2 className="text-lg font-bold mb-3 flex items-center gap-2">
+   344→            <Award className="w-5 h-5 text-emerald-600" />
+   345→            Why ExamPrep Bharat?
+   346→          </h2>
+   347→          <div className="grid grid-cols-2 gap-3">
+   348→            {[
+   349→              { icon: <Zap className="w-5 h-5" />, title: 'Fast & Light', desc: 'Under 30MB app size', color: 'text-yellow-600 bg-yellow-50' },
+   350→              { icon: <CheckCircle2 className="w-5 h-5" />, title: 'Free Tests', desc: 'No hidden charges', color: 'text-emerald-600 bg-emerald-50' },
+   351→              { icon: <BarChart3 className="w-5 h-5" />, title: 'Analysis', desc: 'Detailed score report', color: 'text-blue-600 bg-blue-50' },
+   352→              { icon: <Trophy className="w-5 h-5" />, title: 'Leaderboard', desc: 'All India Rank', color: 'text-purple-600 bg-purple-50' },
+   353→            ].map((f, i) => (
+   354→              <Card key={i} className="border-0 shadow-sm">
+   355→                <CardContent className="p-3">
+   356→                  <div className={`w-8 h-8 rounded-lg ${f.color} flex items-center justify-center mb-2`}>
+   357→                    {f.icon}
+   358→                  </div>
+   359→                  <p className="font-semibold text-sm">{f.title}</p>
+   360→                  <p className="text-xs text-gray-500">{f.desc}</p>
+   361→                </CardContent>
+   362→              </Card>
+   363→            ))}
+   364→          </div>
+   365→        </div>
+   366→      </div>
+   367→
+   368→      {/* Bottom Navigation */}
+   369→      <div className="fixed bottom-0 left-0 right-0 bg-white border-t shadow-lg z-50">
+   370→        <div className="max-w-lg mx-auto flex">
+   371→          {[
+   372→            { icon: <Home className="w-5 h-5" />, label: 'Home', page: 'home' as PageView },
+   373→            { icon: <BookOpen className="w-5 h-5" />, label: 'Exams', page: 'exams' as PageView },
+   374→            { icon: <Trophy className="w-5 h-5" />, label: 'Ranks', page: 'leaderboard' as PageView },
+   375→            { icon: <User className="w-5 h-5" />, label: 'Profile', page: 'profile' as PageView },
+   376→          ].map(nav => (
+   377→            <button
+   378→              key={nav.page}
+   379→              onClick={() => {
+   380→                if (nav.page === 'exams' && categories.length > 0) setPage('exams')
+   381→                else if (nav.page === 'home') setPage('home')
+   382→                else if (nav.page === 'leaderboard') setPage('leaderboard')
+   383→                else if (nav.page === 'profile') setPage('profile')
+   384→              }}
+   385→              className={`flex-1 flex flex-col items-center py-2 gap-1 ${page === nav.page ? 'text-orange-600' : 'text-gray-400'}`}
+   386→            >
+   387→              {nav.icon}
+   388→              <span className="text-xs">{nav.label}</span>
+   389→            </button>
+   390→          ))}
+   391→        </div>
+   392→      </div>
+   393→    </div>
+   394→  )
+   395→
+   396→  // EXAMS LIST PAGE (for a category)
+   397→  const renderExams = () => (
+   398→    <div className="min-h-screen bg-gray-50">
+   399→      <div className="bg-white shadow-sm sticky top-0 z-40">
+   400→        <div className="max-w-lg mx-auto px-4 py-3 flex items-center gap-3">
+   401→          <button onClick={() => setPage('home')} className="w-8 h-8 rounded-full hover:bg-gray-100 flex items-center justify-center">
+   402→            <ArrowLeft className="w-5 h-5" />
+   403→          </button>
+   404→          <div>
+   405→            <h1 className="font-bold text-lg">{selectedCategory?.name || 'Exams'}</h1>
+   406→            <p className="text-xs text-gray-500">{selectedCategory?.exams.length} exams available</p>
+   407→          </div>
+   408→        </div>
+   409→      </div>
+   410→
+   411→      <div className="max-w-lg mx-auto px-4 py-4 space-y-3 pb-20">
+   412→        {selectedCategory?.exams.map(exam => (
+   413→          <Card key={exam.id} className="cursor-pointer hover:shadow-md transition-all border-0 shadow-sm active:scale-[0.98]"
+   414→            onClick={() => goToTests(exam)}>
+   415→            <CardContent className="p-4">
+   416→              <div className="flex items-center justify-between">
+   417→                <div className="flex items-center gap-3 flex-1 min-w-0">
+   418→                  <div className={`w-12 h-12 rounded-xl ${categoryColors[selectedCategory?.slug || ''] || 'bg-gray-500'} text-white flex items-center justify-center`}>
+   419→                    <span className="font-bold text-sm">{exam.name.split(' ').map(w => w[0]).join('').slice(0, 2)}</span>
+   420→                  </div>
+   421→                  <div className="flex-1 min-w-0">
+   422→                    <p className="font-semibold truncate">{exam.name}</p>
+   423→                    <p className="text-xs text-gray-500">{exam.description}</p>
+   424→                    <div className="flex items-center gap-3 mt-1">
+   425→                      <span className="text-xs text-gray-400 flex items-center gap-1"><BookOpen className="w-3 h-3" />{exam._count.tests} tests</span>
+   426→                      {exam.duration && <span className="text-xs text-gray-400 flex items-center gap-1"><Clock className="w-3 h-3" />{exam.duration}min</span>}
+   427→                    </div>
+   428→                  </div>
+   429→                </div>
+   430→                <ChevronRight className="w-5 h-5 text-gray-400 flex-shrink-0" />
+   431→              </div>
+   432→            </CardContent>
+   433→          </Card>
+   434→        ))}
+   435→
+   436→        {/* Also show other categories */}
+   437→        <Separator className="my-4" />
+   438→        <h3 className="font-semibold text-gray-600">Other Categories</h3>
+   439→        {categories.filter(c => c.id !== selectedCategory?.id).map(cat => (
+   440→          <Card key={cat.id} className="cursor-pointer hover:shadow-md transition-all border-0 shadow-sm"
+   441→            onClick={() => goToExams(cat)}>
+   442→            <CardContent className="p-3 flex items-center gap-3">
+   443→              <div className={`w-10 h-10 rounded-lg ${categoryColors[cat.slug] || 'bg-gray-500'} text-white flex items-center justify-center text-lg`}>
+   444→                {cat.icon || '📋'}
+   445→              </div>
+   446→              <div className="flex-1">
+   447→                <p className="font-medium text-sm">{cat.name}</p>
+   448→                <p className="text-xs text-gray-500">{cat.exams.length} exams</p>
+   449→              </div>
+   450→              <ChevronRight className="w-4 h-4 text-gray-400" />
+   451→            </CardContent>
+   452→          </Card>
+   453→        ))}
+   454→      </div>
+   455→    </div>
+   456→  )
+   457→
+   458→  // TESTS LIST PAGE
+   459→  const renderTests = () => (
+   460→    <div className="min-h-screen bg-gray-50">
+   461→      <div className="bg-white shadow-sm sticky top-0 z-40">
+   462→        <div className="max-w-lg mx-auto px-4 py-3 flex items-center gap-3">
+   463→          <button onClick={() => setPage('exams')} className="w-8 h-8 rounded-full hover:bg-gray-100 flex items-center justify-center">
+   464→            <ArrowLeft className="w-5 h-5" />
+   465→          </button>
+   466→          <div>
+   467→            <h1 className="font-bold text-lg">{selectedExam?.name || 'Tests'}</h1>
+   468→            <p className="text-xs text-gray-500">{tests.length} mock tests available</p>
+   469→          </div>
+   470→        </div>
+   471→      </div>
+   472→
+   473→      <div className="max-w-lg mx-auto px-4 py-4 space-y-3 pb-20">
+   474→        {loading ? (
+   475→          <div className="flex items-center justify-center py-12"><RefreshCw className="w-6 h-6 animate-spin text-orange-600" /></div>
+   476→        ) : tests.length === 0 ? (
+   477→          <Card className="border-0 shadow-sm">
+   478→            <CardContent className="p-8 text-center">
+   479→              <BookOpen className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+   480→              <p className="font-medium text-gray-500">No tests available yet</p>
+   481→              <p className="text-sm text-gray-400">Check back soon for new tests!</p>
+   482→            </CardContent>
+   483→          </Card>
+   484→        ) : (
+   485→          tests.map(test => (
+   486→            <Card key={test.id} className="cursor-pointer hover:shadow-md transition-all border-0 shadow-sm active:scale-[0.98]"
+   487→              onClick={() => goToTestInfo(test)}>
+   488→              <CardContent className="p-4">
+   489→                <div className="flex items-start justify-between mb-2">
+   490→                  <div className="flex-1 min-w-0 mr-2">
+   491→                    <p className="font-semibold text-sm">{test.title}</p>
+   492→                    <p className="text-xs text-gray-500 mt-1">{test.exam.name}</p>
+   493→                  </div>
+   494→                  <Badge variant={test.isFree ? 'default' : 'secondary'} className={test.isFree ? 'bg-emerald-500 hover:bg-emerald-600' : ''}>
+   495→                    {test.isFree ? 'FREE' : 'PREMIUM'}
+   496→                  </Badge>
+   497→                </div>
+   498→                <div className="flex items-center gap-4 text-xs text-gray-500">
+   499→                  <span className="flex items-center gap-1"><BookOpen className="w-3 h-3" />{test.totalQuestions} Qs</span>
+   500→                  <span className="flex items-center gap-1"><Clock className="w-3 h-3" />{test.duration} min</span>
+   501→                  <span className="flex items-center gap-1"><Target className="w-3 h-3" />{test.difficulty}</span>
+   502→                  {test.isLive && <Badge className="bg-red-500 text-xs animate-pulse">LIVE</Badge>}
+   503→                </div>
+   504→              </CardContent>
+   505→            </Card>
+   506→          ))
+   507→        )}
+   508→      </div>
+   509→    </div>
+   510→  )
+   511→
+   512→  // TEST INFO PAGE (before starting)
+   513→  const renderTestInfo = () => {
+   514→    if (!selectedTest) return null
+   515→    return (
+   516→      <div className="min-h-screen bg-gray-50">
+   517→        <div className="bg-white shadow-sm sticky top-0 z-40">
+   518→          <div className="max-w-lg mx-auto px-4 py-3 flex items-center gap-3">
+   519→            <button onClick={() => setPage('tests')} className="w-8 h-8 rounded-full hover:bg-gray-100 flex items-center justify-center">
+   520→              <ArrowLeft className="w-5 h-5" />
+   521→            </button>
+   522→            <h1 className="font-bold text-lg">Test Details</h1>
+   523→          </div>
+   524→        </div>
+   525→
+   526→        <div className="max-w-lg mx-auto px-4 py-4 space-y-4 pb-20">
+   527→          <Card className="border-0 shadow-md">
+   528→            <CardHeader className="pb-3">
+   529→              <CardTitle className="text-lg">{selectedTest.title}</CardTitle>
+   530→              <CardDescription>{selectedTest.exam.name}</CardDescription>
+   531→            </CardHeader>
+   532→            <CardContent className="space-y-3">
+   533→              <div className="grid grid-cols-2 gap-3">
+   534→                <div className="bg-blue-50 rounded-xl p-3 text-center">
+   535→                  <BookOpen className="w-5 h-5 text-blue-600 mx-auto mb-1" />
+   536→                  <p className="text-lg font-bold text-blue-700">{selectedTest.totalQuestions}</p>
+   537→                  <p className="text-xs text-blue-600">Questions</p>
+   538→                </div>
+   539→                <div className="bg-orange-50 rounded-xl p-3 text-center">
+   540→                  <Clock className="w-5 h-5 text-orange-600 mx-auto mb-1" />
+   541→                  <p className="text-lg font-bold text-orange-700">{selectedTest.duration}</p>
+   542→                  <p className="text-xs text-orange-600">Minutes</p>
+   543→                </div>
+   544→                <div className="bg-emerald-50 rounded-xl p-3 text-center">
+   545→                  <CheckCircle2 className="w-5 h-5 text-emerald-600 mx-auto mb-1" />
+   546→                  <p className="text-lg font-bold text-emerald-700">+{selectedTest.markingCorrect}</p>
+   547→                  <p className="text-xs text-emerald-600">Correct</p>
+   548→                </div>
+   549→                <div className="bg-red-50 rounded-xl p-3 text-center">
+   550→                  <XCircle className="w-5 h-5 text-red-600 mx-auto mb-1" />
+   551→                  <p className="text-lg font-bold text-red-700">{selectedTest.markingWrong > 0 ? `-${selectedTest.markingWrong}` : '0'}</p>
+   552→                  <p className="text-xs text-red-600">Wrong</p>
+   553→                </div>
+   554→              </div>
+   555→
+   556→              <Separator />
+   557→
+   558→              <div className="space-y-2 text-sm">
+   559→                <h4 className="font-semibold">Instructions:</h4>
+   560→                <ul className="space-y-1 text-gray-600">
+   561→                  <li className="flex items-start gap-2"><CheckCircle2 className="w-4 h-4 text-emerald-500 mt-0.5 flex-shrink-0" />Total {selectedTest.totalQuestions} questions in this test</li>
+   562→                  <li className="flex items-start gap-2"><CheckCircle2 className="w-4 h-4 text-emerald-500 mt-0.5 flex-shrink-0" />Time duration: {selectedTest.duration} minutes</li>
+   563→                  <li className="flex items-start gap-2"><CheckCircle2 className="w-4 h-4 text-emerald-500 mt-0.5 flex-shrink-0" />Each correct answer: +{selectedTest.markingCorrect} marks</li>
+   564→                  <li className="flex items-start gap-2"><CheckCircle2 className="w-4 h-4 text-emerald-500 mt-0.5 flex-shrink-0" />Each wrong answer: {selectedTest.markingWrong > 0 ? `${selectedTest.markingWrong} marks` : 'No negative marking'}</li>
+   565→                  <li className="flex items-start gap-2"><CheckCircle2 className="w-4 h-4 text-emerald-500 mt-0.5 flex-shrink-0" />You can mark questions for review</li>
+   566→                  <li className="flex items-start gap-2"><CheckCircle2 className="w-4 h-4 text-emerald-500 mt-0.5 flex-shrink-0" />Auto-submit when time runs out</li>
+   567→                </ul>
+   568→              </div>
+   569→
+   570→              <Button onClick={startTest} className="w-full bg-orange-600 hover:bg-orange-700 text-white h-12 text-lg font-semibold rounded-xl">
+   571→                <Play className="w-5 h-5 mr-2" /> Start Test
+   572→              </Button>
+   573→            </CardContent>
+   574→          </Card>
+   575→        </div>
+   576→      </div>
+   577→    )
+   578→  }
+   579→
+   580→  // TEST TAKING PAGE
+   581→  const renderTestTaking = () => {
+   582→    if (!selectedTest) return null
+   583→    const questions = selectedTest.questions
+   584→    const q = questions[currentQuestion]
+   585→    const answeredCount = Object.keys(answers).filter(k => answers[k] && answers[k] !== 'skip').length
+   586→    const progress = (answeredCount / questions.length) * 100
+   587→
+   588→    return (
+   589→      <div className="min-h-screen bg-gray-50 flex flex-col">
+   590→        {/* Top Bar */}
+   591→        <div className="bg-white shadow-sm sticky top-0 z-40">
+   592→          <div className="max-w-lg mx-auto px-4 py-2">
+   593→            <div className="flex items-center justify-between mb-2">
+   594→              <p className="text-sm font-medium text-gray-600">Q {currentQuestion + 1}/{questions.length}</p>
+   595→              <div className={`flex items-center gap-1 px-3 py-1 rounded-full ${timeLeft < 60 ? 'bg-red-100 text-red-700 animate-pulse' : 'bg-orange-100 text-orange-700'}`}>
+   596→                <Timer className="w-4 h-4" />
+   597→                <span className="font-mono font-bold text-sm">{formatTime(timeLeft)}</span>
+   598→              </div>
+   599→            </div>
+   600→            <Progress value={progress} className="h-1.5" />
+   601→          </div>
+   602→        </div>
+   603→
+   604→        {/* Question */}
+   605→        <div className="flex-1 max-w-lg mx-auto px-4 py-4 w-full">
+   606→          <div className="mb-4 flex items-center gap-2 flex-wrap">
+   607→            {q.subject && <Badge variant="outline" className="text-xs">{q.subject}</Badge>}
+   608→            <Badge variant="outline" className="text-xs">Q{currentQuestion + 1}</Badge>
+   609→            {markedForReview.has(q.id) && <Badge className="bg-yellow-500 text-xs">Marked for Review</Badge>}
+   610→          </div>
+   611→
+   612→          <Card className="border-0 shadow-md mb-4">
+   613→            <CardContent className="p-5">
+   614→              <p className="text-base font-medium leading-relaxed">{q.questionText}</p>
+   615→            </CardContent>
+   616→          </Card>
+   617→
+   618→          {/* Options */}
+   619→          <div className="space-y-3">
+   620→            {[
+   621→              { key: 'A', text: q.optionA },
+   622→              { key: 'B', text: q.optionB },
+   623→              { key: 'C', text: q.optionC },
+   624→              { key: 'D', text: q.optionD },
+   625→            ].map(opt => {
+   626→              const isSelected = answers[q.id] === opt.key
+   627→              return (
+   628→                <button
+   629→                  key={opt.key}
+   630→                  onClick={() => selectAnswer(q.id, opt.key)}
+   631→                  className={`w-full text-left p-4 rounded-xl border-2 transition-all ${
+   632→                    isSelected
+   633→                      ? 'border-orange-500 bg-orange-50 shadow-sm'
+   634→                      : 'border-gray-200 bg-white hover:border-gray-300 active:scale-[0.98]'
+   635→                  }`}
+   636→                >
+   637→                  <div className="flex items-center gap-3">
+   638→                    <div className={`w-8 h-8 rounded-full flex items-center justify-center font-semibold text-sm ${
+   639→                      isSelected ? 'bg-orange-500 text-white' : 'bg-gray-100 text-gray-600'
+   640→                    }`}>
+   641→                      {opt.key}
+   642→                    </div>
+   643→                    <p className="flex-1 text-sm">{opt.text}</p>
+   644→                  </div>
+   645→                </button>
+   646→              )
+   647→            })}
+   648→          </div>
+   649→
+   650→          {/* Action Buttons */}
+   651→          <div className="flex items-center gap-3 mt-6">
+   652→            <Button
+   653→              variant="outline"
+   654→              onClick={() => toggleReview(q.id)}
+   655→              className={`flex-1 ${markedForReview.has(q.id) ? 'bg-yellow-50 border-yellow-400 text-yellow-700' : ''}`}
+   656→            >
+   657→              {markedForReview.has(q.id) ? '★ Marked' : '☆ Mark for Review'}
+   658→            </Button>
+   659→            <Button
+   660→              variant="outline"
+   661→              onClick={() => selectAnswer(q.id, 'skip')}
+   662→              className="flex-1"
+   663→            >
+   664→              <SkipForward className="w-4 h-4 mr-1" /> Skip
+   665→            </Button>
+   666→          </div>
+   667→        </div>
+   668→
+   669→        {/* Bottom Navigation */}
+   670→        <div className="bg-white border-t sticky bottom-0 z-40">
+   671→          <div className="max-w-lg mx-auto px-4 py-3 flex items-center justify-between">
+   672→            <Button
+   673→              variant="outline"
+   674→              onClick={() => setCurrentQuestion(Math.max(0, currentQuestion - 1))}
+   675→              disabled={currentQuestion === 0}
+   676→            >
+   677→              <ChevronLeft className="w-4 h-4 mr-1" /> Prev
+   678→            </Button>
+   679→
+   680→            <button
+   681→              onClick={() => {
+   682→                if (confirm('Are you sure you want to submit the test?')) submitTest()
+   683→              }}
+   684→              className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-sm font-medium"
+   685→            >
+   686→              Submit Test
+   687→            </button>
+   688→
+   689→            <Button
+   690→              variant="outline"
+   691→              onClick={() => setCurrentQuestion(Math.min(questions.length - 1, currentQuestion + 1))}
+   692→              disabled={currentQuestion === questions.length - 1}
+   693→            >
+   694→              Next <ChevronRight className="w-4 h-4 ml-1" />
+   695→            </Button>
+   696→          </div>
+   697→        </div>
+   698→      </div>
+   699→    )
+   700→  }
+   701→
+   702→  // RESULTS PAGE
+   703→  const renderResults = () => {
+   704→    if (!resultData || !selectedTest) return null
+   705→    const percentage = Math.round((resultData.score / resultData.maxScore) * 100)
+   706→    const timeTakenMin = Math.floor(resultData.timeTaken / 60)
+   707→    const timeTakenSec = resultData.timeTaken % 60
+   708→
+   709→    return (
+   710→      <div className="min-h-screen bg-gray-50">
+   711→        <div className="bg-gradient-to-r from-orange-600 to-red-600 text-white px-4 py-6 rounded-b-3xl">
+   712→          <div className="max-w-lg mx-auto text-center">
+   713→            <Trophy className="w-12 h-12 mx-auto mb-2 text-yellow-300" />
+   714→            <h1 className="text-2xl font-bold">Test Completed!</h1>
+   715→            <p className="text-orange-100 text-sm">{selectedTest.title}</p>
+   716→          </div>
+   717→        </div>
+   718→
+   719→        <div className="max-w-lg mx-auto px-4 -mt-4 space-y-4 pb-20">
+   720→          {/* Score Card */}
+   721→          <Card className="border-0 shadow-lg">
+   722→            <CardContent className="p-6 text-center">
+   723→              <div className="w-28 h-28 rounded-full border-4 border-orange-500 flex items-center justify-center mx-auto mb-3">
+   724→                <div>
+   725→                  <p className="text-3xl font-bold text-orange-600">{percentage}%</p>
+   726→                  <p className="text-xs text-gray-500">Score</p>
+   727→                </div>
+   728→              </div>
+   729→              <p className="text-2xl font-bold">{resultData.score} <span className="text-gray-400 text-lg">/ {resultData.maxScore}</span></p>
+   730→              <p className="text-sm text-gray-500 mt-1">Time: {timeTakenMin}m {timeTakenSec}s</p>
+   731→            </CardContent>
+   732→          </Card>
+   733→
+   734→          {/* Stats */}
+   735→          <div className="grid grid-cols-3 gap-3">
+   736→            <Card className="border-0 shadow-sm">
+   737→              <CardContent className="p-3 text-center">
+   738→                <CheckCircle2 className="w-6 h-6 text-emerald-600 mx-auto mb-1" />
+   739→                <p className="text-xl font-bold text-emerald-600">{resultData.correct}</p>
+   740→                <p className="text-xs text-gray-500">Correct</p>
+   741→              </CardContent>
+   742→            </Card>
+   743→            <Card className="border-0 shadow-sm">
+   744→              <CardContent className="p-3 text-center">
+   745→                <XCircle className="w-6 h-6 text-red-600 mx-auto mb-1" />
+   746→                <p className="text-xl font-bold text-red-600">{resultData.wrong}</p>
+   747→                <p className="text-xs text-gray-500">Wrong</p>
+   748→              </CardContent>
+   749→            </Card>
+   750→            <Card className="border-0 shadow-sm">
+   751→              <CardContent className="p-3 text-center">
+   752→                <SkipForward className="w-6 h-6 text-gray-500 mx-auto mb-1" />
+   753→                <p className="text-xl font-bold text-gray-600">{resultData.skipped}</p>
+   754→                <p className="text-xs text-gray-500">Skipped</p>
+   755→              </CardContent>
+   756→            </Card>
+   757→          </div>
+   758→
+   759→          {/* Answer Key */}
+   760→          <Card className="border-0 shadow-sm">
+   761→            <CardHeader className="pb-2">
+   762→              <CardTitle className="text-base">Answer Key</CardTitle>
+   763→            </CardHeader>
+   764→            <CardContent>
+   765→              <div className="space-y-3 max-h-96 overflow-y-auto">
+   766→                {selectedTest.questions.map((q, i) => {
+   767→                  const userAns = answers[q.id]
+   768→                  const isCorrect = userAns === q.correctAnswer
+   769→                  const isSkipped = !userAns || userAns === 'skip'
+   770→                  return (
+   771→                    <div key={q.id} className="border rounded-xl p-3">
+   772→                      <div className="flex items-start justify-between mb-2">
+   773→                        <p className="text-sm font-medium flex-1">Q{i + 1}: {q.questionText}</p>
+   774→                        {isSkipped ? <Badge variant="secondary" className="text-xs">Skipped</Badge> :
+   775→                          isCorrect ? <Badge className="bg-emerald-500 text-xs">Correct</Badge> :
+   776→                          <Badge className="bg-red-500 text-xs">Wrong</Badge>
+   777→                        }
+   778→                      </div>
+   779→                      <div className="text-xs space-y-1">
+   780→                        {!isSkipped && <p className={isCorrect ? 'text-emerald-600' : 'text-red-600'}>Your answer: {userAns}</p>}
+   781→                        <p className="text-emerald-600 font-medium">Correct answer: {q.correctAnswer}</p>
+   782→                        {q.explanation && <p className="text-gray-500 mt-1 italic">{q.explanation}</p>}
+   783→                      </div>
+   784→                    </div>
+   785→                  )
+   786→                })}
+   787→              </div>
+   788→            </CardContent>
+   789→          </Card>
+   790→
+   791→          {/* Action Buttons */}
+   792→          <div className="flex gap-3">
+   793→            <Button onClick={() => { setPage('leaderboard'); fetchLeaderboard(selectedTest.id) }} className="flex-1 bg-purple-600 hover:bg-purple-700 text-white rounded-xl h-11">
+   794→              <Trophy className="w-4 h-4 mr-2" /> Leaderboard
+   795→            </Button>
+   796→            <Button onClick={() => setPage('home')} variant="outline" className="flex-1 rounded-xl h-11">
+   797→              <Home className="w-4 h-4 mr-2" /> Home
+   798→            </Button>
+   799→          </div>
+   800→        </div>
+   801→      </div>
+   802→    )
+   803→  }
+   804→
+   805→  // LEADERBOARD PAGE
+   806→  const renderLeaderboard = () => (
+   807→    <div className="min-h-screen bg-gray-50">
+   808→      <div className="bg-white shadow-sm sticky top-0 z-40">
+   809→        <div className="max-w-lg mx-auto px-4 py-3 flex items-center gap-3">
+   810→          <button onClick={() => setPage('home')} className="w-8 h-8 rounded-full hover:bg-gray-100 flex items-center justify-center">
+   811→            <ArrowLeft className="w-5 h-5" />
+   812→          </button>
+   813→          <h1 className="font-bold text-lg">Leaderboard</h1>
+   814→        </div>
+   815→      </div>
+   816→
+   817→      <div className="max-w-lg mx-auto px-4 py-4 space-y-3 pb-20">
+   818→        {/* Top 3 */}
+   819→        {leaderboard.length >= 3 && (
+   820→          <div className="flex items-end justify-center gap-3 mb-6 pt-4">
+   821→            {/* 2nd */}
+   822→            <div className="text-center">
+   823→              <div className="w-14 h-14 bg-gray-200 rounded-full flex items-center justify-center mb-1">
+   824→                <span className="font-bold text-gray-600">2</span>
+   825→              </div>
+   826→              <p className="text-xs font-medium truncate max-w-16">{leaderboard[1].user?.name || 'User'}</p>
+   827→              <p className="text-xs text-gray-500">{leaderboard[1].score}/{leaderboard[1].maxScore}</p>
+   828→            </div>
+   829→            {/* 1st */}
+   830→            <div className="text-center -mt-4">
+   831→              <Crown className="w-6 h-6 text-yellow-500 mx-auto mb-1" />
+   832→              <div className="w-16 h-16 bg-yellow-100 rounded-full flex items-center justify-center mb-1 border-2 border-yellow-500">
+   833→                <span className="font-bold text-yellow-600">1</span>
+   834→              </div>
+   835→              <p className="text-xs font-medium truncate max-w-16">{leaderboard[0].user?.name || 'User'}</p>
+   836→              <p className="text-xs text-gray-500">{leaderboard[0].score}/{leaderboard[0].maxScore}</p>
+   837→            </div>
+   838→            {/* 3rd */}
+   839→            <div className="text-center">
+   840→              <div className="w-14 h-14 bg-orange-100 rounded-full flex items-center justify-center mb-1">
+   841→                <span className="font-bold text-orange-600">3</span>
+   842→              </div>
+   843→              <p className="text-xs font-medium truncate max-w-16">{leaderboard[2].user?.name || 'User'}</p>
+   844→              <p className="text-xs text-gray-500">{leaderboard[2].score}/{leaderboard[2].maxScore}</p>
+   845→            </div>
+   846→          </div>
+   847→        )}
+   848→
+   849→        {/* Full List */}
+   850→        {leaderboard.length === 0 ? (
+   851→          <Card className="border-0 shadow-sm">
+   852→            <CardContent className="p-8 text-center">
+   853→              <Trophy className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+   854→              <p className="font-medium text-gray-500">No results yet</p>
+   855→              <p className="text-sm text-gray-400">Take a test to appear on the leaderboard!</p>
+   856→            </CardContent>
+   857→          </Card>
+   858→        ) : (
+   859→          leaderboard.map((entry, i) => (
+   860→            <Card key={entry.id} className={`border-0 shadow-sm ${i < 3 ? 'bg-yellow-50' : ''}`}>
+   861→              <CardContent className="p-3 flex items-center gap-3">
+   862→                <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm ${
+   863→                  i === 0 ? 'bg-yellow-500 text-white' :
+   864→                  i === 1 ? 'bg-gray-400 text-white' :
+   865→                  i === 2 ? 'bg-orange-400 text-white' :
+   866→                  'bg-gray-100 text-gray-600'
+   867→                }`}>
+   868→                  {i + 1}
+   869→                </div>
+   870→                <div className="flex-1 min-w-0">
+   871→                  <p className="font-medium text-sm truncate">{entry.user?.name || 'Guest User'}</p>
+   872→                  <p className="text-xs text-gray-500">{entry.test?.title}</p>
+   873→                </div>
+   874→                <div className="text-right">
+   875→                  <p className="font-bold text-sm text-orange-600">{entry.score}/{entry.maxScore}</p>
+   876→                  <p className="text-xs text-gray-500">{Math.round((entry.score / entry.maxScore) * 100)}%</p>
+   877→                </div>
+   878→              </CardContent>
+   879→            </Card>
+   880→          ))
+   881→        )}
+   882→      </div>
+   883→    </div>
+   884→  )
+   885→
+   886→  // PROFILE PAGE
+   887→  const renderProfile = () => (
+   888→    <div className="min-h-screen bg-gray-50">
+   889→      <div className="bg-gradient-to-r from-orange-600 to-red-600 text-white px-4 py-6 rounded-b-3xl">
+   890→        <div className="max-w-lg mx-auto text-center">
+   891→          <div className="w-20 h-20 bg-white/20 rounded-full flex items-center justify-center mx-auto mb-3">
+   892→            <User className="w-10 h-10" />
+   893→          </div>
+   894→          <h1 className="text-xl font-bold">Guest User</h1>
+   895→          <p className="text-orange-100 text-sm">ExamPrep Bharat</p>
+   896→        </div>
+   897→      </div>
+   898→
+   899→      <div className="max-w-lg mx-auto px-4 -mt-4 space-y-4 pb-20">
+   900→        {/* Stats */}
+   901→        <Card className="border-0 shadow-lg">
+   902→          <CardContent className="p-4">
+   903→            <h3 className="font-semibold mb-3">Your Stats</h3>
+   904→            <div className="grid grid-cols-3 gap-3">
+   905→              <div className="text-center">
+   906→                <p className="text-2xl font-bold text-orange-600">0</p>
+   907→                <p className="text-xs text-gray-500">Tests Taken</p>
+   908→              </div>
+   909→              <div className="text-center">
+   910→                <p className="text-2xl font-bold text-emerald-600">0</p>
+   911→                <p className="text-xs text-gray-500">Avg Score</p>
+   912→              </div>
+   913→              <div className="text-center">
+   914→                <p className="text-2xl font-bold text-blue-600">-</p>
+   915→                <p className="text-xs text-gray-500">Best Rank</p>
+   916→              </div>
+   917→            </div>
+   918→          </CardContent>
+   919→        </Card>
+   920→
+   921→        {/* Settings */}
+   922→        <Card className="border-0 shadow-sm">
+   923→          <CardHeader className="pb-2">
+   924→            <CardTitle className="text-base">Settings</CardTitle>
+   925→          </CardHeader>
+   926→          <CardContent className="space-y-3">
+   927→            <div className="flex items-center justify-between p-3 bg-gray-50 rounded-xl">
+   928→              <div className="flex items-center gap-3">
+   929→                <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center"><span className="text-sm">🌐</span></div>
+   930→                <div>
+   931→                  <p className="text-sm font-medium">Language</p>
+   932→                  <p className="text-xs text-gray-500">English (Default)</p>
+   933→                </div>
+   934→              </div>
+   935→              <ChevronRight className="w-4 h-4 text-gray-400" />
+   936→            </div>
+   937→            <div className="flex items-center justify-between p-3 bg-gray-50 rounded-xl">
+   938→              <div className="flex items-center gap-3">
+   939→                <div className="w-8 h-8 bg-orange-100 rounded-lg flex items-center justify-center"><span className="text-sm">🔔</span></div>
+   940→                <div>
+   941→                  <p className="text-sm font-medium">Notifications</p>
+   942→                  <p className="text-xs text-gray-500">Exam reminders</p>
+   943→                </div>
+   944→              </div>
+   945→              <ChevronRight className="w-4 h-4 text-gray-400" />
+   946→            </div>
+   947→            <div className="flex items-center justify-between p-3 bg-gray-50 rounded-xl">
+   948→              <div className="flex items-center gap-3">
+   949→                <div className="w-8 h-8 bg-emerald-100 rounded-lg flex items-center justify-center"><span className="text-sm">📱</span></div>
+   950→                <div>
+   951→                  <p className="text-sm font-medium">About</p>
+   952→                  <p className="text-xs text-gray-500">ExamPrep Bharat v1.0</p>
+   953→                </div>
+   954→              </div>
+   955→              <ChevronRight className="w-4 h-4 text-gray-400" />
+   956→            </div>
+   957→          </CardContent>
+   958→        </Card>
+   959→
+   960→        {/* Login Card */}
+   961→        <Card className="border-0 shadow-sm bg-gradient-to-r from-orange-500 to-red-500 text-white">
+   962→          <CardContent className="p-4 text-center">
+   963→            <p className="font-semibold">Login to save your progress</p>
+   964→            <p className="text-sm text-orange-100 mb-3">Track your scores across devices</p>
+   965→            <Button variant="outline" className="bg-white text-orange-600 hover:bg-orange-50 rounded-xl">
+   966→              Login with Phone
+   967→            </Button>
+   968→          </CardContent>
+   969→        </Card>
+   970→      </div>
+   971→    </div>
+   972→  )
+   973→
+   974→  // MAIN RENDER
+   975→  switch (page) {
+   976→    case 'home': return renderHome()
+   977→    case 'exams': return renderExams()
+   978→    case 'tests': return renderTests()
+   979→    case 'test-info': return renderTestInfo()
+   980→    case 'test-taking': return renderTestTaking()
+   981→    case 'results': return renderResults()
+   982→    case 'leaderboard': return renderLeaderboard()
+   983→    case 'profile': return renderProfile()
+   984→    default: return renderHome()
+   985→  }
+   986→}
+   987→
+   988→function Crown({ className }: { className?: string }) {
+   989→  return (
+   990→    <svg className={className} viewBox="0 0 24 24" fill="currentColor">
+   991→      <path d="M2 17l2-9 5 4 3-8 3 8 5-4 2 9H2z"/>
+   992→    </svg>
+   993→  )
+   994→}
+   995→

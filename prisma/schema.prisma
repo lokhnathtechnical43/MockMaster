@@ -1,0 +1,119 @@
+// This is your Prisma schema file for ExamPrep Bharat
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model ExamCategory {
+  id          String   @id @default(cuid())
+  name        String
+  slug        String   @unique
+  icon        String?
+  description String?
+  order       Int      @default(0)
+  active      Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  exams       Exam[]
+}
+
+model Exam {
+  id           String       @id @default(cuid())
+  name         String
+  slug         String       @unique
+  categoryId   String
+  category     ExamCategory @relation(fields: [categoryId], references: [id])
+  description  String?
+  totalQuestions Int?
+  duration     Int?         // in minutes
+  markingScheme String?     // e.g. "+1,-0.25"
+  language     String       @default("en")
+  active       Boolean      @default(true)
+  order        Int          @default(0)
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+  tests        Test[]
+}
+
+model Test {
+  id           String     @id @default(cuid())
+  title        String
+  slug         String     @unique
+  examId       String
+  exam         Exam       @relation(fields: [examId], references: [id])
+  description  String?
+  totalQuestions Int
+  duration     Int        // in minutes
+  markingCorrect Float    @default(1.0)
+  markingWrong  Float     @default(0.0)   // negative marking
+  markingSkipped Float    @default(0.0)
+  difficulty   String     @default("mixed") // easy, medium, hard, mixed
+  isFree       Boolean    @default(true)
+  isLive       Boolean    @default(false)
+  liveStartAt  DateTime?
+  liveEndAt    DateTime?
+  active       Boolean    @default(true)
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+  questions    Question[]
+  results      TestResult[]
+}
+
+model Question {
+  id          String   @id @default(cuid())
+  testId      String
+  test        Test     @relation(fields: [testId], references: [id])
+  questionText String
+  questionImage String?
+  optionA     String
+  optionB     String
+  optionC     String
+  optionD     String
+  correctAnswer String  // "A", "B", "C", or "D"
+  explanation String?
+  subject     String?
+  topic       String?
+  difficulty  String   @default("medium")
+  order       Int      @default(0)
+  active      Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model User {
+  id          String   @id @default(cuid())
+  phone       String?  @unique
+  name        String?
+  email       String?
+  avatar      String?
+  language    String   @default("en")
+  targetExams String?  // comma-separated exam slugs
+  premium     Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  results     TestResult[]
+}
+
+model TestResult {
+  id            String   @id @default(cuid())
+  userId        String
+  user          User     @relation(fields: [userId], references: [id])
+  testId        String
+  test          Test     @relation(fields: [testId], references: [id])
+  totalQuestions Int
+  correctCount  Int
+  wrongCount    Int
+  skippedCount  Int
+  score         Float
+  maxScore      Float
+  timeTaken     Int      // in seconds
+  answers       String   // JSON string: {"q1":"A","q2":"C","q3":"skip",...}
+  rank          Int?
+  completedAt   DateTime @default(now())
+  createdAt     DateTime @default(now())
+}
