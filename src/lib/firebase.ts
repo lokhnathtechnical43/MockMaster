@@ -8,21 +8,16 @@ import { getStorage } from "firebase/storage";
 // ============================================================
 // Config values are loaded from .env.local (NEXT_PUBLIC_ prefix)
 // This keeps your API keys out of source code.
-//
-// Setup:
-//   1. Go to https://console.firebase.google.com
-//   2. Create project → Add Web App → Copy config
-//   3. Paste values in .env.local (see .env.local.example)
 // ============================================================
 
 const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY || "",
   authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN || "",
+  databaseURL: process.env.NEXT_PUBLIC_FIREBASE_DATABASE_URL || "",
   projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || "",
   storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET || "",
   messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID || "",
   appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID || "",
-  measurementId: process.env.NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID || "",
 };
 
 // Check if Firebase config is available
@@ -37,7 +32,6 @@ if (isFirebaseConfigured) {
     "[Firebase] No configuration found. Add your Firebase config to .env.local. " +
     "The app will use localStorage fallback mode."
   );
-  // Create a dummy app reference that won't crash
   app = null;
 }
 
