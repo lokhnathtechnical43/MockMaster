@@ -1951,97 +1951,6 @@ export default function ExamPrepApp() {
           <p className="text-center text-gray-300 text-[10px] pt-2 pb-4">{_t('app.versionFull')}</p>
         </div>
 
-        {/* Language Sheet */}
-        {showLanguageSheet && (
-          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[110] flex items-end justify-center" onClick={() => setShowLanguageSheet(false)}>
-            <div className="bg-white rounded-t-[28px] w-full p-6 animate-slide-up" onClick={e => e.stopPropagation()}>
-              <div className="w-10 h-1 rounded-full bg-gray-200 mx-auto mb-5" />
-              <h3 className="font-bold text-lg mb-4">{_t('lang.select')}</h3>
-              <div className="space-y-1">
-                {[
-                  { code: 'en', name: _t('lang.english'), flag: '🇬🇧', available: true },
-                  { code: 'hi', name: _t('lang.hindi'), flag: '🇮🇳', available: true },
-                  { code: 'bn', name: _t('lang.bangla'), flag: '🇧🇩', available: true },
-                ].map(lang => (
-                  <button
-                    key={lang.code}
-                    className={`w-full flex items-center gap-3 p-4 rounded-xl transition-colors ${
-                      lang.available ? 'hover:bg-gray-50 active:bg-gray-100' : 'opacity-50'
-                    }`}
-                    onClick={() => {
-                      if (lang.available) {
-                        setSelectedLanguage(lang.code)
-                        setShowLanguageSheet(false)
-                      }
-                    }}
-                    onTouchEnd={(e) => {
-                      if (lang.available) {
-                        e.preventDefault()
-                        setSelectedLanguage(lang.code)
-                        setShowLanguageSheet(false)
-                      }
-                    }}
-                  >
-                    <span className="text-xl">{lang.flag}</span>
-                    <span className="font-medium text-sm flex-1">{lang.name}</span>
-                    {!lang.available && <Badge variant="secondary" className="text-[10px]">{_t('lang.comingSoon')}</Badge>}
-                    {selectedLanguage === lang.code && (
-                      <div className="w-6 h-6 rounded-full bg-orange-500 flex items-center justify-center">
-                        <CheckCircle2 className="w-4 h-4 text-white" />
-                      </div>
-                    )}
-                  </button>
-                ))}
-              </div>
-              <Button
-                variant="outline"
-                className="w-full mt-5 rounded-xl h-11"
-                onClick={() => setShowLanguageSheet(false)}
-              >
-                {_t('lang.cancel')}
-              </Button>
-            </div>
-          </div>
-        )}
-
-        {/* About Sheet */}
-        {showAboutSheet && (
-          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[110] flex items-end justify-center" onClick={() => setShowAboutSheet(false)}>
-            <div className="bg-white rounded-t-[28px] w-full p-6 animate-slide-up" onClick={e => e.stopPropagation()}>
-              <div className="w-10 h-1 rounded-full bg-gray-200 mx-auto mb-5" />
-              <div className="text-center mb-5">
-                <div className="w-16 h-16 bg-gradient-to-br from-orange-500 to-red-500 rounded-2xl flex items-center justify-center mx-auto mb-3 shadow-lg shadow-orange-500/20">
-                  <span className="text-white text-2xl font-bold">E</span>
-                </div>
-                <h3 className="font-bold text-lg">{_t('app.name')}</h3>
-                <p className="text-gray-400 text-sm">{_t('app.version')}</p>
-              </div>
-              <div className="space-y-2">
-                {[
-                  { label: _t('about.version'), value: '1.0' },
-                  { label: _t('about.size'), value: '~5 MB' },
-                  { label: _t('about.exams'), value: '21+' },
-                  { label: _t('about.questions'), value: '210+' },
-                  { label: _t('about.offline'), value: _t('about.yes'), green: true },
-                  { label: _t('about.ads'), value: _t('about.no'), green: true },
-                ].map(item => (
-                  <div key={item.label} className="flex justify-between text-sm p-3 bg-gray-50 rounded-xl">
-                    <span className="text-gray-500">{item.label}</span>
-                    <span className={`font-medium ${item.green ? 'text-emerald-600' : ''}`}>{item.value}</span>
-                  </div>
-                ))}
-              </div>
-              <p className="text-center text-sm text-gray-400 mt-5">{_t('app.madeIn')}</p>
-              <Button
-                variant="outline"
-                className="w-full mt-4 rounded-xl h-11"
-                onClick={() => setShowAboutSheet(false)}
-              >
-                {_t('about.close')}
-              </Button>
-            </div>
-          </div>
-        )}
       </div>
     )
   }
@@ -2260,6 +2169,98 @@ export default function ExamPrepApp() {
                 </button>
               )}
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Language Sheet - Global */}
+      {showLanguageSheet && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[110] flex items-end justify-center" onClick={() => setShowLanguageSheet(false)}>
+          <div className="bg-white rounded-t-[28px] w-full p-6 animate-slide-up" onClick={e => e.stopPropagation()}>
+            <div className="w-10 h-1 rounded-full bg-gray-200 mx-auto mb-5" />
+            <h3 className="font-bold text-lg mb-4">{_t('lang.select')}</h3>
+            <div className="space-y-1">
+              {[
+                { code: 'en', name: _t('lang.english'), flag: '🇬🇧', available: true },
+                { code: 'hi', name: _t('lang.hindi'), flag: '🇮🇳', available: true },
+                { code: 'bn', name: _t('lang.bangla'), flag: '🇧🇩', available: true },
+              ].map(lang => (
+                <button
+                  key={lang.code}
+                  className={`w-full flex items-center gap-3 p-4 rounded-xl transition-colors ${
+                    lang.available ? 'hover:bg-gray-50 active:bg-gray-100' : 'opacity-50'
+                  }`}
+                  onClick={() => {
+                    if (lang.available) {
+                      setSelectedLanguage(lang.code)
+                      setShowLanguageSheet(false)
+                    }
+                  }}
+                  onTouchEnd={(e) => {
+                    if (lang.available) {
+                      e.preventDefault()
+                      setSelectedLanguage(lang.code)
+                      setShowLanguageSheet(false)
+                    }
+                  }}
+                >
+                  <span className="text-xl">{lang.flag}</span>
+                  <span className="font-medium text-sm flex-1">{lang.name}</span>
+                  {!lang.available && <Badge variant="secondary" className="text-[10px]">{_t('lang.comingSoon')}</Badge>}
+                  {selectedLanguage === lang.code && (
+                    <div className="w-6 h-6 rounded-full bg-orange-500 flex items-center justify-center">
+                      <CheckCircle2 className="w-4 h-4 text-white" />
+                    </div>
+                  )}
+                </button>
+              ))}
+            </div>
+            <Button
+              variant="outline"
+              className="w-full mt-5 rounded-xl h-11"
+              onClick={() => setShowLanguageSheet(false)}
+            >
+              {_t('lang.cancel')}
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {/* About Sheet - Global */}
+      {showAboutSheet && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[110] flex items-end justify-center" onClick={() => setShowAboutSheet(false)}>
+          <div className="bg-white rounded-t-[28px] w-full p-6 animate-slide-up" onClick={e => e.stopPropagation()}>
+            <div className="w-10 h-1 rounded-full bg-gray-200 mx-auto mb-5" />
+            <div className="text-center mb-5">
+              <div className="w-16 h-16 bg-gradient-to-br from-orange-500 to-red-500 rounded-2xl flex items-center justify-center mx-auto mb-3 shadow-lg shadow-orange-500/20">
+                <span className="text-white text-2xl font-bold">E</span>
+              </div>
+              <h3 className="font-bold text-lg">{_t('app.name')}</h3>
+              <p className="text-gray-400 text-sm">{_t('app.version')}</p>
+            </div>
+            <div className="space-y-2">
+              {[
+                { label: _t('about.version'), value: '1.0' },
+                { label: _t('about.size'), value: '~5 MB' },
+                { label: _t('about.exams'), value: '21+' },
+                { label: _t('about.questions'), value: '210+' },
+                { label: _t('about.offline'), value: _t('about.yes'), green: true },
+                { label: _t('about.ads'), value: _t('about.no'), green: true },
+              ].map(item => (
+                <div key={item.label} className="flex justify-between text-sm p-3 bg-gray-50 rounded-xl">
+                  <span className="text-gray-500">{item.label}</span>
+                  <span className={`font-medium ${item.green ? 'text-emerald-600' : ''}`}>{item.value}</span>
+                </div>
+              ))}
+            </div>
+            <p className="text-center text-sm text-gray-400 mt-5">{_t('app.madeIn')}</p>
+            <Button
+              variant="outline"
+              className="w-full mt-4 rounded-xl h-11"
+              onClick={() => setShowAboutSheet(false)}
+            >
+              {_t('about.close')}
+            </Button>
           </div>
         </div>
       )}
