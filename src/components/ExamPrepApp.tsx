@@ -134,6 +134,7 @@ export default function ExamPrepApp() {
   const timerRef = useRef<NodeJS.Timeout | null>(null)
   const carouselRef = useRef<HTMLDivElement | null>(null)
   const carouselTimerRef = useRef<NodeJS.Timeout | null>(null)
+  const sideMenuScrollRef = useRef<{ y: number; x: number; t: number; scrolled?: boolean } | null>(null)
 
   // --- Results ---
   const [lastResult, setLastResult] = useState<TestResult | null>(null)
@@ -3293,7 +3294,7 @@ export default function ExamPrepApp() {
             </div>
 
             {/* Menu Items */}
-            <div className="flex-1 overflow-y-auto py-3 px-3">
+            <div className="flex-1 overflow-y-auto py-3 px-3" onTouchStart={(e) => { sideMenuScrollRef.current = { y: e.touches[0].clientY, x: e.touches[0].clientX, t: Date.now() } }} onTouchMove={(e) => { if (sideMenuScrollRef.current) { const dy = Math.abs(e.touches[0].clientY - sideMenuScrollRef.current.y); const dx = Math.abs(e.touches[0].clientX - sideMenuScrollRef.current.x); if (dy > 8 || dx > 8) sideMenuScrollRef.current.scrolled = true } }} onTouchEnd={() => { setTimeout(() => { if (sideMenuScrollRef.current) sideMenuScrollRef.current.scrolled = false }, 50) }}>
               {/* Main Navigation */}
               <div className="mb-2">
                 <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest px-3 mb-2">{_t('menu.navigation')}</p>
@@ -3304,14 +3305,13 @@ export default function ExamPrepApp() {
                 ].map(item => (
                   <button
                     key={item.page}
-                    onClick={() => { handleBottomNav(item.page); setShowSideMenu(false) }}
-                    onTouchEnd={(e) => { e.preventDefault(); handleBottomNav(item.page); setShowSideMenu(false) }}
+                    onClick={() => { if (!sideMenuScrollRef.current?.scrolled) { handleBottomNav(item.page); setShowSideMenu(false) } }}
                     className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200 mb-0.5 ${
                       item.active
                         ? `${item.activeBg} ${item.activeText} shadow-sm border border-white/60`
                         : 'text-gray-600 hover:bg-gray-50 active:bg-gray-100'
                     }`}
-                    style={{ touchAction: 'manipulation', WebkitTapHighlightColor: 'transparent' }}
+                    style={{ touchAction: 'pan-y', WebkitTapHighlightColor: 'transparent' }}
                   >
                     <div className={`w-8 h-8 rounded-lg flex items-center justify-center transition-all ${
                       item.active
@@ -3347,14 +3347,13 @@ export default function ExamPrepApp() {
                   return (
                     <button
                       key={i}
-                      onClick={() => { navigateTo(item.page); setShowSideMenu(false) }}
-                      onTouchEnd={(e) => { e.preventDefault(); navigateTo(item.page); setShowSideMenu(false) }}
+                      onClick={() => { if (!sideMenuScrollRef.current?.scrolled) { navigateTo(item.page); setShowSideMenu(false) } }}
                       className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200 mb-0.5 ${
                         isActive
                           ? `${item.lightBg} ${item.textColor} shadow-sm border border-white/60`
                           : 'text-gray-600 hover:bg-gray-50 active:bg-gray-100'
                       }`}
-                      style={{ touchAction: 'manipulation', WebkitTapHighlightColor: 'transparent' }}
+                      style={{ touchAction: 'pan-y', WebkitTapHighlightColor: 'transparent' }}
                     >
                       <div className={`w-8 h-8 rounded-lg flex items-center justify-center transition-all ${
                         isActive
@@ -3392,10 +3391,9 @@ export default function ExamPrepApp() {
                 ].map((item, i) => (
                   <button
                     key={i}
-                    onClick={() => { if (!item.soon) { setShowSideMenu(false); setTimeout(() => item.action(), 150) } }}
-                    onTouchEnd={(e) => { e.preventDefault(); if (!item.soon) { setShowSideMenu(false); setTimeout(() => item.action(), 150) } }}
+                    onClick={() => { if (!sideMenuScrollRef.current?.scrolled && !item.soon) { setShowSideMenu(false); setTimeout(() => item.action(), 150) } }}
                     className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200 mb-0.5 ${item.soon ? 'opacity-60' : 'text-gray-600 hover:bg-gray-50 active:bg-gray-100'}`}
-                    style={{ touchAction: 'manipulation', WebkitTapHighlightColor: 'transparent' }}
+                    style={{ touchAction: 'pan-y', WebkitTapHighlightColor: 'transparent' }}
                   >
                     <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${item.soon ? 'bg-gray-100' : item.lightBg}`}>
                       <item.icon className={`w-4 h-4 ${item.soon ? 'text-gray-300' : item.iconInactive}`} />
