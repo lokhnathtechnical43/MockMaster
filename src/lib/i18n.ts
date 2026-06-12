@@ -86,6 +86,18 @@ const translations: Record<Lang, Record<string, string>> = {
     'testTaking.noContinue': 'No, Continue Test',
     'testTaking.yesLeave': 'Yes, Leave Test',
 
+    // === Exit App ===
+    'exitApp.title': 'Exit App?',
+    'exitApp.message': 'Are you sure you want to exit MockMaster? You can always come back to continue your preparation.',
+    'exitApp.noStay': 'No, Stay',
+    'exitApp.yesExit': 'Yes, Exit',
+
+    // === Exam Page Warning ===
+    'examWarning.title': 'Going Back?',
+    'examWarning.message': 'You are about to leave this exam section. Your current progress on this page may not be saved. Do you still want to go back?',
+    'examWarning.stayHere': 'Stay Here',
+    'examWarning.goBack': 'Yes, Go Back',
+
     // === Results ===
     'results.greatJob': 'Great Job!',
     'results.keepPracticing': 'Keep Practicing!',
@@ -399,6 +411,18 @@ const translations: Record<Lang, Record<string, string>> = {
     'testTaking.noContinue': 'नहीं, टेस्ट जारी रखें',
     'testTaking.yesLeave': 'हां, टेस्ट छोड़ें',
 
+    // === Exit App ===
+    'exitApp.title': 'ऐप बंद करें?',
+    'exitApp.message': 'क्या आप वाकई MockMaster बंद करना चाहते हैं? आप हमेशा अपनी तैयारी जारी रखने वापस आ सकते हैं।',
+    'exitApp.noStay': 'नहीं, रुकें',
+    'exitApp.yesExit': 'हां, बंद करें',
+
+    // === Exam Page Warning ===
+    'examWarning.title': 'वापस जा रहे हैं?',
+    'examWarning.message': 'आप इस परीक्षा अनुभाग को छोड़ने वाले हैं। इस पेज की आपकी वर्तमान प्रगति सेव नहीं हो सकती। क्या आप अभी भी वापस जाना चाहते हैं?',
+    'examWarning.stayHere': 'यहीं रुकें',
+    'examWarning.goBack': 'हां, वापस जाएं',
+
     // === Results ===
     'results.greatJob': 'बहुत बढ़िया!',
     'results.keepPracticing': 'अभ्यास जारी रखें!',
@@ -711,6 +735,18 @@ const translations: Record<Lang, Record<string, string>> = {
     'testTaking.leaveMsg': 'আপনি এখন ছেড়ে গেলে আপনার অগ্রগতি হারিয়ে যাবে। দেওয়া উত্তরগুলি সেভ হবে না।',
     'testTaking.noContinue': 'না, টেস্ট চালিয়ে যান',
     'testTaking.yesLeave': 'হ্যাঁ, টেস্ট ছেড়ে যান',
+
+    // === Exit App ===
+    'exitApp.title': 'অ্যাপ থেকে বের হবেন?',
+    'exitApp.message': 'আপনি কি নিশ্চিত যে আপনি MockMaster থেকে বের হতে চান? আপনি যেকোনো সময় আপনার প্রস্তুতি চালিয়ে যেতে ফিরে আসতে পারেন।',
+    'exitApp.noStay': 'না, থাকুন',
+    'exitApp.yesExit': 'হ্যাঁ, বের হব',
+
+    // === Exam Page Warning ===
+    'examWarning.title': 'ফিরে যাচ্ছেন?',
+    'examWarning.message': 'আপনি এই পরীক্ষা বিভাগটি ছেড়ে যেতে চলেছেন। এই পৃষ্ঠার আপনার বর্তমান অগ্রগতি সেভ নাও হতে পারে। আপনি কি এখনও ফিরে যেতে চান?',
+    'examWarning.stayHere': 'এখানেই থাকুন',
+    'examWarning.goBack': 'হ্যাঁ, ফিরে যাব',
 
     // === Results ===
     'results.greatJob': 'চমৎকার!',

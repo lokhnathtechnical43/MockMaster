@@ -150,6 +150,8 @@ export default function ExamPrepApp() {
   const [showQuestionNav, setShowQuestionNav] = useState(false)
   const [showSideMenu, setShowSideMenu] = useState(false)
   const [showNotificationPanel, setShowNotificationPanel] = useState(false)
+  const [showExitConfirm, setShowExitConfirm] = useState(false)
+  const [showExamPageWarning, setShowExamPageWarning] = useState(false)
 
   // --- Splash Screen ---
   const [showSplash, setShowSplash] = useState(true)
@@ -331,6 +333,16 @@ export default function ExamPrepApp() {
 
   // --- Handle mobile back button (Capacitor + Browser) ---
   const handleBackButton = useCallback(() => {
+    // If exit confirmation is showing, close it
+    if (showExitConfirm) {
+      setShowExitConfirm(false)
+      return
+    }
+    // If exam page warning is showing, close it
+    if (showExamPageWarning) {
+      setShowExamPageWarning(false)
+      return
+    }
     // If back confirmation is showing, close it
     if (showBackConfirm) {
       setShowBackConfirm(false)
@@ -376,9 +388,14 @@ export default function ExamPrepApp() {
       setShowBackConfirm(true)
       return
     }
-    // If on home page, minimize app (Android)
+    // If on exam/test pages, show warning before going back
+    if (['tests', 'test-info', 'practice', 'your-exam', 'prev-papers'].includes(currentPage)) {
+      setShowExamPageWarning(true)
+      return
+    }
+    // If on home page, show exit confirmation instead of directly exiting
     if (currentPage === 'home') {
-      App.exitApp?.()
+      setShowExitConfirm(true)
       return
     }
     // Otherwise go back
@@ -387,7 +404,7 @@ export default function ExamPrepApp() {
     } else {
       setCurrentPage('home')
     }
-  }, [currentPage, testActive, showBackConfirm, showSideMenu, showQuestionNav, showLoginModal, showLanguageSheet, showAboutSheet, goBack])
+  }, [currentPage, testActive, showBackConfirm, showExitConfirm, showExamPageWarning, showSideMenu, showQuestionNav, showLoginModal, showLanguageSheet, showAboutSheet, goBack])
 
   // Capacitor hardware back button
   useEffect(() => {
@@ -3121,6 +3138,80 @@ export default function ExamPrepApp() {
 
       {renderPage()}
       {renderBottomNav()}
+
+      {/* ===== Exit App Confirmation Dialog ===== */}
+      {showExitConfirm && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[150] flex items-center justify-center p-5">
+          <div className="bg-white rounded-3xl w-full max-w-sm shadow-2xl overflow-hidden animate-scale-in">
+            <div className="p-6 pb-4 text-center">
+              <div className="w-16 h-16 rounded-full bg-gradient-to-br from-orange-100 to-orange-50 flex items-center justify-center mx-auto mb-4">
+                <LogOut className="w-8 h-8 text-orange-500" />
+              </div>
+              <h3 className="font-bold text-xl text-gray-900">{_t('exitApp.title')}</h3>
+              <p className="text-gray-500 text-sm mt-2 leading-relaxed">
+                {_t('exitApp.message')}
+              </p>
+            </div>
+            <div className="px-6 pb-6 space-y-2.5">
+              <Button
+                className="w-full h-11 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-xl font-semibold text-sm"
+                onClick={() => setShowExitConfirm(false)}
+              >
+                {_t('exitApp.noStay')}
+              </Button>
+              <Button
+                variant="outline"
+                className="w-full h-11 rounded-xl border-gray-200 text-gray-600 hover:bg-red-50 hover:text-red-600 hover:border-red-200 font-semibold text-sm"
+                onClick={() => {
+                  setShowExitConfirm(false)
+                  App.exitApp?.()
+                }}
+              >
+                {_t('exitApp.yesExit')}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ===== Exam Page Back Warning Dialog ===== */}
+      {showExamPageWarning && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[150] flex items-center justify-center p-5">
+          <div className="bg-white rounded-3xl w-full max-w-sm shadow-2xl overflow-hidden animate-scale-in">
+            <div className="p-6 pb-4 text-center">
+              <div className="w-16 h-16 rounded-full bg-gradient-to-br from-amber-100 to-yellow-50 flex items-center justify-center mx-auto mb-4">
+                <AlertTriangle className="w-8 h-8 text-amber-500" />
+              </div>
+              <h3 className="font-bold text-xl text-gray-900">{_t('examWarning.title')}</h3>
+              <p className="text-gray-500 text-sm mt-2 leading-relaxed">
+                {_t('examWarning.message')}
+              </p>
+            </div>
+            <div className="px-6 pb-6 space-y-2.5">
+              <Button
+                className="w-full h-11 bg-gradient-to-r from-emerald-500 to-emerald-600 text-white rounded-xl font-semibold text-sm"
+                onClick={() => setShowExamPageWarning(false)}
+              >
+                {_t('examWarning.stayHere')}
+              </Button>
+              <Button
+                variant="outline"
+                className="w-full h-11 rounded-xl border-gray-200 text-gray-600 hover:bg-amber-50 hover:text-amber-600 hover:border-amber-200 font-semibold text-sm"
+                onClick={() => {
+                  setShowExamPageWarning(false)
+                  if (pageHistoryRef.current.length > 0) {
+                    goBack()
+                  } else {
+                    setCurrentPage('home')
+                  }
+                }}
+              >
+                {_t('examWarning.goBack')}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ===== Side Menu Drawer ===== */}
       {showSideMenu && (
