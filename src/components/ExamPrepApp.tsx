@@ -16,7 +16,8 @@ import {
   LogOut, Loader2, Phone, AlertTriangle, Settings, Bell,
   ChevronDown, Star, Flame, TrendingUp, Calendar, Gift,
   HelpCircle, Share2, MessageCircle, Lock, Crown, Edit3,
-  Eye, EyeOff, Menu, BookmarkPlus, Download, Wifi, WifiOff, BarChart3
+  Eye, EyeOff, Menu, BookmarkPlus, Download, Wifi, WifiOff, BarChart3,
+  ClipboardList, PenTool
 } from 'lucide-react'
 import {
   getCategories, getTestsByExam, getTestById, saveResult, getLeaderboard,
@@ -27,7 +28,7 @@ import LoginModal from '@/components/LoginModal'
 import { App } from '@capacitor/app'
 
 // ===== Types =====
-type Page = 'home' | 'exams' | 'tests' | 'test-info' | 'test-taking' | 'results' | 'leaderboard' | 'profile'
+type Page = 'home' | 'exams' | 'tests' | 'test-info' | 'test-taking' | 'results' | 'leaderboard' | 'profile' | 'practice'
 
 interface CategoryColor {
   bg: string
@@ -121,6 +122,16 @@ export default function ExamPrepApp() {
     { id: '3', title: 'Weekly Maintenance Notice', message: 'App maintenance scheduled this Sunday 2AM-4AM. Some features may be temporarily unavailable.', time: '1d ago', read: true, type: 'alert' },
   ])
   const unreadCount = notifications.filter(n => !n.read).length
+
+  // --- Announcements (admin-managed moving ticker) ---
+  const [announcements] = useState<
+    { id: string; text: string; color: 'orange' | 'blue' | 'green' | 'red' }[]
+  >([
+    { id: '1', text: '🔥 SSC CGL 2025 New Mock Tests Added! Start practicing now!', color: 'orange' },
+    { id: '2', text: '📢 Banking PO MEGA test series launching this week!', color: 'blue' },
+    { id: '3', text: '🏆 Weekly leaderboard winners get special badges!', color: 'green' },
+    { id: '4', text: '⚡ Practice mode is now LIVE! Try topic-wise practice!', color: 'red' },
+  ])
 
   // --- Load categories on mount ---
   useEffect(() => {
@@ -520,8 +531,44 @@ export default function ExamPrepApp() {
           </div>
         )}
 
-        <div className="px-4 mt-6 space-y-6">
-          {/* Search / Quick Start */}
+        {/* Moving Announcements Ticker */}
+        <div className="mx-4 -mt-3 mb-2 relative z-30">
+          <div className="bg-gradient-to-r from-amber-50 to-orange-50 border border-orange-200/50 rounded-xl overflow-hidden">
+            <div className="flex items-center">
+              <div className="bg-orange-500 px-2 py-2 flex items-center flex-shrink-0">
+                <Flame className="w-4 h-4 text-white" />
+              </div>
+              <div className="overflow-hidden flex-1 py-2">
+                <div className="flex animate-marquee whitespace-nowrap">
+                  {announcements.map(a => (
+                    <span key={a.id} className={`mx-8 text-sm font-medium ${
+                      a.color === 'orange' ? 'text-orange-600' :
+                      a.color === 'blue' ? 'text-blue-600' :
+                      a.color === 'green' ? 'text-green-600' :
+                      'text-red-600'
+                    }`}>
+                      {a.text}
+                    </span>
+                  ))}
+                  {/* Duplicate for seamless loop */}
+                  {announcements.map(a => (
+                    <span key={`dup-${a.id}`} className={`mx-8 text-sm font-medium ${
+                      a.color === 'orange' ? 'text-orange-600' :
+                      a.color === 'blue' ? 'text-blue-600' :
+                      a.color === 'green' ? 'text-green-600' :
+                      'text-red-600'
+                    }`}>
+                      {a.text}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="px-4 mt-4 space-y-6">
+          {/* Quick Practice Card */}
           <Card className="border-0 shadow-md">
             <CardContent className="p-4">
               <div className="flex items-center gap-3">
@@ -584,7 +631,7 @@ export default function ExamPrepApp() {
             </div>
           </div>
 
-          {/* Recent Tests */}
+          {/* Popular Exams */}
           <div>
             <h2 className="font-bold text-lg mb-3">Popular Exams</h2>
             <div className="space-y-2">
@@ -609,6 +656,97 @@ export default function ExamPrepApp() {
                 ))
               )}
             </div>
+          </div>
+
+          {/* Daily Tips Section */}
+          <div>
+            <div className="flex items-center gap-2 mb-3">
+              <Star className="w-5 h-5 text-amber-500" />
+              <h2 className="font-bold text-lg">Daily Tips</h2>
+            </div>
+            <Card className="border-0 shadow-sm border-l-4 border-l-orange-400">
+              <CardContent className="p-4">
+                <p className="text-sm text-gray-700 leading-relaxed">💡 <strong>Pro Tip:</strong> Solve at least 50 questions daily from different topics. Consistency beats intensity in exam preparation!</p>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Upcoming Exams Section */}
+          <div>
+            <div className="flex items-center gap-2 mb-3">
+              <Calendar className="w-5 h-5 text-blue-500" />
+              <h2 className="font-bold text-lg">Upcoming Exams</h2>
+            </div>
+            <div className="space-y-2">
+              {[
+                { name: 'SSC CGL 2025 Tier-I', date: 'Jul 2025', status: 'Registration Open' },
+                { name: 'IBPS PO 2025 Prelims', date: 'Aug 2025', status: 'Coming Soon' },
+                { name: 'RRB NTPC CBT-2', date: 'Sep 2025', status: 'Admit Card Soon' },
+              ].map((exam, i) => (
+                <Card key={i} className="border-0 shadow-sm">
+                  <CardContent className="p-3 flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center">
+                      <Calendar className="w-5 h-5 text-blue-500" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-semibold text-sm truncate">{exam.name}</p>
+                      <p className="text-gray-400 text-xs">{exam.date}</p>
+                    </div>
+                    <Badge variant={exam.status === 'Registration Open' ? 'default' : 'secondary'} className={`text-[10px] ${
+                      exam.status === 'Registration Open' ? 'bg-green-100 text-green-700' :
+                      exam.status === 'Admit Card Soon' ? 'bg-amber-100 text-amber-700' :
+                      'bg-gray-100 text-gray-600'
+                    }`}>
+                      {exam.status}
+                    </Badge>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          </div>
+
+          {/* Study Stats / Motivation */}
+          <div>
+            <div className="flex items-center gap-2 mb-3">
+              <TrendingUp className="w-5 h-5 text-green-500" />
+              <h2 className="font-bold text-lg">Your Progress</h2>
+            </div>
+            {auth.isLoggedIn ? (
+              <div className="grid grid-cols-3 gap-2">
+                <Card className="border-0 shadow-sm">
+                  <CardContent className="p-3 text-center">
+                    <Flame className="w-6 h-6 text-orange-500 mx-auto mb-1" />
+                    <p className="font-bold text-lg">{stats.testsTaken}</p>
+                    <p className="text-gray-400 text-[10px]">Tests Done</p>
+                  </CardContent>
+                </Card>
+                <Card className="border-0 shadow-sm">
+                  <CardContent className="p-3 text-center">
+                    <Target className="w-6 h-6 text-green-500 mx-auto mb-1" />
+                    <p className="font-bold text-lg">{stats.avgScore}%</p>
+                    <p className="text-gray-400 text-[10px]">Accuracy</p>
+                  </CardContent>
+                </Card>
+                <Card className="border-0 shadow-sm">
+                  <CardContent className="p-3 text-center">
+                    <Award className="w-6 h-6 text-blue-500 mx-auto mb-1" />
+                    <p className="font-bold text-lg">#{stats.bestRank}</p>
+                    <p className="text-gray-400 text-[10px]">Best Rank</p>
+                  </CardContent>
+                </Card>
+              </div>
+            ) : (
+              <Card className="border-0 shadow-sm bg-gradient-to-r from-orange-50 to-red-50">
+                <CardContent className="p-4 text-center">
+                  <TrendingUp className="w-8 h-8 text-orange-400 mx-auto mb-2" />
+                  <p className="font-semibold text-sm text-gray-700">Login to track your progress</p>
+                  <p className="text-gray-500 text-xs mt-1 mb-3">See your scores, ranks and improvement over time</p>
+                  <Button size="sm" className="bg-gradient-to-r from-orange-500 to-red-500 text-white rounded-xl" onClick={() => setShowLoginModal(true)}>
+                    Login Now
+                  </Button>
+                </CardContent>
+              </Card>
+            )}
           </div>
         </div>
       </div>
@@ -1263,6 +1401,135 @@ export default function ExamPrepApp() {
     )
   }
 
+  // ===== RENDER: Practice Page =====
+  function renderPractice() {
+    return (
+      <div className="pb-20">
+        <div className="bg-gradient-to-r from-orange-500 to-red-500 px-4 pt-[calc(env(safe-area-inset-top,0px)+3rem)] pb-6 rounded-b-3xl">
+          <div className="flex items-center gap-3 mb-2">
+            <button onClick={goBack} className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center">
+              <ArrowLeft className="w-5 h-5 text-white" />
+            </button>
+            <div>
+              <h1 className="text-white text-xl font-bold">Practice</h1>
+              <p className="text-orange-100 text-xs">Topic-wise practice sessions</p>
+            </div>
+          </div>
+        </div>
+
+        <div className="px-4 mt-4 space-y-4">
+          {/* Practice Mode Selection */}
+          <div>
+            <h2 className="font-bold text-lg mb-3">Choose Practice Mode</h2>
+            <div className="grid grid-cols-2 gap-3">
+              <Card className="border-0 shadow-sm cursor-pointer hover:shadow-md transition-shadow" onClick={() => {
+                const allCats = getCategories()
+                const allExams = allCats.flatMap(c => c.exams)
+                if (allExams.length > 0) {
+                  const randomExam = allExams[Math.floor(Math.random() * allExams.length)]
+                  const randomCat = allCats.find(c => c.exams.some(e => e.id === randomExam.id))!
+                  openExam(randomExam, randomCat)
+                }
+              }}>
+                <CardContent className="p-4 text-center">
+                  <div className="w-12 h-12 rounded-2xl bg-orange-50 flex items-center justify-center mx-auto mb-2">
+                    <Zap className="w-6 h-6 text-orange-500" />
+                  </div>
+                  <p className="font-semibold text-sm">Quick Practice</p>
+                  <p className="text-gray-400 text-[11px] mt-1">Random questions</p>
+                </CardContent>
+              </Card>
+              <Card className="border-0 shadow-sm cursor-pointer hover:shadow-md transition-shadow">
+                <CardContent className="p-4 text-center">
+                  <div className="w-12 h-12 rounded-2xl bg-blue-50 flex items-center justify-center mx-auto mb-2">
+                    <Target className="w-6 h-6 text-blue-500" />
+                  </div>
+                  <p className="font-semibold text-sm">Topic Wise</p>
+                  <p className="text-gray-400 text-[11px] mt-1">Pick a subject</p>
+                </CardContent>
+              </Card>
+              <Card className="border-0 shadow-sm cursor-pointer hover:shadow-md transition-shadow">
+                <CardContent className="p-4 text-center">
+                  <div className="w-12 h-12 rounded-2xl bg-green-50 flex items-center justify-center mx-auto mb-2">
+                    <BookMarked className="w-6 h-6 text-green-500" />
+                  </div>
+                  <p className="font-semibold text-sm">Bookmarked</p>
+                  <p className="text-gray-400 text-[11px] mt-1">Saved questions</p>
+                </CardContent>
+              </Card>
+              <Card className="border-0 shadow-sm cursor-pointer hover:shadow-md transition-shadow">
+                <CardContent className="p-4 text-center">
+                  <div className="w-12 h-12 rounded-2xl bg-purple-50 flex items-center justify-center mx-auto mb-2">
+                    <PenTool className="w-6 h-6 text-purple-500" />
+                  </div>
+                  <p className="font-semibold text-sm">Weak Areas</p>
+                  <p className="text-gray-400 text-[11px] mt-1">Improve scores</p>
+                </CardContent>
+              </Card>
+            </div>
+          </div>
+
+          {/* Practice by Category */}
+          <div>
+            <h2 className="font-bold text-lg mb-3">Practice by Category</h2>
+            <div className="space-y-2">
+              {categories.map(cat => {
+                const color = getCatColor(cat.slug)
+                const totalQs = cat.exams.reduce((sum, e) => sum + e.totalQuestions, 0)
+                return (
+                  <Card
+                    key={cat.id}
+                    className="border-0 shadow-sm cursor-pointer hover:shadow-md transition-shadow"
+                    onClick={() => {
+                      setSelectedCategory(cat)
+                      handleBottomNav('exams')
+                    }}
+                  >
+                    <CardContent className="p-3 flex items-center gap-3">
+                      <div className={`w-10 h-10 rounded-xl ${color.light} flex items-center justify-center ${color.text}`}>
+                        {getCatIcon(cat.slug)}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-semibold text-sm">{cat.name}</p>
+                        <p className="text-gray-400 text-xs">{cat.exams.length} exams · {totalQs} questions</p>
+                      </div>
+                      <Button size="sm" variant="outline" className="rounded-xl text-orange-600 border-orange-200 text-xs">
+                        Start
+                      </Button>
+                    </CardContent>
+                  </Card>
+                )
+              })}
+            </div>
+          </div>
+
+          {/* Previous Practice Sessions */}
+          <div>
+            <h2 className="font-bold text-lg mb-3">Recent Practice</h2>
+            {auth.isLoggedIn ? (
+              <Card className="border-0 shadow-sm">
+                <CardContent className="p-4 text-center">
+                  <Clock className="w-8 h-8 text-gray-300 mx-auto mb-2" />
+                  <p className="text-gray-400 text-sm">Your practice history will appear here</p>
+                </CardContent>
+              </Card>
+            ) : (
+              <Card className="border-0 shadow-sm bg-gradient-to-r from-orange-50 to-red-50">
+                <CardContent className="p-4 text-center">
+                  <PenTool className="w-8 h-8 text-orange-400 mx-auto mb-2" />
+                  <p className="font-semibold text-sm text-gray-700">Login to save practice history</p>
+                  <Button size="sm" className="bg-gradient-to-r from-orange-500 to-red-500 text-white rounded-xl mt-2" onClick={() => setShowLoginModal(true)}>
+                    Login Now
+                  </Button>
+                </CardContent>
+              </Card>
+            )}
+          </div>
+        </div>
+      </div>
+    )
+  }
+
   // ===== RENDER: Profile Page =====
   function renderProfile() {
     const stats = getUserStats()
@@ -1602,14 +1869,14 @@ export default function ExamPrepApp() {
 
   // ===== RENDER: Bottom Navigation =====
   function renderBottomNav() {
-    const pages: Page[] = ['home', 'exams', 'leaderboard', 'profile']
+    const pages: Page[] = ['home', 'practice', 'tests', 'leaderboard']
     if (!pages.includes(currentPage)) return null
 
     const navItems = [
       { page: 'home' as Page, icon: Home, label: 'Home' },
-      { page: 'exams' as Page, icon: BookOpen, label: 'Exams' },
+      { page: 'practice' as Page, icon: Zap, label: 'Practice' },
+      { page: 'tests' as Page, icon: ClipboardList, label: 'Tests' },
       { page: 'leaderboard' as Page, icon: Trophy, label: 'Ranks' },
-      { page: 'profile' as Page, icon: User, label: 'Profile' },
     ]
 
     return (
@@ -1654,6 +1921,7 @@ export default function ExamPrepApp() {
       case 'results': return renderResults()
       case 'leaderboard': return renderLeaderboard()
       case 'profile': return renderProfile()
+      case 'practice': return renderPractice()
       default: return renderHome()
     }
   }

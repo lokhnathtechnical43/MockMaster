@@ -197,6 +197,20 @@
   padding-bottom: env(safe-area-inset-bottom, 0px);
 }
 
+/* Marquee ticker animation */
+@keyframes marquee {
+  0% {
+    transform: translateX(0%);
+  }
+  100% {
+    transform: translateX(-50%);
+  }
+}
+
+.animate-marquee {
+  animation: marquee 20s linear infinite;
+}
+
 /* Full width utility for mobile app */
 .min-h-dvh {
   min-height: 100dvh;
