@@ -3225,21 +3225,17 @@ export default function ExamPrepApp() {
           />
           {/* Drawer Panel */}
           <div className="absolute left-0 top-0 bottom-0 w-[280px] bg-white shadow-2xl flex flex-col" style={{ touchAction: 'manipulation' }}>
-            {/* Drawer Header */}
-            <div className="bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 px-5 pt-[calc(env(safe-area-inset-top,0px)+1.25rem)] pb-6 relative overflow-hidden">
-              {/* Decorative circles */}
-              <div className="absolute -top-6 -right-6 w-24 h-24 bg-orange-500/10 rounded-full blur-xl" />
-              <div className="absolute bottom-0 left-0 w-16 h-16 bg-blue-500/10 rounded-full blur-lg" />
-              <div className="flex items-center justify-between mb-5 relative z-10">
-                <div className="flex items-center gap-3">
-                  <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-orange-400 to-rose-500 flex items-center justify-center shadow-lg shadow-orange-500/30">
-                    <img src="/logo.png" alt="M" className="w-7 h-7 rounded-lg" />
-                  </div>
-                  <div>
-                    <p className="text-white font-extrabold text-[15px] tracking-tight">{_t('app.name')}</p>
-                    <p className="text-white/30 text-[10px] font-medium">{_t('app.partner')}</p>
-                  </div>
-                </div>
+            {/* Drawer Header - Premium Profile Card */}
+            <div className="relative px-5 pt-[calc(env(safe-area-inset-top,0px)+1.25rem)] pb-6 overflow-hidden" style={{ background: 'linear-gradient(135deg, #0f0c29 0%, #302b63 50%, #24243e 100%)' }}>
+              {/* Animated decorative elements */}
+              <div className="absolute -top-8 -right-8 w-32 h-32 rounded-full" style={{ background: 'radial-gradient(circle, rgba(251,146,60,0.2) 0%, transparent 70%)' }} />
+              <div className="absolute top-1/2 -left-4 w-24 h-24 rounded-full" style={{ background: 'radial-gradient(circle, rgba(139,92,246,0.15) 0%, transparent 70%)' }} />
+              <div className="absolute bottom-0 right-1/4 w-20 h-20 rounded-full" style={{ background: 'radial-gradient(circle, rgba(59,130,246,0.12) 0%, transparent 70%)' }} />
+              {/* Shimmer overlay */}
+              <div className="absolute inset-0 opacity-20" style={{ background: 'linear-gradient(105deg, transparent 40%, rgba(255,255,255,0.1) 45%, rgba(255,255,255,0.05) 50%, transparent 55%)' }} />
+
+              {/* Close button */}
+              <div className="flex justify-end mb-3 relative z-10">
                 <button
                   onClick={() => setShowSideMenu(false)}
                   onTouchEnd={(e) => { e.preventDefault(); setShowSideMenu(false) }}
@@ -3249,18 +3245,62 @@ export default function ExamPrepApp() {
                   <X className="w-4 h-4 text-white/70" />
                 </button>
               </div>
-              {/* User greeting row */}
-              {auth.isLoggedIn && (
-                <div className="flex items-center gap-2 bg-white/10 backdrop-blur-sm rounded-xl px-3 py-2 relative z-10">
-                  <div className="w-8 h-8 rounded-full bg-gradient-to-br from-emerald-400 to-teal-500 flex items-center justify-center">
-                    <User className="w-4 h-4 text-white" />
+
+              {/* Profile Section - Clickable to go to Profile page */}
+              <button
+                onClick={() => { handleBottomNav('profile'); setShowSideMenu(false) }}
+                onTouchEnd={(e) => { e.preventDefault(); handleBottomNav('profile'); setShowSideMenu(false) }}
+                className="w-full relative z-10 text-left active:scale-[0.97] transition-transform"
+                style={{ touchAction: 'manipulation', WebkitTapHighlightColor: 'transparent' }}
+              >
+                {auth.isLoggedIn ? (
+                  <div className="flex flex-col items-center text-center">
+                    {/* Avatar */}
+                    <div className="relative mb-3">
+                      <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-orange-400 via-rose-500 to-purple-600 flex items-center justify-center shadow-xl shadow-orange-500/30 ring-2 ring-white/20">
+                        <User className="w-8 h-8 text-white" />
+                      </div>
+                      {/* Online badge */}
+                      <div className="absolute -bottom-0.5 -right-0.5 w-5 h-5 bg-emerald-400 rounded-full border-2 border-[#302b63] flex items-center justify-center">
+                        <CheckCircle2 className="w-3 h-3 text-white" />
+                      </div>
+                    </div>
+                    {/* User info */}
+                    <p className="text-white font-bold text-[15px] tracking-tight">{auth.user?.displayName || auth.user?.email?.split('@')[0] || 'Student'}</p>
+                    <p className="text-white/40 text-[11px] mt-0.5 truncate max-w-[200px]">{auth.user?.email || ''}</p>
+                    {/* View Profile badge */}
+                    <div className="mt-2.5 inline-flex items-center gap-1.5 bg-white/10 backdrop-blur-sm rounded-full px-3 py-1">
+                      <Edit3 className="w-3 h-3 text-orange-300" />
+                      <span className="text-[10px] font-semibold text-orange-300">{_t('menu.myProfile')}</span>
+                      <ChevronRight className="w-3 h-3 text-orange-300/60" />
+                    </div>
                   </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-white text-[12px] font-bold truncate">{auth.user?.displayName || auth.user?.email?.split('@')[0] || 'Student'}</p>
-                    <p className="text-white/40 text-[10px] truncate">{auth.user?.email || ''}</p>
+                ) : (
+                  <div className="flex flex-col items-center text-center">
+                    {/* Guest avatar */}
+                    <div className="relative mb-3">
+                      <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-slate-600 to-slate-700 flex items-center justify-center shadow-xl ring-2 ring-white/10">
+                        <User className="w-8 h-8 text-white/50" />
+                      </div>
+                    </div>
+                    <p className="text-white/70 font-bold text-[15px]">{_t('home.loginTrack')}</p>
+                    <p className="text-white/30 text-[11px] mt-0.5">{_t('home.loginTrackSub')}</p>
+                    {/* Login button */}
+                    <div className="mt-2.5 inline-flex items-center gap-1.5 bg-gradient-to-r from-orange-500 to-rose-500 rounded-full px-4 py-1.5 shadow-lg shadow-orange-500/30">
+                      <Mail className="w-3 h-3 text-white" />
+                      <span className="text-[11px] font-bold text-white">{_t('profile.login')}</span>
+                    </div>
                   </div>
+                )}
+              </button>
+
+              {/* App branding */}
+              <div className="flex items-center justify-center gap-2 mt-4 relative z-10">
+                <div className="w-5 h-5 rounded-md bg-gradient-to-br from-orange-400 to-rose-500 flex items-center justify-center">
+                  <img src="/logo.png" alt="M" className="w-3.5 h-3.5 rounded-sm" />
                 </div>
-              )}
+                <p className="text-white/30 text-[10px] font-medium tracking-wider">{_t('app.name')} • {_t('app.version')}</p>
+              </div>
             </div>
 
             {/* Menu Items */}
@@ -3272,7 +3312,6 @@ export default function ExamPrepApp() {
                   { icon: Home, label: _t('menu.home'), page: 'home' as Page, active: currentPage === 'home', color: 'from-orange-500 to-amber-500', lightBg: 'bg-orange-50', activeText: 'text-orange-700', activeBg: 'bg-gradient-to-r from-orange-50 to-amber-50', iconLight: 'text-orange-500' },
                   { icon: BookOpen, label: _t('menu.allExams'), page: 'exams' as Page, active: currentPage === 'exams', color: 'from-blue-500 to-indigo-500', lightBg: 'bg-blue-50', activeText: 'text-blue-700', activeBg: 'bg-gradient-to-r from-blue-50 to-indigo-50', iconLight: 'text-blue-500' },
                   { icon: Trophy, label: _t('menu.leaderboard'), page: 'leaderboard' as Page, active: currentPage === 'leaderboard', color: 'from-yellow-500 to-orange-500', lightBg: 'bg-yellow-50', activeText: 'text-yellow-700', activeBg: 'bg-gradient-to-r from-yellow-50 to-orange-50', iconLight: 'text-yellow-600' },
-                  { icon: User, label: _t('menu.myProfile'), page: 'profile' as Page, active: currentPage === 'profile', color: 'from-purple-500 to-pink-500', lightBg: 'bg-purple-50', activeText: 'text-purple-700', activeBg: 'bg-gradient-to-r from-purple-50 to-pink-50', iconLight: 'text-purple-500' },
                 ].map(item => (
                   <button
                     key={item.page}
