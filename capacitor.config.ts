@@ -1,8 +1,8 @@
 import type { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
-  appId: 'com.examprep.bharat',
-  appName: 'ExamPrep Bharat',
+  appId: 'com.mockmaster.app',
+  appName: 'MockMaster',
   webDir: 'out',
   server: {
     // No live-reload URL — use static files

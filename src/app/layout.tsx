@@ -9,15 +9,15 @@ const geistSans = Geist({
 });
 
 export const metadata: Metadata = {
-  title: "ExamPrep Bharat - Mock Tests for Indian Exams",
+  title: "MockMaster - Mock Tests for Competitive Exams",
   description: "Free mock tests for SSC, Banking, Railways, WBCS, CTET, Defence and more Indian competitive exams. Practice with real exam pattern questions.",
   keywords: ["mock test", "SSC CGL", "IBPS PO", "RRB NTPC", "WBCS", "CTET", "exam preparation", "India", "competitive exams"],
-  authors: [{ name: "ExamPrep Bharat" }],
+  authors: [{ name: "MockMaster" }],
   icons: {
     icon: "/favicon.ico",
   },
   openGraph: {
-    title: "ExamPrep Bharat - Mock Tests for Indian Exams",
+    title: "MockMaster - Mock Tests for Competitive Exams",
     description: "Free mock tests for all major Indian competitive exams",
     type: "website",
   },

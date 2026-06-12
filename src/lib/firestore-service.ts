@@ -1,4 +1,4 @@
-// Firestore Service Layer for ExamPrep Bharat
+// Firestore Service Layer for MockMaster
 // Provides full CRUD operations with offline fallback to local-data.ts
 
 import {

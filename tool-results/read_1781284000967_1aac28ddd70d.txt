@@ -20,7 +20,7 @@
     20→  DocumentData,
     21→  QueryConstraint,
     22→} from 'firebase/firestore'
-    23→import { db } from '@/lib/firebase'
+    23→import { db, isFirebaseReady } from '@/lib/firebase'
     24→import {
     25→  LocalExamCategory,
     26→  LocalExam,
@@ -210,7 +210,7 @@
    210→  firestoreFn: () => Promise<T>,
    211→  fallbackFn: () => T
    212→): Promise<T> {
-   213→  if (!useFirestore) {
+   213→  if (!useFirestore || !isFirebaseReady() || !db) {
    214→    return fallbackFn()
    215→  }
    216→  try {
@@ -1087,98 +1087,102 @@
   1087→ * Useful for initial setup.
   1088→ */
   1089→export async function seedFirestoreIfEmpty(): Promise<boolean> {
-  1090→  try {
-  1091→    const catSnap = await getDocs(collection(db, COLLECTIONS.categories))
-  1092→    if (catSnap.size > 0) return false // Already seeded
-  1093→
-  1094→    const batch = writeBatch(db)
-  1095→    const localCategories = getLocalCategories()
-  1096→
-  1097→    for (const cat of localCategories) {
-  1098→      // Add category document
-  1099→      const catRef = doc(collection(db, COLLECTIONS.categories))
-  1100→      batch.set(catRef, {
-  1101→        name: cat.name,
-  1102→        slug: cat.slug,
-  1103→        icon: cat.icon,
-  1104→        description: cat.description,
-  1105→        order: cat.order,
-  1106→      })
-  1107→
-  1108→      // Add exam documents for this category
-  1109→      for (const exam of cat.exams) {
-  1110→        const examRef = doc(collection(db, COLLECTIONS.exams))
-  1111→        batch.set(examRef, {
-  1112→          name: exam.name,
-  1113→          slug: exam.slug,
-  1114→          description: exam.description,
-  1115→          totalQuestions: exam.totalQuestions,
-  1116→          duration: exam.duration,
-  1117→          markingScheme: exam.markingScheme,
-  1118→          order: exam.order,
-  1119→          testCount: exam.testCount,
-  1120→          categoryId: catRef.id,
-  1121→        })
-  1122→      }
-  1123→    }
-  1124→
-  1125→    // Add all tests
-  1126→    for (const test of ALL_TESTS) {
-  1127→      const testRef = doc(collection(db, COLLECTIONS.tests))
-  1128→      batch.set(testRef, {
-  1129→        title: test.title,
-  1130→        slug: test.slug,
-  1131→        description: test.description,
-  1132→        totalQuestions: test.totalQuestions,
-  1133→        duration: test.duration,
-  1134→        markingCorrect: test.markingCorrect,
-  1135→        markingWrong: test.markingWrong,
-  1136→        markingSkipped: test.markingSkipped,
-  1137→        difficulty: test.difficulty,
-  1138→        isFree: test.isFree,
-  1139→        isLive: test.isLive,
-  1140→        examId: test.exam.id,
-  1141→        examName: test.exam.name,
-  1142→        examSlug: test.exam.slug,
-  1143→      })
-  1144→
-  1145→      // Add questions for this test
-  1146→      for (const q of test.questions) {
-  1147→        const qRef = doc(collection(db, COLLECTIONS.questions))
-  1148→        batch.set(qRef, {
-  1149→          questionText: q.questionText,
-  1150→          questionImage: q.questionImage,
-  1151→          optionA: q.optionA,
-  1152→          optionB: q.optionB,
-  1153→          optionC: q.optionC,
-  1154→          optionD: q.optionD,
-  1155→          correctAnswer: q.correctAnswer,
-  1156→          explanation: q.explanation,
-  1157→          subject: q.subject,
-  1158→          order: q.order,
-  1159→          testId: testRef.id,
-  1160→        })
-  1161→      }
-  1162→    }
-  1163→
-  1164→    // Seed default announcements
-  1165→    for (const ann of DEFAULT_ANNOUNCEMENTS) {
-  1166→      const annRef = doc(collection(db, COLLECTIONS.announcements))
-  1167→      batch.set(annRef, { ...ann, id: annRef.id })
-  1168→    }
-  1169→
-  1170→    // Seed default notifications
-  1171→    for (const notif of DEFAULT_NOTIFICATIONS) {
-  1172→      const notifRef = doc(collection(db, COLLECTIONS.notifications))
-  1173→      batch.set(notifRef, { ...notif, id: notifRef.id })
-  1174→    }
-  1175→
-  1176→    await batch.commit()
-  1177→    console.log('[Firestore] Database seeded successfully')
-  1178→    return true
-  1179→  } catch (error) {
-  1180→    console.error('[Firestore] Seed error:', error)
-  1181→    return false
-  1182→  }
-  1183→}
-  1184→
+  1090→  if (!db || !isFirebaseReady()) {
+  1091→    console.error('[Firestore] Cannot seed: Firebase is not configured. Add config to .env.local')
+  1092→    return false
+  1093→  }
+  1094→  try {
+  1095→    const catSnap = await getDocs(collection(db, COLLECTIONS.categories))
+  1096→    if (catSnap.size > 0) return false // Already seeded
+  1097→
+  1098→    const batch = writeBatch(db)
+  1099→    const localCategories = getLocalCategories()
+  1100→
+  1101→    for (const cat of localCategories) {
+  1102→      // Add category document
+  1103→      const catRef = doc(collection(db, COLLECTIONS.categories))
+  1104→      batch.set(catRef, {
+  1105→        name: cat.name,
+  1106→        slug: cat.slug,
+  1107→        icon: cat.icon,
+  1108→        description: cat.description,
+  1109→        order: cat.order,
+  1110→      })
+  1111→
+  1112→      // Add exam documents for this category
+  1113→      for (const exam of cat.exams) {
+  1114→        const examRef = doc(collection(db, COLLECTIONS.exams))
+  1115→        batch.set(examRef, {
+  1116→          name: exam.name,
+  1117→          slug: exam.slug,
+  1118→          description: exam.description,
+  1119→          totalQuestions: exam.totalQuestions,
+  1120→          duration: exam.duration,
+  1121→          markingScheme: exam.markingScheme,
+  1122→          order: exam.order,
+  1123→          testCount: exam.testCount,
+  1124→          categoryId: catRef.id,
+  1125→        })
+  1126→      }
+  1127→    }
+  1128→
+  1129→    // Add all tests
+  1130→    for (const test of ALL_TESTS) {
+  1131→      const testRef = doc(collection(db, COLLECTIONS.tests))
+  1132→      batch.set(testRef, {
+  1133→        title: test.title,
+  1134→        slug: test.slug,
+  1135→        description: test.description,
+  1136→        totalQuestions: test.totalQuestions,
+  1137→        duration: test.duration,
+  1138→        markingCorrect: test.markingCorrect,
+  1139→        markingWrong: test.markingWrong,
+  1140→        markingSkipped: test.markingSkipped,
+  1141→        difficulty: test.difficulty,
+  1142→        isFree: test.isFree,
+  1143→        isLive: test.isLive,
+  1144→        examId: test.exam.id,
+  1145→        examName: test.exam.name,
+  1146→        examSlug: test.exam.slug,
+  1147→      })
+  1148→
+  1149→      // Add questions for this test
+  1150→      for (const q of test.questions) {
+  1151→        const qRef = doc(collection(db, COLLECTIONS.questions))
+  1152→        batch.set(qRef, {
+  1153→          questionText: q.questionText,
+  1154→          questionImage: q.questionImage,
+  1155→          optionA: q.optionA,
+  1156→          optionB: q.optionB,
+  1157→          optionC: q.optionC,
+  1158→          optionD: q.optionD,
+  1159→          correctAnswer: q.correctAnswer,
+  1160→          explanation: q.explanation,
+  1161→          subject: q.subject,
+  1162→          order: q.order,
+  1163→          testId: testRef.id,
+  1164→        })
+  1165→      }
+  1166→    }
+  1167→
+  1168→    // Seed default announcements
+  1169→    for (const ann of DEFAULT_ANNOUNCEMENTS) {
+  1170→      const annRef = doc(collection(db, COLLECTIONS.announcements))
+  1171→      batch.set(annRef, { ...ann, id: annRef.id })
+  1172→    }
+  1173→
+  1174→    // Seed default notifications
+  1175→    for (const notif of DEFAULT_NOTIFICATIONS) {
+  1176→      const notifRef = doc(collection(db, COLLECTIONS.notifications))
+  1177→      batch.set(notifRef, { ...notif, id: notifRef.id })
+  1178→    }
+  1179→
+  1180→    await batch.commit()
+  1181→    console.log('[Firestore] Database seeded successfully')
+  1182→    return true
+  1183→  } catch (error) {
+  1184→    console.error('[Firestore] Seed error:', error)
+  1185→    return false
+  1186→  }
+  1187→}
+  1188→

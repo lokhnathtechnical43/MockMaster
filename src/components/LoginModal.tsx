@@ -53,16 +53,14 @@ export default function LoginModal({
             <button onClick={onClose} className="w-8 h-8 rounded-full hover:bg-gray-100 flex items-center justify-center">
               <ArrowLeft className="w-5 h-5" />
             </button>
-            <h2 className="text-lg font-bold">Login to ExamPrep Bharat</h2>
+            <h2 className="text-lg font-bold">Login to MockMaster</h2>
           </div>
 
           {mode === 'login' ? (
             /* Login Form */
             <div className="space-y-4">
               <div className="text-center mb-4">
-                <div className="w-16 h-16 bg-orange-100 rounded-full flex items-center justify-center mx-auto mb-3">
-                  <Mail className="w-8 h-8 text-orange-600" />
-                </div>
+                <img src="/logo.png" alt="MockMaster" className="w-16 h-16 rounded-2xl mx-auto mb-3" />
                 <p className="text-sm text-gray-600">Login with your email & password</p>
               </div>
 
@@ -165,9 +163,7 @@ export default function LoginModal({
             /* Sign Up Form */
             <div className="space-y-4">
               <div className="text-center mb-4">
-                <div className="w-16 h-16 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-3">
-                  <UserPlus className="w-8 h-8 text-emerald-600" />
-                </div>
+                <img src="/logo.png" alt="MockMaster" className="w-16 h-16 rounded-2xl mx-auto mb-3" />
                 <p className="text-sm text-gray-600">Create your free account</p>
               </div>
 

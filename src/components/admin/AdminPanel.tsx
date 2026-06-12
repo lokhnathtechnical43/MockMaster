@@ -79,11 +79,9 @@ export default function AdminPanel() {
         <div className="w-full max-w-sm relative z-10">
           {/* Logo */}
           <div className="text-center mb-8">
-            <div className="w-20 h-20 bg-gradient-to-br from-slate-700 to-slate-800 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-xl shadow-slate-900/50 border border-white/10">
-              <Shield className="w-10 h-10 text-orange-400" />
-            </div>
+            <img src="/logo.png" alt="MockMaster" className="w-20 h-20 rounded-2xl mx-auto mb-4 shadow-xl shadow-slate-900/50 border border-white/10" />
             <h1 className="text-white text-2xl font-bold">Admin Panel</h1>
-            <p className="text-slate-400 text-sm mt-1">ExamPrep Bharat Management</p>
+            <p className="text-slate-400 text-sm mt-1">MockMaster Management</p>
           </div>
 
           {/* Login Card */}
@@ -181,7 +179,7 @@ export default function AdminPanel() {
               <h1 className="text-white text-lg font-bold flex items-center gap-2">
                 <Shield className="w-5 h-5 text-orange-400" /> Admin Panel
               </h1>
-              <p className="text-slate-400 text-[11px]">ExamPrep Bharat Management</p>
+              <p className="text-slate-400 text-[11px]">MockMaster Management</p>
             </div>
             <button
               onClick={() => setAdminLoggedIn(false)}

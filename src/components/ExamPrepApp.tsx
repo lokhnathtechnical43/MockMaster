@@ -510,9 +510,12 @@ export default function ExamPrepApp() {
               >
                 <Menu className="w-5 h-5 text-white" />
               </button>
-              <div>
-                <h1 className="text-white text-base font-bold leading-tight">{_t('app.name')}</h1>
-                <p className="text-orange-100 text-[10px] leading-tight">{_t('app.subtitle')}</p>
+              <div className="flex items-center gap-2">
+                <img src="/logo.png" alt="MockMaster" className="w-7 h-7 rounded-lg" />
+                <div>
+                  <h1 className="text-white text-base font-bold leading-tight">{_t('app.name')}</h1>
+                  <p className="text-orange-100 text-[10px] leading-tight">{_t('app.subtitle')}</p>
+                </div>
               </div>
             </div>
 
@@ -2124,9 +2127,7 @@ export default function ExamPrepApp() {
             {/* Drawer Header */}
             <div className="bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 px-5 pt-[calc(env(safe-area-inset-top,0px)+1.5rem)] pb-5">
               <div className="flex items-center justify-between mb-4">
-                <div className="w-10 h-10 bg-gradient-to-br from-orange-400 to-red-500 rounded-xl flex items-center justify-center shadow-lg shadow-orange-500/20">
-                  <span className="text-white font-bold text-sm">E</span>
-                </div>
+                <img src="/logo.png" alt="MockMaster" className="w-10 h-10 rounded-xl shadow-lg shadow-orange-500/20" />
                 <button
                   onClick={() => setShowSideMenu(false)}
                   onTouchEnd={(e) => { e.preventDefault(); setShowSideMenu(false) }}

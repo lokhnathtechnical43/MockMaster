@@ -400,7 +400,7 @@ export default function SettingsTab() {
           </h3>
           <div className="space-y-2">
             {[
-              { label: 'App Name', value: 'ExamPrep Bharat' },
+              { label: 'App Name', value: 'MockMaster' },
               { label: 'Version', value: '2.0.0' },
               { label: 'Framework', value: 'Next.js 16' },
               { label: 'Firebase', value: firebaseConfigured ? 'Configured' : 'Not Configured' },

@@ -33,7 +33,7 @@ export const DEFAULT_ANNOUNCEMENTS: Announcement[] = [
 ]
 
 export const DEFAULT_NOTIFICATIONS: Notification[] = [
-  { id: '1', title: 'Welcome to ExamPrep Bharat!', message: 'Start your exam preparation journey today. Explore all available tests and practice mock exams.', time: 'Just now', read: false, type: 'info' },
+  { id: '1', title: 'Welcome to MockMaster!', message: 'Start your exam preparation journey today. Explore all available tests and practice mock exams.', time: 'Just now', read: false, type: 'info' },
   { id: '2', title: 'New SSC CGL Test Available', message: 'A new mock test for SSC CGL 2025 has been added. Try it now and check your preparation level!', time: '2h ago', read: false, type: 'update' },
   { id: '3', title: 'Weekly Maintenance Notice', message: 'App maintenance scheduled this Sunday 2AM-4AM. Some features may be temporarily unavailable.', time: '1d ago', read: true, type: 'alert' },
 ]

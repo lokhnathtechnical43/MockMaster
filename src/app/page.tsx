@@ -11,7 +11,7 @@ function AppError({ error, reset }: { error: string; reset: () => void }) {
         <div className="w-16 h-16 bg-gradient-to-r from-orange-500 to-red-500 rounded-2xl flex items-center justify-center mx-auto mb-4">
           <span className="text-white text-2xl font-bold">E</span>
         </div>
-        <h2 className="text-lg font-bold text-gray-800 mb-2">ExamPrep Bharat</h2>
+        <h2 className="text-lg font-bold text-gray-800 mb-2">MockMaster</h2>
         <p className="text-red-500 text-sm mb-4">{error || 'Something went wrong'}</p>
         <button
           onClick={reset}
@@ -33,7 +33,7 @@ const ExamPrepApp = dynamic(() => import('@/components/ExamPrepApp'), {
         <div className="w-16 h-16 bg-gradient-to-r from-orange-500 to-red-500 rounded-2xl flex items-center justify-center mx-auto mb-4 animate-pulse">
           <span className="text-white text-2xl font-bold">E</span>
         </div>
-        <p className="text-orange-600 font-semibold">ExamPrep Bharat</p>
+        <p className="text-orange-600 font-semibold">MockMaster</p>
         <p className="text-gray-400 text-sm mt-1">Loading...</p>
       </div>
     </div>

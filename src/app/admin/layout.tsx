@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Admin Panel - ExamPrep Bharat",
-  description: "Admin panel for managing ExamPrep Bharat content",
+  title: "Admin Panel - MockMaster",
+  description: "Admin panel for managing MockMaster content",
   robots: "noindex, nofollow", // Don't index admin pages
 };
 

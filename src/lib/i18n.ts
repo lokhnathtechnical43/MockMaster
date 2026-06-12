@@ -1,4 +1,4 @@
-// ===== i18n — Internationalization for ExamPrep Bharat =====
+// ===== i18n — Internationalization for MockMaster =====
 // Supports: English (en), Hindi (hi), Bangla (bn)
 
 export type Lang = 'en' | 'hi' | 'bn'
@@ -6,11 +6,11 @@ export type Lang = 'en' | 'hi' | 'bn'
 const translations: Record<Lang, Record<string, string>> = {
   en: {
     // === Header ===
-    'app.name': 'ExamPrep Bharat',
+    'app.name': 'MockMaster',
     'app.subtitle': 'Prepare for government exams',
     'app.partner': 'Your exam preparation partner',
     'app.version': 'Version 1.0',
-    'app.versionFull': 'ExamPrep Bharat v1.0',
+    'app.versionFull': 'MockMaster v1.0',
     'app.madeIn': 'Made with ❤️ in India',
 
     // === Home Page ===
@@ -206,17 +206,17 @@ const translations: Record<Lang, Record<string, string>> = {
     'upcoming.rrbNtpcStatus': 'Admit Card Soon',
 
     // === Share ===
-    'share.title': 'ExamPrep Bharat',
+    'share.title': 'MockMaster',
     'share.text': 'Prepare for government exams!',
   },
 
   hi: {
     // === Header ===
-    'app.name': 'ExamPrep Bharat',
+    'app.name': 'MockMaster',
     'app.subtitle': 'सरकारी परीक्षा की तैयारी करें',
     'app.partner': 'आपका परीक्षा तैयारी साथी',
     'app.version': 'संस्करण 1.0',
-    'app.versionFull': 'ExamPrep Bharat v1.0',
+    'app.versionFull': 'MockMaster v1.0',
     'app.madeIn': '❤️ भारत में बनाया गया',
 
     // === Home Page ===
@@ -412,17 +412,17 @@ const translations: Record<Lang, Record<string, string>> = {
     'upcoming.rrbNtpcStatus': 'प्रवेश पत्र जल्द',
 
     // === Share ===
-    'share.title': 'ExamPrep Bharat',
+    'share.title': 'MockMaster',
     'share.text': 'सरकारी परीक्षा की तैयारी करें!',
   },
 
   bn: {
     // === Header ===
-    'app.name': 'ExamPrep Bharat',
+    'app.name': 'MockMaster',
     'app.subtitle': 'সরকারি পরীক্ষার প্রস্তুতি নিন',
     'app.partner': 'আপনার পরীক্ষা প্রস্তুতির সঙ্গী',
     'app.version': 'সংস্করণ 1.0',
-    'app.versionFull': 'ExamPrep Bharat v1.0',
+    'app.versionFull': 'MockMaster v1.0',
     'app.madeIn': '❤️ ভারতে তৈরি',
 
     // === Home Page ===
@@ -618,7 +618,7 @@ const translations: Record<Lang, Record<string, string>> = {
     'upcoming.rrbNtpcStatus': 'প্রবেশপত্র শীঘ্র',
 
     // === Share ===
-    'share.title': 'ExamPrep Bharat',
+    'share.title': 'MockMaster',
     'share.text': 'সরকারি পরীক্ষার প্রস্তুতি নিন!',
   },
 }
