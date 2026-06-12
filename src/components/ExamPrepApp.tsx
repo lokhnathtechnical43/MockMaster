@@ -646,7 +646,7 @@ export default function ExamPrepApp() {
     return (
       <div className="pb-20">
         {/* Professional Header with Stats */}
-        <div className="bg-gradient-to-br from-orange-500 via-red-500 to-rose-500 px-4 pt-[calc(env(safe-area-inset-top,0px)+0.75rem)] pb-8 rounded-b-[2rem] relative overflow-hidden">
+        <div className="bg-gradient-to-br from-orange-500 via-red-500 to-rose-500 px-4 pt-[calc(env(safe-area-inset-top,0px)+0.5rem)] pb-5 rounded-b-[1.5rem] relative overflow-hidden">
           {/* Decorative circles */}
           <div className="absolute top-0 right-0 w-40 h-40 bg-white/5 rounded-full -translate-y-1/2 translate-x-1/4" />
           <div className="absolute bottom-0 left-0 w-32 h-32 bg-white/5 rounded-full translate-y-1/2 -translate-x-1/4" />
@@ -688,10 +688,10 @@ export default function ExamPrepApp() {
             </div>
 
             {/* Welcome + Stats Row */}
-            <div className="mt-5 flex items-end justify-between">
+            <div className="mt-3 flex items-end justify-between">
               <div>
                 <p className="text-white/80 text-sm">{greeting} 👋</p>
-                <p className="text-white text-xl font-extrabold mt-0.5">{auth.isLoggedIn ? (auth.getUserDisplay() || 'Student') : 'Student'}</p>
+                <p className="text-white text-xl font-extrabold mt-0.5">{auth.isLoggedIn ? (auth.user?.displayName || auth.user?.email?.split('@')[0] || auth.getUserDisplay() || 'Student') : 'Student'}</p>
               </div>
               <div className="flex items-center gap-1.5">
                 <div className="bg-white/15 backdrop-blur rounded-xl px-3 py-2 text-center">
@@ -3355,14 +3355,8 @@ export default function ExamPrepApp() {
               <div className="absolute -top-4 -right-4 w-20 h-20 rounded-full" style={{ background: 'radial-gradient(circle, rgba(251,146,60,0.15) 0%, transparent 70%)' }} />
               <div className="absolute bottom-0 left-2 w-14 h-14 rounded-full" style={{ background: 'radial-gradient(circle, rgba(139,92,246,0.1) 0%, transparent 70%)' }} />
 
-              {/* Close + App branding row */}
-              <div className="flex items-center justify-between mb-2 relative z-10">
-                <div className="flex items-center gap-2">
-                  <div className="w-6 h-6 rounded-md bg-gradient-to-br from-orange-400 to-rose-500 flex items-center justify-center">
-                    <img src="/logo.png" alt="M" className="w-4 h-4 rounded-sm" />
-                  </div>
-                  <span className="text-white font-bold text-[13px]">{_t('app.name')}</span>
-                </div>
+              {/* Close button row */}
+              <div className="flex items-center justify-end mb-2 relative z-10">
                 <button
                   onClick={() => setShowSideMenu(false)}
                   onTouchEnd={(e) => { e.preventDefault(); setShowSideMenu(false) }}
