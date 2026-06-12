@@ -74,3 +74,6 @@ android/app/src/main/assets/public/
 # IDE
 .vscode/
 .idea/
+
+# Work log
+worklog.md
