@@ -17,7 +17,8 @@ import {
   ChevronDown, Star, Flame, TrendingUp, Calendar, Gift,
   HelpCircle, Share2, MessageCircle, Crown,
   Menu, BookmarkPlus, Download, BarChart3, Wifi,
-  ClipboardList, PenTool, Calculator
+  ClipboardList, PenTool, Calculator, Camera, MapPin, Phone,
+  Edit3, Save, ChevronUp
 } from 'lucide-react'
 import {
   getCategories as getLocalCategories, getTestsByExam as getLocalTestsByExam,
@@ -155,6 +156,21 @@ export default function ExamPrepApp() {
   const [userExamId, setUserExamId] = useState<string>('')
   const [dailyRoutine, setDailyRoutine] = useState<{ questionCount: number; preferredTime: string; examId: string }>({ questionCount: 10, preferredTime: 'morning', examId: '' })
 
+  // --- Profile Data (localStorage) ---
+  const [profileData, setProfileData] = useState({
+    fullName: '',
+    dateOfBirth: '',
+    gender: '',
+    category: '',
+    address: '',
+    education: '',
+    targetExam: '',
+    phone: '',
+    state: '',
+  })
+  const [isEditingProfile, setIsEditingProfile] = useState(false)
+  const [profileSaved, setProfileSaved] = useState(false)
+
   // Load bookmarks & preferences from localStorage
   useEffect(() => {
     try {
@@ -169,6 +185,10 @@ export default function ExamPrepApp() {
       const saved = localStorage.getItem('mockmaster_daily_routine')
       if (saved) setDailyRoutine(JSON.parse(saved))
     } catch {}
+    try {
+      const saved = localStorage.getItem('mockmaster_profile')
+      if (saved) setProfileData(JSON.parse(saved))
+    } catch {}
   }, [])
 
   // Save bookmarks when changed
@@ -181,6 +201,9 @@ export default function ExamPrepApp() {
   useEffect(() => {
     try { localStorage.setItem('mockmaster_daily_routine', JSON.stringify(dailyRoutine)) } catch {}
   }, [dailyRoutine])
+  useEffect(() => {
+    try { localStorage.setItem('mockmaster_profile', JSON.stringify(profileData)) } catch {}
+  }, [profileData])
 
   function toggleBookmark(questionId: string) {
     setBookmarkedQs(prev => prev.includes(questionId) ? prev.filter(id => id !== questionId) : [...prev, questionId])
@@ -2486,99 +2509,101 @@ export default function ExamPrepApp() {
     const userDisplay = auth.getUserDisplay()
     const userEmail = auth.getUserEmail()
     const isEmailUser = !auth.isGuest && auth.isLoggedIn
+    const hasProfileData = profileData.fullName || profileData.dateOfBirth || profileData.category || profileData.education || profileData.address || profileData.phone || profileData.state || profileData.gender || profileData.targetExam
+
+    const indianStates = ['Andhra Pradesh','Arunachal Pradesh','Assam','Bihar','Chhattisgarh','Goa','Gujarat','Haryana','Himachal Pradesh','Jharkhand','Karnataka','Kerala','Madhya Pradesh','Maharashtra','Manipur','Meghalaya','Mizoram','Nagaland','Odisha','Punjab','Rajasthan','Sikkim','Tamil Nadu','Telangana','Tripura','Uttar Pradesh','Uttarakhand','West Bengal','Delhi','Jammu & Kashmir','Ladakh']
 
     return (
       <div className="pb-20">
         {/* Header with gradient */}
-        <div className="bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 px-5 pt-[calc(env(safe-area-inset-top,0px)+3rem)] pb-10 rounded-b-[28px] relative overflow-hidden">
-          {/* Decorative circles */}
-          <div className="absolute top-0 right-0 w-40 h-40 bg-orange-500/10 rounded-full -translate-y-1/2 translate-x-1/4" />
-          <div className="absolute bottom-0 left-0 w-32 h-32 bg-orange-500/10 rounded-full translate-y-1/2 -translate-x-1/4" />
+        <div className="bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 px-5 pt-[calc(env(safe-area-inset-top,0px)+3rem)] pb-14 rounded-b-[32px] relative overflow-hidden">
+          {/* Decorative elements */}
+          <div className="absolute top-0 right-0 w-44 h-44 bg-purple-500/10 rounded-full -translate-y-1/2 translate-x-1/4 blur-2xl" />
+          <div className="absolute bottom-0 left-0 w-36 h-36 bg-orange-500/10 rounded-full translate-y-1/2 -translate-x-1/4 blur-2xl" />
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-64 h-64 bg-blue-500/5 rounded-full blur-3xl" />
 
           {/* Top bar */}
           <div className="flex items-center justify-between mb-6 relative z-10">
-            <h1 className="text-white text-xl font-bold">{_t('profile.title')}</h1>
+            <h1 className="text-white text-xl font-extrabold tracking-tight">{_t('profile.title')}</h1>
             <button
-              onClick={() => setShowAboutSheet(true)}
-              className="w-9 h-9 rounded-full bg-white/10 backdrop-blur flex items-center justify-center"
+              onClick={() => setShowLanguageSheet(true)}
+              className="w-9 h-9 rounded-full bg-white/10 backdrop-blur-sm flex items-center justify-center hover:bg-white/20 transition-colors"
             >
-              <Settings className="w-4 h-4 text-white/70" />
+              <BookOpen className="w-4 h-4 text-white/70" />
             </button>
           </div>
 
           {/* Profile Card */}
           <div className="bg-white/10 backdrop-blur-md rounded-2xl p-5 border border-white/10 relative z-10">
             <div className="flex items-center gap-4">
+              {/* Avatar with camera overlay */}
               <div className="relative">
-                <div className="w-16 h-16 rounded-full bg-gradient-to-br from-orange-400 to-red-500 flex items-center justify-center shadow-lg shadow-orange-500/20">
-                  <span className="text-white font-bold text-xl">{getAvatarDisplay()}</span>
+                <div className="w-[72px] h-[72px] rounded-full bg-gradient-to-br from-orange-400 via-rose-500 to-pink-500 flex items-center justify-center shadow-xl shadow-orange-500/25 ring-2 ring-white/20">
+                  <span className="text-white font-bold text-2xl">{getAvatarDisplay()}</span>
                 </div>
                 {isEmailUser && (
-                  <div className="absolute -bottom-1 -right-1 w-6 h-6 rounded-full bg-emerald-500 flex items-center justify-center border-2 border-slate-900">
+                  <div className="absolute -bottom-0.5 -right-0.5 w-6 h-6 rounded-full bg-emerald-500 flex items-center justify-center border-2 border-slate-900 shadow-sm">
                     <CheckCircle2 className="w-3 h-3 text-white" />
                   </div>
                 )}
               </div>
               <div className="flex-1 min-w-0">
                 <p className="text-white font-bold text-lg truncate">
-                  {isEmailUser ? (userDisplay || userEmail) : _t('profile.guestUser')}
+                  {profileData.fullName || (isEmailUser ? (userDisplay || userEmail) : _t('profile.guestUser'))}
                 </p>
-                <div className="flex items-center gap-2 mt-1">
+                {profileData.targetExam && (
+                  <p className="text-orange-300 text-xs font-medium mt-0.5 flex items-center gap-1">
+                    <Target className="w-3 h-3" /> {profileData.targetExam}
+                  </p>
+                )}
+                <div className="flex items-center gap-2 mt-1.5">
                   {isEmailUser ? (
-                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 text-xs font-medium">
+                    <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 text-[11px] font-semibold">
                       <Shield className="w-3 h-3" /> {_t('profile.verified')}
                     </span>
                   ) : (
-                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-400 text-xs font-medium">
+                    <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-amber-500/20 text-amber-400 text-[11px] font-semibold">
                       <AlertTriangle className="w-3 h-3" /> {_t('profile.guestMode')}
                     </span>
                   )}
                 </div>
               </div>
-              {auth.isLoggedIn && !auth.isGuest && (
-                <button
-                  onClick={() => auth.logout()}
-                  className="w-9 h-9 rounded-full bg-white/10 flex items-center justify-center"
-                >
-                  <LogOut className="w-4 h-4 text-white/60" />
-                </button>
-              )}
             </div>
 
             {/* Stats Row */}
             <div className="mt-5 pt-4 border-t border-white/10 grid grid-cols-3 gap-2">
               <div className="text-center">
-                <p className="text-white font-bold text-xl">{stats.testsTaken}</p>
-                <p className="text-white/40 text-[10px] font-medium uppercase tracking-wider">{_t('profile.tests')}</p>
+                <p className="text-white font-extrabold text-xl">{stats.testsTaken}</p>
+                <p className="text-white/40 text-[9px] font-semibold uppercase tracking-widest">{_t('profile.tests')}</p>
               </div>
               <div className="text-center border-x border-white/10">
-                <p className="text-white font-bold text-xl">{stats.avgScore}%</p>
-                <p className="text-white/40 text-[10px] font-medium uppercase tracking-wider">{_t('profile.avgScore')}</p>
+                <p className="text-white font-extrabold text-xl">{stats.avgScore}%</p>
+                <p className="text-white/40 text-[9px] font-semibold uppercase tracking-widest">{_t('profile.avgScore')}</p>
               </div>
               <div className="text-center">
-                <p className="text-white font-bold text-xl">#{stats.bestRank}</p>
-                <p className="text-white/40 text-[10px] font-medium uppercase tracking-wider">{_t('profile.bestRank')}</p>
+                <p className="text-white font-extrabold text-xl">#{stats.bestRank}</p>
+                <p className="text-white/40 text-[9px] font-semibold uppercase tracking-widest">{_t('profile.bestRank')}</p>
               </div>
             </div>
           </div>
         </div>
 
-        <div className="px-4 -mt-5 space-y-4 relative z-20">
+        <div className="px-4 -mt-6 space-y-4 relative z-20">
           {/* Guest Upgrade Banner */}
           {auth.isGuest && (
-            <Card className="border-0 shadow-lg bg-gradient-to-r from-amber-500 to-orange-500 overflow-hidden">
+            <Card className="border-0 shadow-xl bg-gradient-to-r from-amber-500 via-orange-500 to-rose-500 overflow-hidden">
               <CardContent className="p-4">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center flex-shrink-0">
+                  <div className="w-11 h-11 rounded-xl bg-white/20 backdrop-blur-sm flex items-center justify-center flex-shrink-0">
                     <Crown className="w-5 h-5 text-white" />
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-white font-bold text-sm">{_t('profile.upgradeTitle')}</p>
-                    <p className="text-white/80 text-xs mt-0.5">{_t('profile.upgradeSub')}</p>
+                    <p className="text-white/80 text-[11px] mt-0.5">{_t('profile.upgradeSub')}</p>
                   </div>
                   <Button
                     size="sm"
-                    className="bg-white text-orange-600 hover:bg-white/90 rounded-xl font-bold px-3"
+                    className="bg-white text-orange-600 hover:bg-white/90 rounded-xl font-bold px-3 shadow-lg"
                     onClick={() => setShowLoginModal(true)}
                   >
                     <Mail className="w-3 h-3 mr-1" /> {_t('profile.login')}
@@ -2590,17 +2615,17 @@ export default function ExamPrepApp() {
 
           {/* Not logged in - Login Card */}
           {!auth.isLoggedIn && (
-            <Card className="border-0 shadow-lg overflow-hidden">
+            <Card className="border-0 shadow-xl overflow-hidden">
               <CardContent className="p-5">
                 <div className="text-center mb-4">
-                  <div className="w-14 h-14 rounded-full bg-orange-50 flex items-center justify-center mx-auto mb-3">
-                    <User className="w-7 h-7 text-orange-500" />
+                  <div className="w-16 h-16 rounded-full bg-gradient-to-br from-orange-100 to-rose-100 flex items-center justify-center mx-auto mb-3">
+                    <User className="w-8 h-8 text-orange-500" />
                   </div>
                   <p className="font-bold text-base">{_t('profile.loginUnlock')}</p>
                   <p className="text-gray-400 text-xs mt-1">{_t('profile.loginUnlockSub')}</p>
                 </div>
                 <Button
-                  className="w-full h-11 bg-gradient-to-r from-orange-500 to-red-500 text-white rounded-xl font-semibold"
+                  className="w-full h-12 bg-gradient-to-r from-orange-500 via-rose-500 to-pink-500 text-white rounded-2xl font-bold text-sm shadow-lg shadow-orange-500/25"
                   onClick={() => setShowLoginModal(true)}
                 >
                   <Mail className="w-4 h-4 mr-2" /> {_t('profile.loginEmail')}
@@ -2609,136 +2634,285 @@ export default function ExamPrepApp() {
             </Card>
           )}
 
+          {/* Personal Information Section */}
+          <div>
+            <div className="flex items-center justify-between px-1 mb-3">
+              <div className="flex items-center gap-2">
+                <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center shadow-sm">
+                  <User className="w-3.5 h-3.5 text-white" />
+                </div>
+                <h2 className="font-bold text-[15px] text-gray-800">{_t('profile.personalInfo')}</h2>
+              </div>
+              <button
+                onClick={() => {
+                  if (isEditingProfile) {
+                    setProfileSaved(true)
+                    setTimeout(() => setProfileSaved(false), 2000)
+                  }
+                  setIsEditingProfile(!isEditingProfile)
+                }}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
+                  isEditingProfile
+                    ? 'bg-emerald-500 text-white shadow-md shadow-emerald-500/25'
+                    : 'bg-gradient-to-r from-orange-50 to-rose-50 text-orange-600 border border-orange-200'
+                }`}
+              >
+                {isEditingProfile ? <><Save className="w-3 h-3" /> {_t('profile.saveProfile')}</> : <><Edit3 className="w-3 h-3" /> {_t('profile.editProfile')}</>}
+              </button>
+            </div>
+
+            {/* Profile Saved Toast */}
+            {profileSaved && (
+              <div className="mb-3 flex items-center gap-2 bg-emerald-50 border border-emerald-200 rounded-xl px-3 py-2">
+                <CheckCircle2 className="w-4 h-4 text-emerald-500" />
+                <span className="text-emerald-700 text-xs font-bold">{_t('profile.profileSaved')}</span>
+              </div>
+            )}
+
+            <Card className="border-0 shadow-lg overflow-hidden">
+              <CardContent className="p-4 space-y-4">
+                {/* Full Name */}
+                <div>
+                  <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5 flex items-center gap-1.5">
+                    <User className="w-3 h-3 text-violet-500" /> {_t('profile.fullName')}
+                  </label>
+                  {isEditingProfile ? (
+                    <input
+                      type="text"
+                      value={profileData.fullName}
+                      onChange={e => setProfileData(prev => ({ ...prev, fullName: e.target.value }))}
+                      placeholder={_t('profile.namePlaceholder')}
+                      className="w-full h-11 px-4 rounded-xl border-2 border-violet-200 bg-violet-50/50 text-sm font-medium text-gray-800 placeholder:text-gray-300 focus:outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-100 transition-all"
+                    />
+                  ) : (
+                    <div className={`h-11 px-4 rounded-xl flex items-center ${profileData.fullName ? 'bg-gray-50 border border-gray-100' : 'bg-gray-50/50 border border-dashed border-gray-200'}`}>
+                      <span className={`text-sm font-medium ${profileData.fullName ? 'text-gray-800' : 'text-gray-300'}`}>{profileData.fullName || _t('profile.namePlaceholder')}</span>
+                    </div>
+                  )}
+                </div>
+
+                {/* Date of Birth & Gender - 2 columns */}
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5 flex items-center gap-1.5">
+                      <Calendar className="w-3 h-3 text-blue-500" /> {_t('profile.dateOfBirth')}
+                    </label>
+                    {isEditingProfile ? (
+                      <input
+                        type="date"
+                        value={profileData.dateOfBirth}
+                        onChange={e => setProfileData(prev => ({ ...prev, dateOfBirth: e.target.value }))}
+                        className="w-full h-11 px-3 rounded-xl border-2 border-blue-200 bg-blue-50/50 text-sm font-medium text-gray-800 focus:outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 transition-all"
+                      />
+                    ) : (
+                      <div className={`h-11 px-4 rounded-xl flex items-center ${profileData.dateOfBirth ? 'bg-gray-50 border border-gray-100' : 'bg-gray-50/50 border border-dashed border-gray-200'}`}>
+                        <span className={`text-sm font-medium ${profileData.dateOfBirth ? 'text-gray-800' : 'text-gray-300'}`}>{profileData.dateOfBirth ? new Date(profileData.dateOfBirth).toLocaleDateString('en-IN', { day:'2-digit', month:'short', year:'numeric' }) : _t('profile.dobPlaceholder')}</span>
+                      </div>
+                    )}
+                  </div>
+                  <div>
+                    <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5 flex items-center gap-1.5">
+                      <User className="w-3 h-3 text-pink-500" /> {_t('profile.gender')}
+                    </label>
+                    {isEditingProfile ? (
+                      <select
+                        value={profileData.gender}
+                        onChange={e => setProfileData(prev => ({ ...prev, gender: e.target.value }))}
+                        className="w-full h-11 px-3 rounded-xl border-2 border-pink-200 bg-pink-50/50 text-sm font-medium text-gray-800 focus:outline-none focus:border-pink-400 focus:ring-2 focus:ring-pink-100 transition-all appearance-none"
+                      >
+                        <option value="">{_t('profile.gender')}</option>
+                        <option value="male">{_t('profile.genderMale')}</option>
+                        <option value="female">{_t('profile.genderFemale')}</option>
+                        <option value="other">{_t('profile.genderOther')}</option>
+                      </select>
+                    ) : (
+                      <div className={`h-11 px-4 rounded-xl flex items-center ${profileData.gender ? 'bg-gray-50 border border-gray-100' : 'bg-gray-50/50 border border-dashed border-gray-200'}`}>
+                        <span className={`text-sm font-medium ${profileData.gender ? 'text-gray-800' : 'text-gray-300'}`}>
+                          {profileData.gender === 'male' ? _t('profile.genderMale') : profileData.gender === 'female' ? _t('profile.genderFemale') : profileData.gender === 'other' ? _t('profile.genderOther') : _t('profile.gender')}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Category & Education - 2 columns */}
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5 flex items-center gap-1.5">
+                      <Shield className="w-3 h-3 text-amber-500" /> {_t('profile.category')}
+                    </label>
+                    {isEditingProfile ? (
+                      <select
+                        value={profileData.category}
+                        onChange={e => setProfileData(prev => ({ ...prev, category: e.target.value }))}
+                        className="w-full h-11 px-3 rounded-xl border-2 border-amber-200 bg-amber-50/50 text-sm font-medium text-gray-800 focus:outline-none focus:border-amber-400 focus:ring-2 focus:ring-amber-100 transition-all appearance-none"
+                      >
+                        <option value="">{_t('profile.category')}</option>
+                        <option value="general">{_t('profile.categoryGeneral')}</option>
+                        <option value="obc">{_t('profile.categoryOBC')}</option>
+                        <option value="sc">{_t('profile.categorySC')}</option>
+                        <option value="st">{_t('profile.categoryST')}</option>
+                        <option value="ews">{_t('profile.categoryEWS')}</option>
+                      </select>
+                    ) : (
+                      <div className={`h-11 px-4 rounded-xl flex items-center ${profileData.category ? 'bg-gray-50 border border-gray-100' : 'bg-gray-50/50 border border-dashed border-gray-200'}`}>
+                        <span className={`text-sm font-medium capitalize ${profileData.category ? 'text-gray-800' : 'text-gray-300'}`}>
+                          {profileData.category === 'general' ? _t('profile.categoryGeneral') : profileData.category === 'obc' ? _t('profile.categoryOBC') : profileData.category === 'sc' ? _t('profile.categorySC') : profileData.category === 'st' ? _t('profile.categoryST') : profileData.category === 'ews' ? _t('profile.categoryEWS') : _t('profile.category')}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                  <div>
+                    <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5 flex items-center gap-1.5">
+                      <GraduationCap className="w-3 h-3 text-emerald-500" /> {_t('profile.education')}
+                    </label>
+                    {isEditingProfile ? (
+                      <select
+                        value={profileData.education}
+                        onChange={e => setProfileData(prev => ({ ...prev, education: e.target.value }))}
+                        className="w-full h-11 px-3 rounded-xl border-2 border-emerald-200 bg-emerald-50/50 text-sm font-medium text-gray-800 focus:outline-none focus:border-emerald-400 focus:ring-2 focus:ring-emerald-100 transition-all appearance-none"
+                      >
+                        <option value="">{_t('profile.educationPlaceholder')}</option>
+                        <option value="10th">{_t('profile.education10th')}</option>
+                        <option value="12th">{_t('profile.education12th')}</option>
+                        <option value="graduate">{_t('profile.educationGraduate')}</option>
+                        <option value="post-graduate">{_t('profile.educationPostGrad')}</option>
+                        <option value="other">{_t('profile.educationOther')}</option>
+                      </select>
+                    ) : (
+                      <div className={`h-11 px-4 rounded-xl flex items-center ${profileData.education ? 'bg-gray-50 border border-gray-100' : 'bg-gray-50/50 border border-dashed border-gray-200'}`}>
+                        <span className={`text-sm font-medium ${profileData.education ? 'text-gray-800' : 'text-gray-300'}`}>
+                          {profileData.education === '10th' ? _t('profile.education10th') : profileData.education === '12th' ? _t('profile.education12th') : profileData.education === 'graduate' ? _t('profile.educationGraduate') : profileData.education === 'post-graduate' ? _t('profile.educationPostGrad') : profileData.education === 'other' ? _t('profile.educationOther') : _t('profile.educationPlaceholder')}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Phone & State - 2 columns */}
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5 flex items-center gap-1.5">
+                      <Phone className="w-3 h-3 text-sky-500" /> {_t('profile.phone')}
+                    </label>
+                    {isEditingProfile ? (
+                      <input
+                        type="tel"
+                        value={profileData.phone}
+                        onChange={e => setProfileData(prev => ({ ...prev, phone: e.target.value }))}
+                        placeholder={_t('profile.phonePlaceholder')}
+                        className="w-full h-11 px-4 rounded-xl border-2 border-sky-200 bg-sky-50/50 text-sm font-medium text-gray-800 placeholder:text-gray-300 focus:outline-none focus:border-sky-400 focus:ring-2 focus:ring-sky-100 transition-all"
+                      />
+                    ) : (
+                      <div className={`h-11 px-4 rounded-xl flex items-center ${profileData.phone ? 'bg-gray-50 border border-gray-100' : 'bg-gray-50/50 border border-dashed border-gray-200'}`}>
+                        <span className={`text-sm font-medium ${profileData.phone ? 'text-gray-800' : 'text-gray-300'}`}>{profileData.phone || _t('profile.phonePlaceholder')}</span>
+                      </div>
+                    )}
+                  </div>
+                  <div>
+                    <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5 flex items-center gap-1.5">
+                      <MapPin className="w-3 h-3 text-rose-500" /> {_t('profile.state')}
+                    </label>
+                    {isEditingProfile ? (
+                      <select
+                        value={profileData.state}
+                        onChange={e => setProfileData(prev => ({ ...prev, state: e.target.value }))}
+                        className="w-full h-11 px-3 rounded-xl border-2 border-rose-200 bg-rose-50/50 text-sm font-medium text-gray-800 focus:outline-none focus:border-rose-400 focus:ring-2 focus:ring-rose-100 transition-all appearance-none"
+                      >
+                        <option value="">{_t('profile.statePlaceholder')}</option>
+                        {indianStates.map(s => <option key={s} value={s}>{s}</option>)}
+                      </select>
+                    ) : (
+                      <div className={`h-11 px-4 rounded-xl flex items-center ${profileData.state ? 'bg-gray-50 border border-gray-100' : 'bg-gray-50/50 border border-dashed border-gray-200'}`}>
+                        <span className={`text-sm font-medium truncate ${profileData.state ? 'text-gray-800' : 'text-gray-300'}`}>{profileData.state || _t('profile.statePlaceholder')}</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Target Exam */}
+                <div>
+                  <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5 flex items-center gap-1.5">
+                    <Target className="w-3 h-3 text-orange-500" /> {_t('profile.targetExam')}
+                  </label>
+                  {isEditingProfile ? (
+                    <select
+                      value={profileData.targetExam}
+                      onChange={e => setProfileData(prev => ({ ...prev, targetExam: e.target.value }))}
+                      className="w-full h-11 px-4 rounded-xl border-2 border-orange-200 bg-orange-50/50 text-sm font-medium text-gray-800 focus:outline-none focus:border-orange-400 focus:ring-2 focus:ring-orange-100 transition-all appearance-none"
+                    >
+                      <option value="">{_t('profile.targetExamPlaceholder')}</option>
+                      {categories.flatMap(cat => cat.exams.map(exam => <option key={exam.id} value={exam.name}>{exam.name}</option>))}
+                    </select>
+                  ) : (
+                    <div className={`h-11 px-4 rounded-xl flex items-center ${profileData.targetExam ? 'bg-gradient-to-r from-orange-50 to-amber-50 border border-orange-200' : 'bg-gray-50/50 border border-dashed border-gray-200'}`}>
+                      <span className={`text-sm font-medium ${profileData.targetExam ? 'text-orange-700' : 'text-gray-300'}`}>{profileData.targetExam || _t('profile.targetExamPlaceholder')}</span>
+                    </div>
+                  )}
+                </div>
+
+                {/* Address */}
+                <div>
+                  <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5 flex items-center gap-1.5">
+                    <MapPin className="w-3 h-3 text-teal-500" /> {_t('profile.address')}
+                  </label>
+                  {isEditingProfile ? (
+                    <textarea
+                      value={profileData.address}
+                      onChange={e => setProfileData(prev => ({ ...prev, address: e.target.value }))}
+                      placeholder={_t('profile.addressPlaceholder')}
+                      rows={2}
+                      className="w-full px-4 py-3 rounded-xl border-2 border-teal-200 bg-teal-50/50 text-sm font-medium text-gray-800 placeholder:text-gray-300 focus:outline-none focus:border-teal-400 focus:ring-2 focus:ring-teal-100 transition-all resize-none"
+                    />
+                  ) : (
+                    <div className={`px-4 py-3 rounded-xl ${profileData.address ? 'bg-gray-50 border border-gray-100' : 'bg-gray-50/50 border border-dashed border-gray-200'}`}>
+                      <span className={`text-sm font-medium ${profileData.address ? 'text-gray-800' : 'text-gray-300'}`}>{profileData.address || _t('profile.addressPlaceholder')}</span>
+                    </div>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
           {/* Quick Actions Grid */}
           <div className="grid grid-cols-2 gap-3">
             <Card
-              className="border-0 shadow-sm cursor-pointer hover:shadow-md transition-all active:scale-[0.98]"
+              className="border-0 shadow-lg cursor-pointer hover:shadow-xl transition-all active:scale-[0.97] overflow-hidden"
               onClick={() => { pageHistoryRef.current.push(currentPage); setCurrentPage('exams') }}
             >
               <CardContent className="p-4">
-                <div className="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center mb-2">
-                  <BookOpen className="w-5 h-5 text-blue-600" />
+                <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-blue-400 to-indigo-500 flex items-center justify-center mb-2.5 shadow-sm">
+                  <BookOpen className="w-5 h-5 text-white" />
                 </div>
-                <p className="font-semibold text-sm">{_t('profile.myExams')}</p>
-                <p className="text-gray-400 text-[10px] mt-0.5">{categories.length} {_t('profile.categories')}</p>
+                <p className="font-bold text-sm">{_t('profile.myExams')}</p>
+                <p className="text-gray-400 text-[10px] mt-0.5 font-medium">{categories.length} {_t('profile.categories')}</p>
               </CardContent>
             </Card>
             <Card
-              className="border-0 shadow-sm cursor-pointer hover:shadow-md transition-all active:scale-[0.98]"
+              className="border-0 shadow-lg cursor-pointer hover:shadow-xl transition-all active:scale-[0.97] overflow-hidden"
               onClick={() => { pageHistoryRef.current.push(currentPage); setCurrentPage('leaderboard') }}
             >
               <CardContent className="p-4">
-                <div className="w-10 h-10 rounded-xl bg-amber-50 flex items-center justify-center mb-2">
-                  <Trophy className="w-5 h-5 text-amber-600" />
+                <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center mb-2.5 shadow-sm">
+                  <Trophy className="w-5 h-5 text-white" />
                 </div>
-                <p className="font-semibold text-sm">{_t('leaderboard.title')}</p>
-                <p className="text-gray-400 text-[10px] mt-0.5">{_t('profile.viewRankings')}</p>
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Settings Section */}
-          <div>
-            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider px-1 mb-2">{_t('profile.settings')}</p>
-            <Card className="border-0 shadow-sm overflow-hidden">
-              <CardContent className="p-0">
-                {/* Language */}
-                <button
-                  className="w-full flex items-center gap-3 p-4 hover:bg-gray-50/80 transition-colors active:bg-gray-100"
-                  onClick={() => setShowLanguageSheet(true)}
-                >
-                  <div className="w-9 h-9 rounded-xl bg-indigo-50 flex items-center justify-center">
-                    <BookOpen className="w-4 h-4 text-indigo-600" />
-                  </div>
-                  <div className="flex-1 text-left">
-                    <p className="font-semibold text-[13px]">{_t('profile.language')}</p>
-                    <p className="text-gray-400 text-[11px]">{lng === 'en' ? _t('lang.english') : lng === 'hi' ? _t('lang.hindi') : _t('lang.bangla')}</p>
-                  </div>
-                  <ChevronRight className="w-4 h-4 text-gray-300" />
-                </button>
-                <div className="mx-4 border-t border-gray-100" />
-                {/* Help & FAQ */}
-                <button
-                  className="w-full flex items-center gap-3 p-4 hover:bg-gray-50/80 transition-colors active:bg-gray-100"
-                  onClick={() => setShowFaqSheet(true)}
-                >
-                  <div className="w-9 h-9 rounded-xl bg-cyan-50 flex items-center justify-center">
-                    <HelpCircle className="w-4 h-4 text-cyan-600" />
-                  </div>
-                  <div className="flex-1 text-left">
-                    <p className="font-semibold text-[13px]">{_t('menu.helpFaq')}</p>
-                    <p className="text-gray-400 text-[11px]">{_t('menu.getSupport')}</p>
-                  </div>
-                  <ChevronRight className="w-4 h-4 text-gray-300" />
-                </button>
-                <div className="mx-4 border-t border-gray-100" />
-                {/* About */}
-                <button
-                  className="w-full flex items-center gap-3 p-4 hover:bg-gray-50/80 transition-colors active:bg-gray-100"
-                  onClick={() => setShowAboutSheet(true)}
-                >
-                  <div className="w-9 h-9 rounded-xl bg-purple-50 flex items-center justify-center">
-                    <Shield className="w-4 h-4 text-purple-600" />
-                  </div>
-                  <div className="flex-1 text-left">
-                    <p className="font-semibold text-[13px]">{_t('profile.about')}</p>
-                    <p className="text-gray-400 text-[11px]">{_t('profile.aboutSub')}</p>
-                  </div>
-                  <ChevronRight className="w-4 h-4 text-gray-300" />
-                </button>
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Support Section */}
-          <div>
-            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider px-1 mb-2">{_t('profile.support')}</p>
-            <Card className="border-0 shadow-sm overflow-hidden">
-              <CardContent className="p-0">
-                <button
-                  className="w-full flex items-center gap-3 p-4 hover:bg-gray-50/80 transition-colors active:bg-gray-100"
-                  onClick={() => setShowAboutSheet(true)}
-                >
-                  <div className="w-9 h-9 rounded-xl bg-teal-50 flex items-center justify-center">
-                    <HelpCircle className="w-4 h-4 text-teal-600" />
-                  </div>
-                  <div className="flex-1 text-left">
-                    <p className="font-semibold text-[13px]">{_t('profile.helpFaq')}</p>
-                    <p className="text-gray-400 text-[11px]">{_t('profile.helpFaqSub')}</p>
-                  </div>
-                  <ChevronRight className="w-4 h-4 text-gray-300" />
-                </button>
-                <div className="mx-4 border-t border-gray-100" />
-                <button
-                  className="w-full flex items-center gap-3 p-4 hover:bg-gray-50/80 transition-colors active:bg-gray-100"
-                  onClick={() => {
-                    if (navigator.share) {
-                      navigator.share({ title: _t('app.name'), text: _t('share.text'), url: window.location.href })
-                    }
-                  }}
-                >
-                  <div className="w-9 h-9 rounded-xl bg-pink-50 flex items-center justify-center">
-                    <Share2 className="w-4 h-4 text-pink-600" />
-                  </div>
-                  <div className="flex-1 text-left">
-                    <p className="font-semibold text-[13px]">{_t('profile.shareApp')}</p>
-                    <p className="text-gray-400 text-[11px]">{_t('profile.shareAppSub')}</p>
-                  </div>
-                  <ChevronRight className="w-4 h-4 text-gray-300" />
-                </button>
+                <p className="font-bold text-sm">{_t('leaderboard.title')}</p>
+                <p className="text-gray-400 text-[10px] mt-0.5 font-medium">{_t('profile.viewRankings')}</p>
               </CardContent>
             </Card>
           </div>
 
           {/* Logout Button */}
           {auth.isLoggedIn && !auth.isGuest && (
-            <Button
-              variant="outline"
-              className="w-full rounded-xl border-red-200 text-red-500 hover:bg-red-50 hover:text-red-600 h-11 font-semibold"
+            <button
               onClick={() => auth.logout()}
+              className="w-full flex items-center justify-center gap-2 h-12 rounded-2xl border-2 border-red-200 text-red-500 hover:bg-red-50 active:bg-red-100 font-bold text-sm transition-all"
             >
-              <LogOut className="w-4 h-4 mr-2" /> {_t('profile.logout')}
-            </Button>
+              <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-red-400 to-rose-500 flex items-center justify-center">
+                <LogOut className="w-3.5 h-3.5 text-white" />
+              </div>
+              {_t('profile.logout')}
+            </button>
           )}
 
           {/* App Version */}
