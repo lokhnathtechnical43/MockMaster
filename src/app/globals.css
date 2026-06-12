@@ -160,6 +160,15 @@
   }
 }
 
+@keyframes slide-in-left {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
 @keyframes scale-in {
   from {
     transform: scale(0.9);
@@ -173,6 +182,10 @@
 
 .animate-slide-up {
   animation: slide-up 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.animate-slide-in-left {
+  animation: slide-in-left 0.25s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .animate-scale-in {

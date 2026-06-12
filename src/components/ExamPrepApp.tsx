@@ -10,13 +10,13 @@ import { ScrollArea } from '@/components/ui/scroll-area'
 import { Separator } from '@/components/ui/separator'
 import {
   BookOpen, Trophy, Clock, CheckCircle2, XCircle, SkipForward,
-  ChevronRight, ChevronLeft, Home, User, ArrowLeft,
+  ChevronRight, ChevronLeft, Home, User, ArrowLeft, X,
   Play, Zap, Target, Award, Timer, RefreshCw, BookMarked,
   GraduationCap, Shield, Building, Train, ShieldCheck, Swords,
   LogOut, Loader2, Phone, AlertTriangle, Settings, Bell,
   ChevronDown, Star, Flame, TrendingUp, Calendar, Gift,
   HelpCircle, Share2, MessageCircle, Lock, Crown, Edit3,
-  Eye, EyeOff
+  Eye, EyeOff, Menu, BookmarkPlus, Download, Wifi, WifiOff, BarChart3
 } from 'lucide-react'
 import {
   getCategories, getTestsByExam, getTestById, saveResult, getLeaderboard,
@@ -109,6 +109,7 @@ export default function ExamPrepApp() {
   const [showAboutSheet, setShowAboutSheet] = useState(false)
   const [selectedLanguage, setSelectedLanguage] = useState('en')
   const [showQuestionNav, setShowQuestionNav] = useState(false)
+  const [showSideMenu, setShowSideMenu] = useState(false)
 
   // --- Load categories on mount ---
   useEffect(() => {
@@ -135,6 +136,11 @@ export default function ExamPrepApp() {
     // If back confirmation is showing, close it
     if (showBackConfirm) {
       setShowBackConfirm(false)
+      return
+    }
+    // If side menu is open, close it
+    if (showSideMenu) {
+      setShowSideMenu(false)
       return
     }
     // If question nav panel is open, close it
@@ -173,7 +179,7 @@ export default function ExamPrepApp() {
     } else {
       setCurrentPage('home')
     }
-  }, [currentPage, testActive, showBackConfirm, showQuestionNav, showLoginModal, showLanguageSheet, showAboutSheet, goBack])
+  }, [currentPage, testActive, showBackConfirm, showSideMenu, showQuestionNav, showLoginModal, showLanguageSheet, showAboutSheet, goBack])
 
   // Capacitor hardware back button
   useEffect(() => {
@@ -370,9 +376,18 @@ export default function ExamPrepApp() {
         {/* Header */}
         <div className="bg-gradient-to-r from-orange-500 to-red-500 px-4 pt-[calc(env(safe-area-inset-top,0px)+3rem)] pb-8 rounded-b-3xl">
           <div className="flex items-center justify-between mb-6">
-            <div>
-              <h1 className="text-white text-2xl font-bold">ExamPrep Bharat</h1>
-              <p className="text-orange-100 text-sm mt-1">Prepare for government exams</p>
+            <div className="flex items-center gap-3">
+              {/* Menu Button */}
+              <button
+                onClick={() => setShowSideMenu(true)}
+                className="w-10 h-10 rounded-xl bg-white/20 backdrop-blur flex items-center justify-center active:bg-white/30 transition-colors"
+              >
+                <Menu className="w-5 h-5 text-white" />
+              </button>
+              <div>
+                <h1 className="text-white text-xl font-bold">ExamPrep Bharat</h1>
+                <p className="text-orange-100 text-xs">Prepare for government exams</p>
+              </div>
             </div>
             <button
               onClick={() => auth.isLoggedIn ? handleBottomNav('profile') : setShowLoginModal(true)}
@@ -1549,6 +1564,147 @@ export default function ExamPrepApp() {
     <div className="min-h-screen min-h-dvh bg-gray-50 relative w-full overflow-x-hidden">
       {renderPage()}
       {renderBottomNav()}
+
+      {/* ===== Side Menu Drawer ===== */}
+      {showSideMenu && (
+        <div className="fixed inset-0 z-50">
+          {/* Backdrop */}
+          <div
+            className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+            onClick={() => setShowSideMenu(false)}
+          />
+          {/* Drawer Panel */}
+          <div className="absolute left-0 top-0 bottom-0 w-[280px] bg-white shadow-2xl animate-slide-in-left flex flex-col">
+            {/* Drawer Header */}
+            <div className="bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 px-5 pt-[calc(env(safe-area-inset-top,0px)+1.5rem)] pb-5">
+              <div className="flex items-center justify-between mb-4">
+                <div className="w-10 h-10 bg-gradient-to-br from-orange-400 to-red-500 rounded-xl flex items-center justify-center shadow-lg shadow-orange-500/20">
+                  <span className="text-white font-bold text-sm">E</span>
+                </div>
+                <button
+                  onClick={() => setShowSideMenu(false)}
+                  className="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center"
+                >
+                  <X className="w-4 h-4 text-white/60" />
+                </button>
+              </div>
+              <p className="text-white font-bold text-base">ExamPrep Bharat</p>
+              <p className="text-white/40 text-xs mt-0.5">Your exam preparation partner</p>
+            </div>
+
+            {/* Menu Items */}
+            <div className="flex-1 overflow-y-auto py-2">
+              {/* Main Navigation */}
+              <div className="px-3 py-2">
+                <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider px-3 mb-1">Navigation</p>
+                {[
+                  { icon: Home, label: 'Home', page: 'home' as Page, active: currentPage === 'home' },
+                  { icon: BookOpen, label: 'All Exams', page: 'exams' as Page, active: currentPage === 'exams' },
+                  { icon: Trophy, label: 'Leaderboard', page: 'leaderboard' as Page, active: currentPage === 'leaderboard' },
+                  { icon: User, label: 'My Profile', page: 'profile' as Page, active: currentPage === 'profile' },
+                ].map(item => (
+                  <button
+                    key={item.page}
+                    onClick={() => { handleBottomNav(item.page); setShowSideMenu(false) }}
+                    className={`w-full flex items-center gap-3 px-3 py-3 rounded-xl transition-colors ${
+                      item.active ? 'bg-orange-50 text-orange-600' : 'text-gray-600 hover:bg-gray-50 active:bg-gray-100'
+                    }`}
+                  >
+                    <item.icon className={`w-5 h-5 ${item.active ? 'text-orange-500' : 'text-gray-400'}`} />
+                    <span className={`font-medium text-sm ${item.active ? 'font-semibold' : ''}`}>{item.label}</span>
+                    {item.active && <div className="ml-auto w-1.5 h-1.5 rounded-full bg-orange-500" />}
+                  </button>
+                ))}
+              </div>
+
+              <div className="mx-5 border-t border-gray-100 my-1" />
+
+              {/* Quick Actions */}
+              <div className="px-3 py-2">
+                <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider px-3 mb-1">Quick Actions</p>
+                {[
+                  { icon: Zap, label: 'Quick Practice', action: () => {
+                    const allCats = getCategories()
+                    const allExams = allCats.flatMap(c => c.exams)
+                    if (allExams.length > 0) {
+                      const randomExam = allExams[Math.floor(Math.random() * allExams.length)]
+                      const randomCat = allCats.find(c => c.exams.some(e => e.id === randomExam.id))!
+                      openExam(randomExam, randomCat)
+                    }
+                  }},
+                  { icon: BookmarkPlus, label: 'Bookmarked Questions', action: () => {} },
+                  { icon: Download, label: 'Offline Tests', action: () => {} },
+                  { icon: BarChart3, label: 'Performance Report', action: () => {} },
+                ].map((item, i) => (
+                  <button
+                    key={i}
+                    onClick={() => { item.action(); setShowSideMenu(false) }}
+                    className="w-full flex items-center gap-3 px-3 py-3 rounded-xl text-gray-600 hover:bg-gray-50 active:bg-gray-100 transition-colors"
+                  >
+                    <item.icon className="w-5 h-5 text-gray-400" />
+                    <span className="font-medium text-sm">{item.label}</span>
+                    {['BookmarkPlus', 'Download', 'BarChart3'].includes(item.label) && (
+                      <Badge variant="secondary" className="text-[9px] ml-auto">Soon</Badge>
+                    )}
+                  </button>
+                ))}
+              </div>
+
+              <div className="mx-5 border-t border-gray-100 my-1" />
+
+              {/* Settings & Support */}
+              <div className="px-3 py-2">
+                <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider px-3 mb-1">Settings</p>
+                {[
+                  { icon: BookOpen, label: 'Language', sub: selectedLanguage === 'en' ? 'English' : selectedLanguage === 'hi' ? 'Hindi' : 'Bengali', action: () => setShowLanguageSheet(true) },
+                  { icon: Bell, label: 'Notifications', sub: 'Manage alerts', action: () => {} },
+                  { icon: Wifi, label: 'Offline Mode', sub: 'Download tests', action: () => {} },
+                  { icon: HelpCircle, label: 'Help & FAQ', sub: 'Get support', action: () => setShowAboutSheet(true) },
+                  { icon: Share2, label: 'Share App', sub: 'Tell your friends', action: () => {
+                    if (navigator.share) {
+                      navigator.share({ title: 'ExamPrep Bharat', text: 'Prepare for government exams!', url: window.location.href })
+                    }
+                  }},
+                  { icon: Shield, label: 'About', sub: 'Version 1.0', action: () => setShowAboutSheet(true) },
+                ].map((item, i) => (
+                  <button
+                    key={i}
+                    onClick={() => { item.action(); setShowSideMenu(false) }}
+                    className="w-full flex items-center gap-3 px-3 py-3 rounded-xl text-gray-600 hover:bg-gray-50 active:bg-gray-100 transition-colors"
+                  >
+                    <item.icon className="w-5 h-5 text-gray-400" />
+                    <div className="flex-1 text-left">
+                      <span className="font-medium text-sm block">{item.label}</span>
+                      {item.sub && <span className="text-gray-400 text-[11px]">{item.sub}</span>}
+                    </div>
+                    <ChevronRight className="w-4 h-4 text-gray-300" />
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Drawer Footer */}
+            <div className="border-t border-gray-100 px-5 py-4">
+              {auth.isLoggedIn ? (
+                <button
+                  onClick={() => { auth.logout(); setShowSideMenu(false) }}
+                  className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-red-500 hover:bg-red-50 active:bg-red-100 transition-colors"
+                >
+                  <LogOut className="w-5 h-5" />
+                  <span className="font-medium text-sm">Logout</span>
+                </button>
+              ) : (
+                <button
+                  onClick={() => { setShowLoginModal(true); setShowSideMenu(false) }}
+                  className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-gradient-to-r from-orange-500 to-red-500 text-white rounded-xl font-semibold text-sm"
+                >
+                  <Phone className="w-4 h-4" /> Login
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Login Modal */}
       {showLoginModal && (
