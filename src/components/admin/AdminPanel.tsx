@@ -10,7 +10,7 @@ import {
   BookOpen, Trophy, ArrowLeft, Shield, LogOut, Lock,
   Bell, Flame, Zap, Building, XCircle, AlertTriangle, Gift, Plus,
   Eye, EyeOff, BarChart3, Users, FileText, Settings, Home,
-  CheckCircle2, ChevronRight, Trash2, Edit3, Save, RefreshCw
+  CheckCircle2, ChevronRight, Trash2, Edit3, Save, RefreshCw, Clock
 } from 'lucide-react'
 import {
   type Announcement, type Notification,
@@ -18,6 +18,7 @@ import {
   saveAnnouncements, saveNotifications,
   DEFAULT_ANNOUNCEMENTS, DEFAULT_NOTIFICATIONS
 } from '@/lib/admin-data'
+import { getResults, type TestResult } from '@/lib/local-data'
 import Link from 'next/link'
 
 export default function AdminPanel() {
@@ -27,7 +28,12 @@ export default function AdminPanel() {
   const [showPassword, setShowPassword] = useState(false)
 
   // --- Tab ---
-  const [adminTab, setAdminTab] = useState<'announcements' | 'notifications' | 'dashboard'>('dashboard')
+  const [adminTab, setAdminTab] = useState<'announcements' | 'notifications' | 'dashboard' | 'users'>('dashboard')
+
+  // --- User Data ---
+  const [allResults, setAllResults] = useState<TestResult[]>([])
+  const [selectedUserId, setSelectedUserId] = useState<string | null>(null)
+  const [userSearchQuery, setUserSearchQuery] = useState('')
 
   // --- Announcements ---
   const [announcements, setAnnouncements] = useState<Announcement[]>([])
@@ -46,6 +52,15 @@ export default function AdminPanel() {
   useEffect(() => {
     setAnnouncements(getAnnouncements())
     setNotifications(getNotifications())
+    setAllResults(getResults())
+  }, [])
+
+  // Refresh user data periodically
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setAllResults(getResults())
+    }, 5000)
+    return () => clearInterval(interval)
   }, [])
 
   // --- Save data whenever it changes ---
@@ -186,6 +201,7 @@ export default function AdminPanel() {
           <div className="flex gap-1.5">
             {[
               { id: 'dashboard' as const, icon: BarChart3, label: 'Dashboard' },
+              { id: 'users' as const, icon: Users, label: 'Users' },
               { id: 'announcements' as const, icon: Flame, label: 'Announcements' },
               { id: 'notifications' as const, icon: Bell, label: 'Notifications' },
             ].map(tab => (
@@ -255,15 +271,15 @@ export default function AdminPanel() {
                 </CardContent>
               </Card>
 
-              <Card className="border-0 shadow-md bg-gradient-to-br from-purple-50 to-purple-100/50">
+              <Card className="border-0 shadow-md bg-gradient-to-br from-violet-50 to-violet-100/50">
                 <CardContent className="p-4">
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center">
+                    <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-violet-500 to-indigo-500 flex items-center justify-center">
                       <Users className="w-5 h-5 text-white" />
                     </div>
                     <div>
-                      <p className="text-2xl font-bold text-purple-600">{unreadNotifications}</p>
-                      <p className="text-purple-500/70 text-xs">Unread Notifs</p>
+                      <p className="text-2xl font-bold text-violet-600">{new Set(allResults.map(r => r.userId)).size}</p>
+                      <p className="text-violet-500/70 text-xs">Users</p>
                     </div>
                   </div>
                 </CardContent>
@@ -277,6 +293,14 @@ export default function AdminPanel() {
                   <Zap className="w-4 h-4 text-orange-500" /> Quick Actions
                 </h3>
                 <div className="grid grid-cols-2 gap-3">
+                  <button
+                    onClick={() => setAdminTab('users')}
+                    className="p-3 rounded-xl bg-violet-50 hover:bg-violet-100 transition-colors text-left"
+                  >
+                    <Users className="w-5 h-5 text-violet-500 mb-1" />
+                    <p className="font-semibold text-xs text-violet-700">View Users</p>
+                    <p className="text-violet-500/60 text-[10px]">{new Set(allResults.map(r => r.userId)).size} users</p>
+                  </button>
                   <button
                     onClick={() => setAdminTab('announcements')}
                     className="p-3 rounded-xl bg-orange-50 hover:bg-orange-100 transition-colors text-left"
@@ -292,17 +316,6 @@ export default function AdminPanel() {
                     <Bell className="w-5 h-5 text-blue-500 mb-1" />
                     <p className="font-semibold text-xs text-blue-700">Send Notification</p>
                     <p className="text-blue-500/60 text-[10px]">Alert all users</p>
-                  </button>
-                  <button
-                    onClick={() => {
-                      setAnnouncements(DEFAULT_ANNOUNCEMENTS)
-                      setNotifications(DEFAULT_NOTIFICATIONS)
-                    }}
-                    className="p-3 rounded-xl bg-slate-50 hover:bg-slate-100 transition-colors text-left"
-                  >
-                    <RefreshCw className="w-5 h-5 text-slate-500 mb-1" />
-                    <p className="font-semibold text-xs text-slate-700">Reset Data</p>
-                    <p className="text-slate-500/60 text-[10px]">Restore defaults</p>
                   </button>
                   <Link
                     href="/"
@@ -359,6 +372,273 @@ export default function AdminPanel() {
                 </div>
               </CardContent>
             </Card>
+          </div>
+        )}
+
+        {/* ===== USERS TAB ===== */}
+        {adminTab === 'users' && (
+          <div className="space-y-4">
+            {/* User Stats Overview */}
+            <div className="grid grid-cols-3 gap-3">
+              <Card className="border-0 shadow-md bg-gradient-to-br from-violet-50 to-violet-100/50">
+                <CardContent className="p-3 text-center">
+                  <Users className="w-5 h-5 text-violet-500 mx-auto mb-1" />
+                  <p className="text-xl font-bold text-violet-600">{new Set(allResults.map(r => r.userId)).size}</p>
+                  <p className="text-violet-500/70 text-[10px]">Total Users</p>
+                </CardContent>
+              </Card>
+              <Card className="border-0 shadow-md bg-gradient-to-br from-emerald-50 to-emerald-100/50">
+                <CardContent className="p-3 text-center">
+                  <FileText className="w-5 h-5 text-emerald-500 mx-auto mb-1" />
+                  <p className="text-xl font-bold text-emerald-600">{allResults.length}</p>
+                  <p className="text-emerald-500/70 text-[10px]">Tests Taken</p>
+                </CardContent>
+              </Card>
+              <Card className="border-0 shadow-md bg-gradient-to-br from-amber-50 to-amber-100/50">
+                <CardContent className="p-3 text-center">
+                  <Trophy className="w-5 h-5 text-amber-500 mx-auto mb-1" />
+                  <p className="text-xl font-bold text-amber-600">{allResults.length > 0 ? Math.round(allResults.reduce((sum, r) => sum + (r.score / r.maxScore) * 100, 0) / allResults.length) : 0}%</p>
+                  <p className="text-amber-500/70 text-[10px]">Avg Score</p>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Search */}
+            <Card className="border-0 shadow-md">
+              <CardContent className="p-3">
+                <div className="flex items-center gap-2">
+                  <input
+                    type="text"
+                    value={userSearchQuery}
+                    onChange={e => { setUserSearchQuery(e.target.value); setSelectedUserId(null) }}
+                    placeholder="Search by User ID or Phone..."
+                    className="flex-1 px-3 py-2 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-violet-300"
+                  />
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="rounded-xl"
+                    onClick={() => setAllResults(getResults())}
+                  >
+                    <RefreshCw className="w-4 h-4" />
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* User List or User Detail */}
+            {selectedUserId ? (
+              /* ===== USER DETAIL VIEW ===== */
+              <div className="space-y-4">
+                <button
+                  onClick={() => setSelectedUserId(null)}
+                  className="flex items-center gap-2 text-sm text-violet-600 hover:text-violet-800 font-medium"
+                >
+                  <ArrowLeft className="w-4 h-4" /> Back to Users
+                </button>
+
+                {/* User Header */}
+                <Card className="border-0 shadow-md bg-gradient-to-r from-violet-600 to-indigo-600">
+                  <CardContent className="p-5">
+                    <div className="flex items-center gap-4">
+                      <div className="w-14 h-14 rounded-full bg-white/20 flex items-center justify-center">
+                        <Users className="w-7 h-7 text-white" />
+                      </div>
+                      <div className="flex-1">
+                        <h3 className="text-white font-bold text-lg">
+                          {selectedUserId.startsWith('guest_') ? 'Guest User' : 'Phone User'}
+                        </h3>
+                        <p className="text-white/60 text-xs font-mono mt-0.5">{selectedUserId}</p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-white font-bold text-2xl">{allResults.filter(r => r.userId === selectedUserId).length}</p>
+                        <p className="text-white/60 text-[10px]">Tests Taken</p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* User Stats */}
+                {(() => {
+                  const userResults = allResults.filter(r => r.userId === selectedUserId)
+                  const avgScore = userResults.length > 0 ? Math.round(userResults.reduce((sum, r) => sum + (r.score / r.maxScore) * 100, 0) / userResults.length) : 0
+                  const bestScore = userResults.length > 0 ? Math.max(...userResults.map(r => (r.score / r.maxScore) * 100)) : 0
+                  const totalTime = userResults.reduce((sum, r) => sum + r.timeTaken, 0)
+                  const totalCorrect = userResults.reduce((sum, r) => sum + r.correctCount, 0)
+                  const totalWrong = userResults.reduce((sum, r) => sum + r.wrongCount, 0)
+                  const totalSkipped = userResults.reduce((sum, r) => sum + r.skippedCount, 0)
+                  const totalQuestions = totalCorrect + totalWrong + totalSkipped
+                  const accuracy = totalQuestions > 0 ? Math.round((totalCorrect / totalQuestions) * 100) : 0
+
+                  return (
+                    <div className="grid grid-cols-2 gap-3">
+                      <Card className="border-0 shadow-sm">
+                        <CardContent className="p-3">
+                          <p className="text-gray-400 text-[10px] uppercase tracking-wider">Avg Score</p>
+                          <p className="text-xl font-bold text-violet-600">{avgScore}%</p>
+                        </CardContent>
+                      </Card>
+                      <Card className="border-0 shadow-sm">
+                        <CardContent className="p-3">
+                          <p className="text-gray-400 text-[10px] uppercase tracking-wider">Best Score</p>
+                          <p className="text-xl font-bold text-emerald-600">{Math.round(bestScore)}%</p>
+                        </CardContent>
+                      </Card>
+                      <Card className="border-0 shadow-sm">
+                        <CardContent className="p-3">
+                          <p className="text-gray-400 text-[10px] uppercase tracking-wider">Accuracy</p>
+                          <p className="text-xl font-bold text-amber-600">{accuracy}%</p>
+                          <p className="text-gray-300 text-[9px]">{totalCorrect} correct / {totalQuestions} total</p>
+                        </CardContent>
+                      </Card>
+                      <Card className="border-0 shadow-sm">
+                        <CardContent className="p-3">
+                          <p className="text-gray-400 text-[10px] uppercase tracking-wider">Total Time</p>
+                          <p className="text-xl font-bold text-blue-600">{Math.floor(totalTime / 60)}m</p>
+                          <p className="text-gray-300 text-[9px]">{totalTime % 60}s remaining</p>
+                        </CardContent>
+                      </Card>
+                    </div>
+                  )
+                })()}
+
+                {/* User's Test History */}
+                <Card className="border-0 shadow-md">
+                  <CardContent className="p-4">
+                    <h3 className="font-bold text-sm mb-3 flex items-center gap-2">
+                      <FileText className="w-4 h-4 text-violet-500" /> Test History
+                    </h3>
+                    <div className="space-y-2">
+                      {allResults
+                        .filter(r => r.userId === selectedUserId)
+                        .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+                        .map(result => (
+                          <div key={result.id} className="p-3 rounded-xl bg-gray-50 hover:bg-gray-100 transition-colors">
+                            <div className="flex items-start justify-between mb-2">
+                              <div className="flex-1 min-w-0">
+                                <p className="font-semibold text-sm truncate">{result.testName}</p>
+                                <p className="text-gray-400 text-xs">{result.examName}</p>
+                              </div>
+                              <Badge className={`text-[9px] ml-2 ${
+                                (result.score / result.maxScore) >= 0.7 ? 'bg-emerald-100 text-emerald-700' :
+                                (result.score / result.maxScore) >= 0.4 ? 'bg-amber-100 text-amber-700' :
+                                'bg-red-100 text-red-700'
+                              }`}>
+                                {Math.round((result.score / result.maxScore) * 100)}%
+                              </Badge>
+                            </div>
+                            <div className="flex items-center gap-4 text-xs text-gray-500">
+                              <span className="flex items-center gap-1">
+                                <CheckCircle2 className="w-3 h-3 text-emerald-500" /> {result.correctCount}
+                              </span>
+                              <span className="flex items-center gap-1">
+                                <XCircle className="w-3 h-3 text-red-500" /> {result.wrongCount}
+                              </span>
+                              <span className="flex items-center gap-1">
+                                <AlertTriangle className="w-3 h-3 text-amber-500" /> {result.skippedCount}
+                              </span>
+                              <span className="flex items-center gap-1">
+                                <Clock className="w-3 h-3 text-blue-500" /> {Math.floor(result.timeTaken / 60)}m {result.timeTaken % 60}s
+                              </span>
+                            </div>
+                            <p className="text-gray-300 text-[9px] mt-1">{new Date(result.createdAt).toLocaleString()}</p>
+                          </div>
+                        ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+            ) : (
+              /* ===== USER LIST VIEW ===== */
+              <div className="space-y-3">
+                {(() => {
+                  // Group results by userId
+                  const userMap = new Map<string, { results: TestResult[], userId: string }>()
+                  allResults.forEach(r => {
+                    if (!userMap.has(r.userId)) {
+                      userMap.set(r.userId, { results: [], userId: r.userId })
+                    }
+                    userMap.get(r.userId)!.results.push(r)
+                  })
+
+                  const users = Array.from(userMap.values())
+                    .map(u => ({
+                      ...u,
+                      totalTests: u.results.length,
+                      avgScore: Math.round(u.results.reduce((sum, r) => sum + (r.score / r.maxScore) * 100, 0) / u.results.length),
+                      lastActive: u.results.reduce((latest, r) => {
+                        const d = new Date(r.createdAt)
+                        return d > latest ? d : latest
+                      }, new Date(0)),
+                      isGuest: u.userId.startsWith('guest_'),
+                    }))
+                    .filter(u => {
+                      if (!userSearchQuery) return true
+                      const q = userSearchQuery.toLowerCase()
+                      return u.userId.toLowerCase().includes(q)
+                    })
+                    .sort((a, b) => b.lastActive.getTime() - a.lastActive.getTime())
+
+                  return users.length === 0 ? (
+                    <Card className="border-0 shadow-sm">
+                      <CardContent className="p-8 text-center">
+                        <Users className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+                        <p className="text-gray-400 text-sm font-medium">
+                          {allResults.length === 0 ? 'No user data yet' : 'No users found'}
+                        </p>
+                        <p className="text-gray-300 text-xs mt-1">
+                          {allResults.length === 0
+                            ? 'Users will appear here when they start taking tests'
+                            : 'Try a different search query'}
+                        </p>
+                      </CardContent>
+                    </Card>
+                  ) : (
+                    users.map(user => (
+                      <Card key={user.userId} className="border-0 shadow-sm hover:shadow-md transition-shadow cursor-pointer" onClick={() => setSelectedUserId(user.userId)}>
+                        <CardContent className="p-4">
+                          <div className="flex items-center gap-3">
+                            <div className={`w-11 h-11 rounded-full flex items-center justify-center flex-shrink-0 ${
+                              user.isGuest
+                                ? 'bg-gray-100'
+                                : 'bg-gradient-to-br from-violet-500 to-indigo-500'
+                            }`}>
+                              {user.isGuest
+                                ? <Users className="w-5 h-5 text-gray-500" />
+                                : <span className="text-white font-bold text-sm">{user.userId.slice(0, 2).toUpperCase()}</span>
+                              }
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2">
+                                <p className="font-semibold text-sm">
+                                  {user.isGuest ? 'Guest User' : 'Phone User'}
+                                </p>
+                                <Badge variant="secondary" className={`text-[9px] ${
+                                  user.isGuest ? 'bg-gray-100 text-gray-600' : 'bg-violet-100 text-violet-700'
+                                }`}>
+                                  {user.isGuest ? 'Guest' : 'Verified'}
+                                </Badge>
+                              </div>
+                              <p className="text-gray-400 text-[10px] font-mono truncate">{user.userId}</p>
+                            </div>
+                            <div className="text-right flex-shrink-0">
+                              <div className="flex items-center gap-1 justify-end">
+                                <p className="text-lg font-bold" style={{ color: user.avgScore >= 70 ? '#059669' : user.avgScore >= 40 ? '#d97706' : '#dc2626' }}>
+                                  {user.avgScore}%
+                                </p>
+                                <ChevronRight className="w-4 h-4 text-gray-300" />
+                              </div>
+                              <p className="text-gray-400 text-[10px]">{user.totalTests} tests</p>
+                              <p className="text-gray-300 text-[9px]">{user.lastActive.toLocaleDateString()}</p>
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    ))
+                  )
+                })()}
+              </div>
+            )}
           </div>
         )}
 

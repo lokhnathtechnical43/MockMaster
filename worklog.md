@@ -78,3 +78,31 @@ Stage Summary:
 - Admin panel includes "Back to App" link and "View App" quick action
 - Admin panel has noindex/nofollow meta tags for security
 - Build passes successfully with both / and /admin routes
+
+---
+Task ID: admin-users-tab
+Agent: Main Agent
+Task: Add Users tab to admin panel for viewing user data
+
+Work Log:
+- Added `getResults` and `TestResult` imports from local-data.ts
+- Added new "users" tab type to adminTab state
+- Added state for allResults, selectedUserId, userSearchQuery
+- Added periodic refresh (5s) for user data
+- Added Users tab to header navigation tabs
+- Created Users tab with:
+  - Stats overview (Total Users, Tests Taken, Avg Score)
+  - Search by User ID
+  - User list view grouped by userId with avg score, test count, last active date
+  - User detail view with stats (avg score, best score, accuracy, total time)
+  - Test history per user with score breakdown
+  - Guest vs Verified user badges
+- Updated Dashboard Quick Actions with "View Users" button
+- Updated Dashboard stats card from "Unread Notifs" to "Users" count
+- Added Clock icon import for test history display
+
+Stage Summary:
+- Admin panel now has 4 tabs: Dashboard, Users, Announcements, Notifications
+- Users tab shows all user test data from localStorage
+- Can view individual user details and full test history
+- Search functionality to find users by ID
