@@ -555,73 +555,73 @@ export default function ExamPrepApp() {
   // ===== RENDER: Home Page =====
   function renderHome() {
     const stats = getUserStats()
+    const totalTestsAvailable = categories.reduce((sum, c) => sum + c.exams.length, 0)
+    const greetings = [_t('home.goodMorning'), _t('home.goodAfternoon'), _t('home.goodEvening')]
+    const hour = new Date().getHours()
+    const greeting = hour < 12 ? greetings[0] : hour < 17 ? greetings[1] : greetings[2]
+
     return (
       <div className="pb-20">
-        {/* Compact Header */}
-        <div className="bg-gradient-to-r from-orange-500 to-red-500 px-4 pt-[calc(env(safe-area-inset-top,0px)+0.75rem)] pb-3 rounded-b-2xl">
-          <div className="flex items-center justify-between">
-            {/* Left: Menu + App Name */}
-            <div className="flex items-center gap-2.5">
-              <button
-                onClick={() => setShowSideMenu(true)}
-                onTouchEnd={(e) => { e.preventDefault(); setShowSideMenu(true) }}
-                className="w-10 h-10 rounded-lg bg-white/20 backdrop-blur flex items-center justify-center active:bg-white/30 transition-colors"
-                style={{ touchAction: 'manipulation', WebkitTapHighlightColor: 'transparent' }}
-              >
-                <Menu className="w-5 h-5 text-white" />
-              </button>
-              <div className="flex items-center gap-2">
-                <img src="/logo.png" alt="MockMaster" className="w-7 h-7 rounded-lg" />
-                <div>
-                  <h1 className="text-white text-base font-bold leading-tight">{_t('app.name')}</h1>
-                  <p className="text-orange-100 text-[10px] leading-tight">{_t('app.subtitle')}</p>
+        {/* Professional Header with Stats */}
+        <div className="bg-gradient-to-br from-orange-500 via-red-500 to-rose-500 px-4 pt-[calc(env(safe-area-inset-top,0px)+0.75rem)] pb-8 rounded-b-[2rem] relative overflow-hidden">
+          {/* Decorative circles */}
+          <div className="absolute top-0 right-0 w-40 h-40 bg-white/5 rounded-full -translate-y-1/2 translate-x-1/4" />
+          <div className="absolute bottom-0 left-0 w-32 h-32 bg-white/5 rounded-full translate-y-1/2 -translate-x-1/4" />
+          <div className="absolute top-1/2 right-1/4 w-16 h-16 bg-white/5 rounded-full" />
+
+          <div className="relative z-10">
+            {/* Top Bar */}
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2.5">
+                <button
+                  onClick={() => setShowSideMenu(true)}
+                  onTouchEnd={(e) => { e.preventDefault(); setShowSideMenu(true) }}
+                  className="w-10 h-10 rounded-xl bg-white/15 backdrop-blur flex items-center justify-center active:bg-white/25 transition-colors"
+                  style={{ touchAction: 'manipulation', WebkitTapHighlightColor: 'transparent' }}
+                >
+                  <Menu className="w-5 h-5 text-white" />
+                </button>
+                <div className="flex items-center gap-2">
+                  <img src="/logo.png" alt="MockMaster" className="w-8 h-8 rounded-xl shadow-sm" />
+                  <div>
+                    <h1 className="text-white text-base font-extrabold leading-tight">{_t('app.name')}</h1>
+                    <p className="text-orange-100 text-[10px] leading-tight">{_t('app.subtitle')}</p>
+                  </div>
                 </div>
               </div>
+              <button
+                onClick={() => setShowNotificationPanel(!showNotificationPanel)}
+                onTouchEnd={(e) => { e.preventDefault(); setShowNotificationPanel(!showNotificationPanel) }}
+                className="w-10 h-10 rounded-xl bg-white/15 backdrop-blur flex items-center justify-center active:bg-white/25 transition-colors relative"
+                style={{ touchAction: 'manipulation', WebkitTapHighlightColor: 'transparent' }}
+              >
+                <Bell className="w-4 h-4 text-white" />
+                {unreadCount > 0 && (
+                  <span className="absolute -top-1 -right-1 w-4 h-4 bg-yellow-400 rounded-full flex items-center justify-center text-orange-800 text-[8px] font-bold">
+                    {unreadCount}
+                  </span>
+                )}
+              </button>
             </div>
 
-            {/* Right: Notification */}
-            <button
-              onClick={() => setShowNotificationPanel(!showNotificationPanel)}
-              onTouchEnd={(e) => { e.preventDefault(); setShowNotificationPanel(!showNotificationPanel) }}
-              className="w-10 h-10 rounded-lg bg-white/20 backdrop-blur flex items-center justify-center active:bg-white/30 transition-colors relative"
-              style={{ touchAction: 'manipulation', WebkitTapHighlightColor: 'transparent' }}
-            >
-              <Bell className="w-4 h-4 text-white" />
-              {unreadCount > 0 && (
-                <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 rounded-full flex items-center justify-center text-white text-[8px] font-bold border border-orange-500">
-                  {unreadCount}
-                </span>
-              )}
-            </button>
-          </div>
-
-          {/* Moving Announcements Marquee */}
-          <div className="bg-white/10 backdrop-blur rounded-lg mt-2.5 overflow-hidden">
-            <div className="flex items-center">
-              <div className="bg-white/15 px-2 py-1.5 flex items-center flex-shrink-0">
-                <Flame className="w-3.5 h-3.5 text-yellow-300" />
+            {/* Welcome + Stats Row */}
+            <div className="mt-5 flex items-end justify-between">
+              <div>
+                <p className="text-white/80 text-sm">{greeting} 👋</p>
+                <p className="text-white text-xl font-extrabold mt-0.5">{auth.isLoggedIn ? (auth.userName || 'Student') : 'Student'}</p>
               </div>
-              <div className="overflow-hidden flex-1 py-1.5">
-                <div className="flex animate-marquee whitespace-nowrap">
-                  {announcements.map(a => (
-                    <button
-                      key={a.id}
-                      onClick={() => handleBottomNav(a.action)}
-                      className="mx-6 text-[11px] font-medium text-white/90 active:text-white"
-                    >
-                      {a.title} — {a.subtitle}
-                    </button>
-                  ))}
-                  {/* Duplicate for seamless loop */}
-                  {announcements.map(a => (
-                    <button
-                      key={`dup-${a.id}`}
-                      onClick={() => handleBottomNav(a.action)}
-                      className="mx-6 text-[11px] font-medium text-white/90 active:text-white"
-                    >
-                      {a.title} — {a.subtitle}
-                    </button>
-                  ))}
+              <div className="flex items-center gap-1.5">
+                <div className="bg-white/15 backdrop-blur rounded-xl px-3 py-2 text-center">
+                  <p className="text-white font-extrabold text-lg leading-none">{stats.testsTaken}</p>
+                  <p className="text-white/70 text-[9px] mt-0.5">{_t('home.testsDone')}</p>
+                </div>
+                <div className="bg-white/15 backdrop-blur rounded-xl px-3 py-2 text-center">
+                  <p className="text-white font-extrabold text-lg leading-none">{stats.avgScore}%</p>
+                  <p className="text-white/70 text-[9px] mt-0.5">{_t('home.accuracy')}</p>
+                </div>
+                <div className="bg-white/15 backdrop-blur rounded-xl px-3 py-2 text-center">
+                  <p className="text-white font-extrabold text-lg leading-none">#{stats.bestRank}</p>
+                  <p className="text-white/70 text-[9px] mt-0.5">{_t('home.bestRank')}</p>
                 </div>
               </div>
             </div>
@@ -632,7 +632,6 @@ export default function ExamPrepApp() {
         {showNotificationPanel && (
           <div className="px-4 -mt-4 mb-2 relative z-40">
             <div className="bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden">
-              {/* Panel Header */}
               <div className="flex items-center justify-between px-4 py-3 bg-gradient-to-r from-orange-50 to-red-50 border-b border-gray-100">
                 <div className="flex items-center gap-2">
                   <Bell className="w-4 h-4 text-orange-500" />
@@ -650,16 +649,11 @@ export default function ExamPrepApp() {
                       {_t('home.markAllRead')}
                     </button>
                   )}
-                  <button
-                    onClick={() => setShowNotificationPanel(false)}
-                    className="w-6 h-6 rounded-full bg-gray-100 flex items-center justify-center"
-                  >
+                  <button onClick={() => setShowNotificationPanel(false)} className="w-6 h-6 rounded-full bg-gray-100 flex items-center justify-center">
                     <X className="w-3 h-3 text-gray-500" />
                   </button>
                 </div>
               </div>
-
-              {/* Notification List */}
               <div className="max-h-[300px] overflow-y-auto">
                 {notifications.length === 0 ? (
                   <div className="py-8 text-center">
@@ -671,28 +665,16 @@ export default function ExamPrepApp() {
                     <div
                       key={notification.id}
                       onClick={() => setNotifications(prev => prev.map(n => n.id === notification.id ? { ...n, read: true } : n))}
-                      className={`px-4 py-3 border-b border-gray-50 last:border-b-0 active:bg-gray-50 transition-colors cursor-pointer ${
-                        !notification.read ? 'bg-orange-50/50' : ''
-                      }`}
+                      className={`px-4 py-3 border-b border-gray-50 last:border-b-0 active:bg-gray-50 transition-colors cursor-pointer ${!notification.read ? 'bg-orange-50/50' : ''}`}
                     >
                       <div className="flex items-start gap-3">
-                        <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 ${
-                          notification.type === 'update' ? 'bg-blue-100' :
-                          notification.type === 'alert' ? 'bg-amber-100' :
-                          'bg-green-100'
-                        }`}>
-                          {notification.type === 'update' ? <Zap className="w-4 h-4 text-blue-500" /> :
-                           notification.type === 'alert' ? <AlertTriangle className="w-4 h-4 text-amber-500" /> :
-                           <Gift className="w-4 h-4 text-green-500" />}
+                        <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 ${notification.type === 'update' ? 'bg-blue-100' : notification.type === 'alert' ? 'bg-amber-100' : 'bg-green-100'}`}>
+                          {notification.type === 'update' ? <Zap className="w-4 h-4 text-blue-500" /> : notification.type === 'alert' ? <AlertTriangle className="w-4 h-4 text-amber-500" /> : <Gift className="w-4 h-4 text-green-500" />}
                         </div>
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2">
-                            <p className={`text-sm ${!notification.read ? 'font-bold text-gray-900' : 'font-medium text-gray-700'}`}>
-                              {notification.title}
-                            </p>
-                            {!notification.read && (
-                              <div className="w-2 h-2 rounded-full bg-orange-500 flex-shrink-0" />
-                            )}
+                            <p className={`text-sm ${!notification.read ? 'font-bold text-gray-900' : 'font-medium text-gray-700'}`}>{notification.title}</p>
+                            {!notification.read && <div className="w-2 h-2 rounded-full bg-orange-500 flex-shrink-0" />}
                           </div>
                           <p className="text-xs text-gray-500 mt-0.5 line-clamp-2">{notification.message}</p>
                           <p className="text-[10px] text-gray-400 mt-1">{notification.time}</p>
@@ -706,10 +688,34 @@ export default function ExamPrepApp() {
           </div>
         )}
 
+        {/* Moving Announcements Marquee */}
+        <div className="mx-4 -mt-4">
+          <div className="bg-white/80 backdrop-blur-md rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+            <div className="flex items-center">
+              <div className="bg-gradient-to-r from-orange-500 to-red-500 px-2.5 py-2 flex items-center flex-shrink-0">
+                <Flame className="w-3.5 h-3.5 text-white" />
+              </div>
+              <div className="overflow-hidden flex-1 py-2">
+                <div className="flex animate-marquee whitespace-nowrap">
+                  {announcements.map(a => (
+                    <button key={a.id} onClick={() => handleBottomNav(a.action)} className="mx-6 text-[11px] font-medium text-gray-700 active:text-orange-600">
+                      {a.title} — {a.subtitle}
+                    </button>
+                  ))}
+                  {announcements.map(a => (
+                    <button key={`dup-${a.id}`} onClick={() => handleBottomNav(a.action)} className="mx-6 text-[11px] font-medium text-gray-700 active:text-orange-600">
+                      {a.title} — {a.subtitle}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
         {/* Announcements - Image Banner Carousel */}
         <div className="px-4 mt-3 mb-1">
           <div className="relative">
-            {/* Banner Cards - Full Width Single Item */}
             <div
               ref={carouselRef}
               onScroll={() => {
@@ -738,22 +744,15 @@ export default function ExamPrepApp() {
               className="flex overflow-x-auto scrollbar-hide snap-x snap-mandatory"
             >
               {announcements.map((a, index) => (
-                <button
-                  key={a.id}
-                  onClick={() => handleBottomNav(a.action)}
-                  className="flex-shrink-0 w-full snap-center px-1"
-                >
+                <button key={a.id} onClick={() => handleBottomNav(a.action)} className="flex-shrink-0 w-full snap-center px-1">
                   <div className={`bg-gradient-to-br ${a.gradient} rounded-2xl overflow-hidden shadow-md active:scale-[0.98] transition-transform`}>
-                    {/* Image Area */}
                     <div className="h-32 relative flex items-center justify-center overflow-hidden">
-                      {/* Background Pattern */}
                       <div className="absolute inset-0 opacity-10">
                         <div className="absolute top-3 left-6 w-24 h-24 rounded-full border-4 border-white" />
                         <div className="absolute bottom-2 right-8 w-20 h-20 rounded-full border-4 border-white" />
                         <div className="absolute top-10 right-16 w-10 h-10 rounded-full bg-white" />
                         <div className="absolute bottom-4 left-20 w-6 h-6 rounded-full bg-white" />
                       </div>
-                      {/* Icon + Text */}
                       <div className="relative z-10 flex items-center gap-4 px-4">
                         <div className="w-16 h-16 bg-white/20 backdrop-blur rounded-2xl flex items-center justify-center flex-shrink-0">
                           {a.image === 'ssc' && <BookOpen className="w-8 h-8 text-white" />}
@@ -775,44 +774,38 @@ export default function ExamPrepApp() {
                 </button>
               ))}
             </div>
-
-            {/* Dots Indicator */}
             <div className="flex items-center justify-center gap-1.5 mt-1">
               {announcements.map((_, i) => (
-                <button
-                  key={i}
-                  onClick={() => {
-                    setActiveAnnouncement(i)
-                    if (carouselRef.current) {
-                      const cardWidth = carouselRef.current.children[0]?.getBoundingClientRect().width || 250
-                      const gap = 12
-                      carouselRef.current.scrollTo({ left: i * (cardWidth + gap), behavior: 'smooth' })
-                    }
-                  }}
-                  className={`h-1.5 rounded-full transition-all duration-300 ${
-                    i === activeAnnouncement ? 'w-4 bg-orange-500' : 'w-1.5 bg-gray-300'
-                  }`}
+                <button key={i} onClick={() => {
+                  setActiveAnnouncement(i)
+                  if (carouselRef.current) {
+                    const cardWidth = carouselRef.current.children[0]?.getBoundingClientRect().width || 250
+                    carouselRef.current.scrollTo({ left: i * cardWidth, behavior: 'smooth' })
+                  }
+                }}
+                  className={`h-1.5 rounded-full transition-all duration-300 ${i === activeAnnouncement ? 'w-4 bg-orange-500' : 'w-1.5 bg-gray-300'}`}
                 />
               ))}
             </div>
           </div>
         </div>
 
-        <div className="px-4 mt-4 space-y-6">
-          {/* Quick Practice Card */}
-          <Card className="border-0 shadow-md">
-            <CardContent className="p-4">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-gradient-to-r from-orange-500 to-red-500 flex items-center justify-center">
-                  <Zap className="w-5 h-5 text-white" />
-                </div>
-                <div className="flex-1">
-                  <p className="font-semibold text-sm">{_t('home.quickPractice')}</p>
-                  <p className="text-gray-500 text-xs">{_t('home.quickPracticeSub')}</p>
+        <div className="px-4 mt-4 space-y-5">
+          {/* Quick Practice - Professional Card */}
+          <Card className="border-0 shadow-lg overflow-hidden">
+            <div className="bg-gradient-to-r from-orange-500 to-red-500 p-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-12 h-12 rounded-2xl bg-white/20 backdrop-blur flex items-center justify-center">
+                    <Zap className="w-6 h-6 text-white" />
+                  </div>
+                  <div>
+                    <p className="font-bold text-white text-base">{_t('home.quickPractice')}</p>
+                    <p className="text-white/70 text-xs mt-0.5">{_t('home.quickPracticeSub')}</p>
+                  </div>
                 </div>
                 <Button
-                  size="sm"
-                  className="bg-gradient-to-r from-orange-500 to-red-500 text-white rounded-xl"
+                  className="bg-white text-orange-600 rounded-xl font-bold shadow-md hover:bg-white/90 active:scale-95 transition-all"
                   onClick={() => {
                     const allCats = categories
                     const allExams = allCats.flatMap(c => c.exams)
@@ -826,14 +819,14 @@ export default function ExamPrepApp() {
                   <Play className="w-4 h-4 mr-1" /> {_t('home.start')}
                 </Button>
               </div>
-            </CardContent>
+            </div>
           </Card>
 
-          {/* Exam Categories */}
+          {/* Exam Categories - Professional Cards */}
           <div>
             <div className="flex items-center justify-between mb-3">
               <h2 className="font-bold text-lg">{_t('home.examCategories')}</h2>
-              <button onClick={() => handleBottomNav('exams')} className="text-orange-600 text-sm font-medium flex items-center">
+              <button onClick={() => handleBottomNav('exams')} className="text-orange-600 text-sm font-semibold flex items-center gap-0.5">
                 {_t('home.viewAll')} <ChevronRight className="w-4 h-4" />
               </button>
             </div>
@@ -843,18 +836,18 @@ export default function ExamPrepApp() {
                 return (
                   <Card
                     key={cat.id}
-                    className="border-0 shadow-sm cursor-pointer hover:shadow-md transition-shadow"
-                    onClick={() => {
-                      setSelectedCategory(cat)
-                      handleBottomNav('exams')
-                    }}
+                    className="border-0 shadow-md cursor-pointer hover:shadow-lg transition-all active:scale-[0.97] overflow-hidden"
+                    onClick={() => { setSelectedCategory(cat); handleBottomNav('exams') }}
                   >
-                    <CardContent className="p-4">
-                      <div className={`w-10 h-10 rounded-xl ${color.light} flex items-center justify-center ${color.text} mb-2`}>
+                    <CardContent className="p-4 relative">
+                      <div className="absolute top-0 right-0 w-16 h-16 rounded-bl-[2rem] opacity-30" style={{ background: `linear-gradient(135deg, ${color.accent || '#f97316'}22, transparent)` }} />
+                      <div className={`w-11 h-11 rounded-2xl ${color.light} flex items-center justify-center ${color.text} mb-3 shadow-sm`}>
                         {getCatIcon(cat.slug)}
                       </div>
-                      <p className="font-semibold text-sm">{cat.name}</p>
-                      <p className="text-gray-400 text-xs mt-1">{cat.exams.length} {_t('home.exams')}</p>
+                      <p className="font-bold text-sm">{cat.name}</p>
+                      <div className="flex items-center gap-1 mt-1.5">
+                        <span className="text-[10px] text-gray-400 bg-gray-50 px-1.5 py-0.5 rounded-md font-medium">{cat.exams.length} {_t('home.exams')}</span>
+                      </div>
                     </CardContent>
                   </Card>
                 )
@@ -862,29 +855,43 @@ export default function ExamPrepApp() {
             </div>
           </div>
 
-          {/* Popular Exams */}
+          {/* Popular Exams - Professional List */}
           <div>
-            <h2 className="font-bold text-lg mb-3">{_t('home.popularExams')}</h2>
+            <div className="flex items-center justify-between mb-3">
+              <h2 className="font-bold text-lg">{_t('home.popularExams')}</h2>
+            </div>
             <div className="space-y-2">
               {categories.slice(0, 3).flatMap(cat =>
-                cat.exams.slice(0, 2).map(exam => (
-                  <Card
-                    key={exam.id}
-                    className="border-0 shadow-sm cursor-pointer hover:shadow-md transition-shadow"
-                    onClick={() => openExam(exam, cat)}
-                  >
-                    <CardContent className="p-3 flex items-center gap-3">
-                      <div className={`w-10 h-10 rounded-xl ${getCatColor(cat.slug).light} flex items-center justify-center ${getCatColor(cat.slug).text}`}>
-                        {getCatIcon(cat.slug)}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="font-semibold text-sm truncate">{exam.name}</p>
-                        <p className="text-gray-400 text-xs">{exam.testCount} {_t('exams.tests')} · {exam.totalQuestions} {_t('tests.Qs')}</p>
-                      </div>
-                      <ChevronRight className="w-4 h-4 text-gray-400" />
-                    </CardContent>
-                  </Card>
-                ))
+                cat.exams.slice(0, 2).map(exam => {
+                  const color = getCatColor(cat.slug)
+                  return (
+                    <Card
+                      key={exam.id}
+                      className="border-0 shadow-sm cursor-pointer hover:shadow-md transition-all active:scale-[0.98]"
+                      onClick={() => openExam(exam, cat)}
+                    >
+                      <CardContent className="p-3 flex items-center gap-3">
+                        <div className={`w-11 h-11 rounded-2xl ${color.light} flex items-center justify-center ${color.text} shadow-sm`}>
+                          {getCatIcon(cat.slug)}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="font-semibold text-sm truncate">{exam.name}</p>
+                          <div className="flex items-center gap-2 mt-1">
+                            <span className="text-[10px] text-gray-400 flex items-center gap-0.5">
+                              <BookOpen className="w-2.5 h-2.5" /> {exam.totalQuestions} Qs
+                            </span>
+                            <span className="text-[10px] text-gray-400 flex items-center gap-0.5">
+                              <Clock className="w-2.5 h-2.5" /> {exam.duration}m
+                            </span>
+                          </div>
+                        </div>
+                        <div className="w-8 h-8 rounded-xl bg-orange-50 flex items-center justify-center">
+                          <ChevronRight className="w-4 h-4 text-orange-500" />
+                        </div>
+                      </CardContent>
+                    </Card>
+                  )
+                })
               )}
             </div>
           </div>
@@ -892,20 +899,29 @@ export default function ExamPrepApp() {
           {/* Daily Tips Section */}
           <div>
             <div className="flex items-center gap-2 mb-3">
-              <Star className="w-5 h-5 text-amber-500" />
+              <div className="w-7 h-7 rounded-lg bg-amber-50 flex items-center justify-center">
+                <Star className="w-4 h-4 text-amber-500" />
+              </div>
               <h2 className="font-bold text-lg">{_t('home.dailyTips')}</h2>
             </div>
-            <Card className="border-0 shadow-sm border-l-4 border-l-orange-400">
-              <CardContent className="p-4">
-                <p className="text-sm text-gray-700 leading-relaxed">{_t('home.dailyTip')}</p>
-              </CardContent>
+            <Card className="border-0 shadow-md overflow-hidden">
+              <div className="bg-gradient-to-r from-amber-50 to-orange-50 p-4">
+                <div className="flex items-start gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-400 to-orange-400 flex items-center justify-center flex-shrink-0 shadow-sm">
+                    <Star className="w-5 h-5 text-white" />
+                  </div>
+                  <p className="text-sm text-gray-700 leading-relaxed pt-1">{_t('home.dailyTip')}</p>
+                </div>
+              </div>
             </Card>
           </div>
 
           {/* Upcoming Exams Section */}
           <div>
             <div className="flex items-center gap-2 mb-3">
-              <Calendar className="w-5 h-5 text-blue-500" />
+              <div className="w-7 h-7 rounded-lg bg-blue-50 flex items-center justify-center">
+                <Calendar className="w-4 h-4 text-blue-500" />
+              </div>
               <h2 className="font-bold text-lg">{_t('home.upcomingExams')}</h2>
             </div>
             <div className="space-y-2">
@@ -914,67 +930,87 @@ export default function ExamPrepApp() {
                 { name: _t('upcoming.ibpsPo'), date: _t('upcoming.ibpsPoDate'), status: _t('upcoming.ibpsPoStatus'), statusType: 'coming' },
                 { name: _t('upcoming.rrbNtpc'), date: _t('upcoming.rrbNtpcDate'), status: _t('upcoming.rrbNtpcStatus'), statusType: 'admit' },
               ].map((exam, i) => (
-                <Card key={i} className="border-0 shadow-sm">
-                  <CardContent className="p-3 flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center">
-                      <Calendar className="w-5 h-5 text-blue-500" />
+                <Card key={i} className="border-0 shadow-sm overflow-hidden">
+                  <CardContent className="p-0">
+                    <div className="flex items-center gap-3 p-3">
+                      <div className="w-11 h-11 rounded-2xl bg-blue-50 flex items-center justify-center">
+                        <Calendar className="w-5 h-5 text-blue-500" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-semibold text-sm truncate">{exam.name}</p>
+                        <p className="text-gray-400 text-xs mt-0.5">{exam.date}</p>
+                      </div>
+                      <Badge className={`text-[10px] font-bold border-0 ${
+                        exam.statusType === 'open' ? 'bg-emerald-100 text-emerald-700' :
+                        exam.statusType === 'admit' ? 'bg-amber-100 text-amber-700' :
+                        'bg-gray-100 text-gray-600'
+                      }`}>
+                        {exam.status}
+                      </Badge>
                     </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="font-semibold text-sm truncate">{exam.name}</p>
-                      <p className="text-gray-400 text-xs">{exam.date}</p>
-                    </div>
-                    <Badge variant={exam.statusType === 'open' ? 'default' : 'secondary'} className={`text-[10px] ${
-                      exam.statusType === 'open' ? 'bg-green-100 text-green-700' :
-                      exam.statusType === 'admit' ? 'bg-amber-100 text-amber-700' :
-                      'bg-gray-100 text-gray-600'
-                    }`}>
-                      {exam.status}
-                    </Badge>
                   </CardContent>
                 </Card>
               ))}
             </div>
           </div>
 
-          {/* Study Stats / Motivation */}
+          {/* Study Stats / Motivation - Professional */}
           <div>
             <div className="flex items-center gap-2 mb-3">
-              <TrendingUp className="w-5 h-5 text-green-500" />
+              <div className="w-7 h-7 rounded-lg bg-green-50 flex items-center justify-center">
+                <TrendingUp className="w-4 h-4 text-green-500" />
+              </div>
               <h2 className="font-bold text-lg">{_t('home.yourProgress')}</h2>
             </div>
             {auth.isLoggedIn ? (
               <div className="grid grid-cols-3 gap-2">
-                <Card className="border-0 shadow-sm">
-                  <CardContent className="p-3 text-center">
-                    <Flame className="w-6 h-6 text-orange-500 mx-auto mb-1" />
-                    <p className="font-bold text-lg">{stats.testsTaken}</p>
-                    <p className="text-gray-400 text-[10px]">{_t('home.testsDone')}</p>
+                <Card className="border-0 shadow-md overflow-hidden">
+                  <CardContent className="p-0">
+                    <div className="bg-gradient-to-b from-orange-50 to-white p-3 text-center">
+                      <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-orange-400 to-red-400 flex items-center justify-center mx-auto mb-2 shadow-sm">
+                        <Flame className="w-5 h-5 text-white" />
+                      </div>
+                      <p className="font-extrabold text-2xl text-gray-800">{stats.testsTaken}</p>
+                      <p className="text-gray-400 text-[10px] font-medium mt-0.5">{_t('home.testsDone')}</p>
+                    </div>
                   </CardContent>
                 </Card>
-                <Card className="border-0 shadow-sm">
-                  <CardContent className="p-3 text-center">
-                    <Target className="w-6 h-6 text-green-500 mx-auto mb-1" />
-                    <p className="font-bold text-lg">{stats.avgScore}%</p>
-                    <p className="text-gray-400 text-[10px]">{_t('home.accuracy')}</p>
+                <Card className="border-0 shadow-md overflow-hidden">
+                  <CardContent className="p-0">
+                    <div className="bg-gradient-to-b from-emerald-50 to-white p-3 text-center">
+                      <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-emerald-400 to-green-400 flex items-center justify-center mx-auto mb-2 shadow-sm">
+                        <Target className="w-5 h-5 text-white" />
+                      </div>
+                      <p className="font-extrabold text-2xl text-gray-800">{stats.avgScore}%</p>
+                      <p className="text-gray-400 text-[10px] font-medium mt-0.5">{_t('home.accuracy')}</p>
+                    </div>
                   </CardContent>
                 </Card>
-                <Card className="border-0 shadow-sm">
-                  <CardContent className="p-3 text-center">
-                    <Award className="w-6 h-6 text-blue-500 mx-auto mb-1" />
-                    <p className="font-bold text-lg">#{stats.bestRank}</p>
-                    <p className="text-gray-400 text-[10px]">{_t('home.bestRank')}</p>
+                <Card className="border-0 shadow-md overflow-hidden">
+                  <CardContent className="p-0">
+                    <div className="bg-gradient-to-b from-blue-50 to-white p-3 text-center">
+                      <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-blue-400 to-indigo-400 flex items-center justify-center mx-auto mb-2 shadow-sm">
+                        <Award className="w-5 h-5 text-white" />
+                      </div>
+                      <p className="font-extrabold text-2xl text-gray-800">#{stats.bestRank}</p>
+                      <p className="text-gray-400 text-[10px] font-medium mt-0.5">{_t('home.bestRank')}</p>
+                    </div>
                   </CardContent>
                 </Card>
               </div>
             ) : (
-              <Card className="border-0 shadow-sm bg-gradient-to-r from-orange-50 to-red-50">
-                <CardContent className="p-4 text-center">
-                  <TrendingUp className="w-8 h-8 text-orange-400 mx-auto mb-2" />
-                  <p className="font-semibold text-sm text-gray-700">{_t('home.loginTrack')}</p>
-                  <p className="text-gray-500 text-xs mt-1 mb-3">{_t('home.loginTrackSub')}</p>
-                  <Button size="sm" className="bg-gradient-to-r from-orange-500 to-red-500 text-white rounded-xl" onClick={() => setShowLoginModal(true)}>
-                    {_t('home.loginNow')}
-                  </Button>
+              <Card className="border-0 shadow-md overflow-hidden">
+                <CardContent className="p-0">
+                  <div className="bg-gradient-to-r from-orange-50 via-red-50 to-rose-50 p-5 text-center">
+                    <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-orange-400 to-red-400 flex items-center justify-center mx-auto mb-3 shadow-md">
+                      <TrendingUp className="w-7 h-7 text-white" />
+                    </div>
+                    <p className="font-bold text-gray-800">{_t('home.loginTrack')}</p>
+                    <p className="text-gray-500 text-xs mt-1 mb-3">{_t('home.loginTrackSub')}</p>
+                    <Button className="bg-gradient-to-r from-orange-500 to-red-500 text-white rounded-xl font-bold shadow-md active:scale-95 transition-all" onClick={() => setShowLoginModal(true)}>
+                      {_t('home.loginNow')}
+                    </Button>
+                  </div>
                 </CardContent>
               </Card>
             )}
