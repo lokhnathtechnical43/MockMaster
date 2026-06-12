@@ -1443,7 +1443,7 @@ export default function ExamPrepApp() {
 
     return (
       <div className="fixed bottom-0 left-0 right-0 z-40 safe-area-pb">
-        <div className="bg-white/95 backdrop-blur-lg border-t border-gray-100 max-w-lg mx-auto">
+        <div className="bg-white/95 backdrop-blur-lg border-t border-gray-100 w-full">
           <div className="flex items-center justify-around py-2">
             {navItems.map(item => {
               const isActive = currentPage === item.page
@@ -1488,7 +1488,7 @@ export default function ExamPrepApp() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 max-w-lg mx-auto relative">
+    <div className="min-h-screen min-h-dvh bg-gray-50 relative w-full">
       {renderPage()}
       {renderBottomNav()}
 

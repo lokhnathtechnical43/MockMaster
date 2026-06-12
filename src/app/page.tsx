@@ -6,7 +6,7 @@ import dynamic from 'next/dynamic'
 const ExamPrepApp = dynamic(() => import('@/components/ExamPrepApp'), {
   ssr: false,
   loading: () => (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-orange-50 to-white">
+    <div className="min-h-screen min-h-dvh flex items-center justify-center bg-gradient-to-b from-orange-50 to-white w-full">
       <div className="text-center">
         <div className="w-16 h-16 bg-gradient-to-r from-orange-500 to-red-500 rounded-2xl flex items-center justify-center mx-auto mb-4 animate-pulse">
           <span className="text-white text-2xl font-bold">E</span>
