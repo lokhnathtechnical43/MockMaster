@@ -123,15 +123,16 @@ export default function ExamPrepApp() {
   ])
   const unreadCount = notifications.filter(n => !n.read).length
 
-  // --- Announcements (admin-managed moving ticker) ---
+  // --- Announcements (admin-managed image banners) ---
   const [announcements] = useState<
-    { id: string; text: string; color: 'orange' | 'blue' | 'green' | 'red' }[]
+    { id: string; image: string; title: string; subtitle: string; action: Page; gradient: string }[]
   >([
-    { id: '1', text: '🔥 SSC CGL 2025 New Mock Tests Added! Start practicing now!', color: 'orange' },
-    { id: '2', text: '📢 Banking PO MEGA test series launching this week!', color: 'blue' },
-    { id: '3', text: '🏆 Weekly leaderboard winners get special badges!', color: 'green' },
-    { id: '4', text: '⚡ Practice mode is now LIVE! Try topic-wise practice!', color: 'red' },
+    { id: '1', image: 'ssc', title: 'SSC CGL 2025', subtitle: 'New Mock Tests Added!', action: 'exams', gradient: 'from-orange-500 to-red-500' },
+    { id: '2', image: 'banking', title: 'Banking PO', subtitle: 'MEGA Test Series Live!', action: 'exams', gradient: 'from-blue-500 to-indigo-500' },
+    { id: '3', image: 'leaderboard', title: 'Weekly Winners', subtitle: 'Get Special Badges!', action: 'leaderboard', gradient: 'from-emerald-500 to-teal-500' },
+    { id: '4', image: 'practice', title: 'Practice Mode', subtitle: 'Topic-wise Practice LIVE!', action: 'practice', gradient: 'from-purple-500 to-pink-500' },
   ])
+  const [activeAnnouncement, setActiveAnnouncement] = useState(0)
 
   // --- Load categories on mount ---
   useEffect(() => {
@@ -400,54 +401,53 @@ export default function ExamPrepApp() {
     const stats = getUserStats()
     return (
       <div className="pb-20">
-        {/* Header */}
-        <div className="bg-gradient-to-r from-orange-500 to-red-500 px-4 pt-[calc(env(safe-area-inset-top,0px)+3rem)] pb-8 rounded-b-3xl">
-          {/* Top Row: Menu + Notification */}
-          <div className="flex items-center justify-between mb-4">
-            {/* Menu Button */}
-            <button
-              onClick={() => setShowSideMenu(true)}
-              className="w-10 h-10 rounded-xl bg-white/20 backdrop-blur flex items-center justify-center active:bg-white/30 transition-colors"
-            >
-              <Menu className="w-5 h-5 text-white" />
-            </button>
+        {/* Compact Header */}
+        <div className="bg-gradient-to-r from-orange-500 to-red-500 px-4 pt-[calc(env(safe-area-inset-top,0px)+0.75rem)] pb-3 rounded-b-2xl">
+          <div className="flex items-center justify-between">
+            {/* Left: Menu + App Name */}
+            <div className="flex items-center gap-2.5">
+              <button
+                onClick={() => setShowSideMenu(true)}
+                className="w-8 h-8 rounded-lg bg-white/20 backdrop-blur flex items-center justify-center active:bg-white/30 transition-colors"
+              >
+                <Menu className="w-4 h-4 text-white" />
+              </button>
+              <div>
+                <h1 className="text-white text-base font-bold leading-tight">ExamPrep Bharat</h1>
+                <p className="text-orange-100 text-[10px] leading-tight">Prepare for government exams</p>
+              </div>
+            </div>
 
-            {/* Notification Bell */}
+            {/* Right: Notification */}
             <button
               onClick={() => setShowNotificationPanel(!showNotificationPanel)}
-              className="w-10 h-10 rounded-xl bg-white/20 backdrop-blur flex items-center justify-center active:bg-white/30 transition-colors relative"
+              className="w-8 h-8 rounded-lg bg-white/20 backdrop-blur flex items-center justify-center active:bg-white/30 transition-colors relative"
             >
-              <Bell className="w-5 h-5 text-white" />
+              <Bell className="w-4 h-4 text-white" />
               {unreadCount > 0 && (
-                <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 rounded-full flex items-center justify-center text-white text-[10px] font-bold border-2 border-orange-500">
+                <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 rounded-full flex items-center justify-center text-white text-[8px] font-bold border border-orange-500">
                   {unreadCount}
                 </span>
               )}
             </button>
           </div>
 
-          {/* App Name Row */}
-          <div className="mb-4">
-            <h1 className="text-white text-xl font-bold">ExamPrep Bharat</h1>
-            <p className="text-orange-100 text-xs">Prepare for government exams</p>
-          </div>
-
-          {/* Quick Stats */}
+          {/* Compact Quick Stats */}
           {auth.isLoggedIn && stats.testsTaken > 0 && (
-            <div className="bg-white/15 backdrop-blur rounded-2xl p-4 flex items-center justify-around">
+            <div className="bg-white/10 backdrop-blur rounded-xl p-2.5 flex items-center justify-around mt-2.5">
               <div className="text-center">
-                <p className="text-white font-bold text-lg">{stats.testsTaken}</p>
-                <p className="text-orange-100 text-xs">Tests</p>
+                <p className="text-white font-bold text-sm">{stats.testsTaken}</p>
+                <p className="text-orange-100 text-[9px]">Tests</p>
               </div>
-              <div className="w-px h-8 bg-white/20" />
+              <div className="w-px h-5 bg-white/20" />
               <div className="text-center">
-                <p className="text-white font-bold text-lg">{stats.avgScore}%</p>
-                <p className="text-orange-100 text-xs">Avg Score</p>
+                <p className="text-white font-bold text-sm">{stats.avgScore}%</p>
+                <p className="text-orange-100 text-[9px]">Avg Score</p>
               </div>
-              <div className="w-px h-8 bg-white/20" />
+              <div className="w-px h-5 bg-white/20" />
               <div className="text-center">
-                <p className="text-white font-bold text-lg">#{stats.bestRank}</p>
-                <p className="text-orange-100 text-xs">Best Rank</p>
+                <p className="text-white font-bold text-sm">#{stats.bestRank}</p>
+                <p className="text-orange-100 text-[9px]">Best Rank</p>
               </div>
             </div>
           )}
@@ -531,38 +531,58 @@ export default function ExamPrepApp() {
           </div>
         )}
 
-        {/* Moving Announcements Ticker */}
-        <div className="mx-4 -mt-3 mb-2 relative z-30">
-          <div className="bg-gradient-to-r from-amber-50 to-orange-50 border border-orange-200/50 rounded-xl overflow-hidden">
-            <div className="flex items-center">
-              <div className="bg-orange-500 px-2 py-2 flex items-center flex-shrink-0">
-                <Flame className="w-4 h-4 text-white" />
-              </div>
-              <div className="overflow-hidden flex-1 py-2">
-                <div className="flex animate-marquee whitespace-nowrap">
-                  {announcements.map(a => (
-                    <span key={a.id} className={`mx-8 text-sm font-medium ${
-                      a.color === 'orange' ? 'text-orange-600' :
-                      a.color === 'blue' ? 'text-blue-600' :
-                      a.color === 'green' ? 'text-green-600' :
-                      'text-red-600'
-                    }`}>
-                      {a.text}
-                    </span>
-                  ))}
-                  {/* Duplicate for seamless loop */}
-                  {announcements.map(a => (
-                    <span key={`dup-${a.id}`} className={`mx-8 text-sm font-medium ${
-                      a.color === 'orange' ? 'text-orange-600' :
-                      a.color === 'blue' ? 'text-blue-600' :
-                      a.color === 'green' ? 'text-green-600' :
-                      'text-red-600'
-                    }`}>
-                      {a.text}
-                    </span>
-                  ))}
-                </div>
-              </div>
+        {/* Announcements - Image Banner Carousel */}
+        <div className="px-4 mt-3 mb-1">
+          <div className="relative">
+            {/* Banner Cards - Horizontal Scroll */}
+            <div className="flex gap-3 overflow-x-auto scrollbar-hide snap-x snap-mandatory pb-2 -mx-1 px-1">
+              {announcements.map((a, index) => (
+                <button
+                  key={a.id}
+                  onClick={() => handleBottomNav(a.action)}
+                  className="flex-shrink-0 w-[75vw] max-w-[300px] snap-center"
+                >
+                  <div className={`bg-gradient-to-br ${a.gradient} rounded-2xl overflow-hidden shadow-md active:scale-[0.98] transition-transform`}>
+                    {/* Image Area */}
+                    <div className="h-28 relative flex items-center justify-center overflow-hidden">
+                      {/* Background Pattern */}
+                      <div className="absolute inset-0 opacity-10">
+                        <div className="absolute top-2 left-4 w-20 h-20 rounded-full border-4 border-white" />
+                        <div className="absolute bottom-1 right-6 w-16 h-16 rounded-full border-4 border-white" />
+                        <div className="absolute top-8 right-12 w-8 h-8 rounded-full bg-white" />
+                      </div>
+                      {/* Icon based on type */}
+                      <div className="relative z-10 flex flex-col items-center">
+                        <div className="w-14 h-14 bg-white/20 backdrop-blur rounded-2xl flex items-center justify-center mb-1.5">
+                          {a.image === 'ssc' && <BookOpen className="w-7 h-7 text-white" />}
+                          {a.image === 'banking' && <Building className="w-7 h-7 text-white" />}
+                          {a.image === 'leaderboard' && <Trophy className="w-7 h-7 text-white" />}
+                          {a.image === 'practice' && <Zap className="w-7 h-7 text-white" />}
+                        </div>
+                        <p className="text-white/60 text-[9px] font-medium tracking-wider uppercase">Tap to open</p>
+                      </div>
+                    </div>
+                    {/* Text Area */}
+                    <div className="px-3 py-2.5 bg-black/10">
+                      <p className="text-white font-bold text-sm leading-tight">{a.title}</p>
+                      <p className="text-white/70 text-[11px] mt-0.5">{a.subtitle}</p>
+                    </div>
+                  </div>
+                </button>
+              ))}
+            </div>
+
+            {/* Dots Indicator */}
+            <div className="flex items-center justify-center gap-1.5 mt-1">
+              {announcements.map((_, i) => (
+                <div
+                  key={i}
+                  className={`h-1.5 rounded-full transition-all duration-300 ${
+                    i === activeAnnouncement ? 'w-4 bg-orange-500' : 'w-1.5 bg-gray-300'
+                  }`
+                  }
+                />
+              ))}
             </div>
           </div>
         </div>

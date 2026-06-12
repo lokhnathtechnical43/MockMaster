@@ -211,6 +211,15 @@
   animation: marquee 20s linear infinite;
 }
 
+/* Hide scrollbar for horizontal scroll areas */
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
 /* Full width utility for mobile app */
 .min-h-dvh {
   min-height: 100dvh;
