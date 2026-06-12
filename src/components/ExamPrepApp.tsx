@@ -10,10 +10,13 @@ import { ScrollArea } from '@/components/ui/scroll-area'
 import { Separator } from '@/components/ui/separator'
 import {
   BookOpen, Trophy, Clock, CheckCircle2, XCircle, SkipForward,
-  ChevronRight, ChevronLeft, Home, BarChart3, User, ArrowLeft,
+  ChevronRight, ChevronLeft, Home, User, ArrowLeft,
   Play, Zap, Target, Award, Timer, RefreshCw, BookMarked,
   GraduationCap, Shield, Building, Train, ShieldCheck, Swords,
-  LogOut, Loader2, Phone, AlertTriangle
+  LogOut, Loader2, Phone, AlertTriangle, Settings, Bell,
+  ChevronDown, Star, Flame, TrendingUp, Calendar, Gift,
+  HelpCircle, Share2, MessageCircle, Lock, Crown, Edit3,
+  Eye, EyeOff
 } from 'lucide-react'
 import {
   getCategories, getTestsByExam, getTestById, saveResult, getLeaderboard,
@@ -104,7 +107,6 @@ export default function ExamPrepApp() {
   const [showLanguageSheet, setShowLanguageSheet] = useState(false)
   const [showAboutSheet, setShowAboutSheet] = useState(false)
   const [selectedLanguage, setSelectedLanguage] = useState('en')
-  const [notificationsEnabled, setNotificationsEnabled] = useState(false)
   const [showQuestionNav, setShowQuestionNav] = useState(false)
 
   // --- Load categories on mount ---
@@ -842,38 +844,40 @@ export default function ExamPrepApp() {
           </div>
         )}
 
-        {/* Back Confirmation */}
+        {/* Back Confirmation - Professional Dialog */}
         {showBackConfirm && (
-          <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-            <Card className="w-full max-w-sm border-0 shadow-2xl">
-              <CardContent className="p-6 text-center">
-                <div className="w-14 h-14 rounded-full bg-red-100 flex items-center justify-center mx-auto mb-4">
-                  <AlertTriangle className="w-7 h-7 text-red-600" />
+          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-5">
+            <div className="bg-white rounded-3xl w-full max-w-sm shadow-2xl overflow-hidden animate-scale-in">
+              <div className="p-6 pb-4 text-center">
+                <div className="w-16 h-16 rounded-full bg-gradient-to-br from-red-100 to-red-50 flex items-center justify-center mx-auto mb-4">
+                  <AlertTriangle className="w-8 h-8 text-red-500" />
                 </div>
-                <h3 className="font-bold text-lg mb-2">Leave Test?</h3>
-                <p className="text-gray-500 text-sm mb-6">Your progress will be lost if you leave now.</p>
-                <div className="flex gap-3">
-                  <Button
-                    variant="outline"
-                    className="flex-1 rounded-xl"
-                    onClick={() => setShowBackConfirm(false)}
-                  >
-                    No, Stay
-                  </Button>
-                  <Button
-                    className="flex-1 bg-red-500 hover:bg-red-600 text-white rounded-xl"
-                    onClick={() => {
-                      setShowBackConfirm(false)
-                      if (timerRef.current) clearInterval(timerRef.current)
-                      setTestActive(false)
-                      goBack()
-                    }}
-                  >
-                    Yes, Leave
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
+                <h3 className="font-bold text-xl text-gray-900">Leave Test?</h3>
+                <p className="text-gray-500 text-sm mt-2 leading-relaxed">
+                  Your progress will be lost if you leave now. All answered questions will not be saved.
+                </p>
+              </div>
+              <div className="px-6 pb-6 space-y-2.5">
+                <Button
+                  className="w-full h-11 bg-gradient-to-r from-orange-500 to-red-500 text-white rounded-xl font-semibold text-sm"
+                  onClick={() => setShowBackConfirm(false)}
+                >
+                  No, Continue Test
+                </Button>
+                <Button
+                  variant="outline"
+                  className="w-full h-11 rounded-xl border-gray-200 text-gray-600 hover:bg-red-50 hover:text-red-600 hover:border-red-200 font-semibold text-sm"
+                  onClick={() => {
+                    setShowBackConfirm(false)
+                    if (timerRef.current) clearInterval(timerRef.current)
+                    setTestActive(false)
+                    goBack()
+                  }}
+                >
+                  Yes, Leave Test
+                </Button>
+              </div>
+            </div>
           </div>
         )}
       </div>
@@ -1096,148 +1100,264 @@ export default function ExamPrepApp() {
 
     return (
       <div className="pb-20">
-        <div className="bg-gradient-to-r from-orange-500 to-red-500 px-4 pt-12 pb-8 rounded-b-3xl">
-          <h1 className="text-white text-xl font-bold mb-4">Profile</h1>
-          <div className="flex items-center gap-4">
-            <div className="w-16 h-16 rounded-full bg-white/20 flex items-center justify-center">
-              <span className="text-white font-bold text-2xl">{getAvatarDisplay()}</span>
+        {/* Header with gradient */}
+        <div className="bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 px-5 pt-12 pb-10 rounded-b-[28px] relative overflow-hidden">
+          {/* Decorative circles */}
+          <div className="absolute top-0 right-0 w-40 h-40 bg-orange-500/10 rounded-full -translate-y-1/2 translate-x-1/4" />
+          <div className="absolute bottom-0 left-0 w-32 h-32 bg-orange-500/10 rounded-full translate-y-1/2 -translate-x-1/4" />
+
+          {/* Top bar */}
+          <div className="flex items-center justify-between mb-6 relative z-10">
+            <h1 className="text-white text-xl font-bold">My Profile</h1>
+            <button
+              onClick={() => setShowAboutSheet(true)}
+              className="w-9 h-9 rounded-full bg-white/10 backdrop-blur flex items-center justify-center"
+            >
+              <Settings className="w-4 h-4 text-white/70" />
+            </button>
+          </div>
+
+          {/* Profile Card */}
+          <div className="bg-white/10 backdrop-blur-md rounded-2xl p-5 border border-white/10 relative z-10">
+            <div className="flex items-center gap-4">
+              <div className="relative">
+                <div className="w-16 h-16 rounded-full bg-gradient-to-br from-orange-400 to-red-500 flex items-center justify-center shadow-lg shadow-orange-500/20">
+                  <span className="text-white font-bold text-xl">{getAvatarDisplay()}</span>
+                </div>
+                {isPhoneUser && (
+                  <div className="absolute -bottom-1 -right-1 w-6 h-6 rounded-full bg-emerald-500 flex items-center justify-center border-2 border-slate-900">
+                    <CheckCircle2 className="w-3 h-3 text-white" />
+                  </div>
+                )}
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-white font-bold text-lg truncate">
+                  {isPhoneUser ? `+91 ${userDisplay?.slice(-10)}` : 'Guest User'}
+                </p>
+                <div className="flex items-center gap-2 mt-1">
+                  {isPhoneUser ? (
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 text-xs font-medium">
+                      <Shield className="w-3 h-3" /> Verified
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-400 text-xs font-medium">
+                      <AlertTriangle className="w-3 h-3" /> Guest Mode
+                    </span>
+                  )}
+                </div>
+              </div>
+              {auth.isLoggedIn && !auth.isGuest && (
+                <button
+                  onClick={() => auth.logout()}
+                  className="w-9 h-9 rounded-full bg-white/10 flex items-center justify-center"
+                >
+                  <LogOut className="w-4 h-4 text-white/60" />
+                </button>
+              )}
             </div>
-            <div>
-              <p className="text-white font-bold text-lg">
-                {isPhoneUser ? `+91 ${userDisplay?.slice(-10)}` : 'Guest User'}
-              </p>
-              <p className="text-white/70 text-sm">
-                {isPhoneUser ? 'Phone Login' : 'Guest Mode'}
-              </p>
+
+            {/* Stats Row */}
+            <div className="mt-5 pt-4 border-t border-white/10 grid grid-cols-3 gap-2">
+              <div className="text-center">
+                <p className="text-white font-bold text-xl">{stats.testsTaken}</p>
+                <p className="text-white/40 text-[10px] font-medium uppercase tracking-wider">Tests</p>
+              </div>
+              <div className="text-center border-x border-white/10">
+                <p className="text-white font-bold text-xl">{stats.avgScore}%</p>
+                <p className="text-white/40 text-[10px] font-medium uppercase tracking-wider">Avg Score</p>
+              </div>
+              <div className="text-center">
+                <p className="text-white font-bold text-xl">#{stats.bestRank}</p>
+                <p className="text-white/40 text-[10px] font-medium uppercase tracking-wider">Best Rank</p>
+              </div>
             </div>
           </div>
         </div>
 
-        <div className="px-4 -mt-4 space-y-4">
-          {/* Stats Card */}
-          <Card className="border-0 shadow-md">
-            <CardContent className="p-4">
-              <div className="grid grid-cols-3 gap-4 text-center">
-                <div>
-                  <p className="font-bold text-xl text-orange-600">{stats.testsTaken}</p>
-                  <p className="text-gray-400 text-xs">Tests Taken</p>
-                </div>
-                <div>
-                  <p className="font-bold text-xl text-orange-600">{stats.avgScore}%</p>
-                  <p className="text-gray-400 text-xs">Avg Score</p>
-                </div>
-                <div>
-                  <p className="font-bold text-xl text-orange-600">#{stats.bestRank}</p>
-                  <p className="text-gray-400 text-xs">Best Rank</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Settings */}
-          <Card className="border-0 shadow-sm">
-            <CardContent className="p-0">
-              {/* Language */}
-              <button
-                className="w-full flex items-center gap-3 p-4 hover:bg-gray-50 transition-colors"
-                onClick={() => setShowLanguageSheet(true)}
-              >
-                <div className="w-9 h-9 rounded-lg bg-blue-50 flex items-center justify-center">
-                  <BookOpen className="w-4 h-4 text-blue-600" />
-                </div>
-                <div className="flex-1 text-left">
-                  <p className="font-semibold text-sm">Language</p>
-                  <p className="text-gray-400 text-xs">{selectedLanguage === 'en' ? 'English' : selectedLanguage === 'hi' ? 'Hindi' : 'Bengali'}</p>
-                </div>
-                <ChevronRight className="w-4 h-4 text-gray-400" />
-              </button>
-              <Separator />
-              {/* Notifications */}
-              <div className="flex items-center gap-3 p-4">
-                <div className="w-9 h-9 rounded-lg bg-emerald-50 flex items-center justify-center">
-                  <Zap className="w-4 h-4 text-emerald-600" />
-                </div>
-                <div className="flex-1">
-                  <p className="font-semibold text-sm">Notifications</p>
-                  <p className="text-gray-400 text-xs">{notificationsEnabled ? 'Enabled' : 'Disabled'}</p>
-                </div>
-                <button
-                  onClick={() => setNotificationsEnabled(!notificationsEnabled)}
-                  className={`w-12 h-7 rounded-full transition-colors relative ${notificationsEnabled ? 'bg-orange-500' : 'bg-gray-300'}`}
-                >
-                  <span className={`absolute top-0.5 w-6 h-6 rounded-full bg-white shadow transition-transform ${notificationsEnabled ? 'translate-x-5' : 'translate-x-0.5'}`} />
-                </button>
-              </div>
-              <Separator />
-              {/* About */}
-              <button
-                className="w-full flex items-center gap-3 p-4 hover:bg-gray-50 transition-colors"
-                onClick={() => setShowAboutSheet(true)}
-              >
-                <div className="w-9 h-9 rounded-lg bg-purple-50 flex items-center justify-center">
-                  <Shield className="w-4 h-4 text-purple-600" />
-                </div>
-                <div className="flex-1 text-left">
-                  <p className="font-semibold text-sm">About</p>
-                  <p className="text-gray-400 text-xs">App info & details</p>
-                </div>
-                <ChevronRight className="w-4 h-4 text-gray-400" />
-              </button>
-            </CardContent>
-          </Card>
-
-          {/* Login/Logout Card */}
-          <Card className="border-0 shadow-sm">
-            <CardContent className="p-4">
-              {auth.isLoggedIn ? (
-                <div>
-                  {auth.isGuest && (
-                    <div className="mb-3 p-3 bg-amber-50 rounded-xl">
-                      <p className="text-amber-700 text-sm font-medium">You are in Guest Mode</p>
-                      <p className="text-amber-600 text-xs mt-1">Upgrade to save progress across devices</p>
-                      <Button
-                        size="sm"
-                        className="mt-2 bg-gradient-to-r from-orange-500 to-red-500 text-white rounded-xl"
-                        onClick={() => setShowLoginModal(true)}
-                      >
-                        <Phone className="w-4 h-4 mr-1" /> Upgrade to Phone Login
-                      </Button>
-                    </div>
-                  )}
+        <div className="px-4 -mt-5 space-y-4 relative z-20">
+          {/* Guest Upgrade Banner */}
+          {auth.isGuest && (
+            <Card className="border-0 shadow-lg bg-gradient-to-r from-amber-500 to-orange-500 overflow-hidden">
+              <CardContent className="p-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center flex-shrink-0">
+                    <Crown className="w-5 h-5 text-white" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-white font-bold text-sm">Upgrade to Phone Login</p>
+                    <p className="text-white/80 text-xs mt-0.5">Save progress & access from any device</p>
+                  </div>
                   <Button
-                    variant="outline"
-                    className="w-full rounded-xl border-red-200 text-red-600 hover:bg-red-50"
-                    onClick={() => auth.logout()}
+                    size="sm"
+                    className="bg-white text-orange-600 hover:bg-white/90 rounded-xl font-bold px-3"
+                    onClick={() => setShowLoginModal(true)}
                   >
-                    <LogOut className="w-4 h-4 mr-2" /> Logout
+                    <Phone className="w-3 h-3 mr-1" /> Login
                   </Button>
                 </div>
-              ) : (
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Not logged in - Login Card */}
+          {!auth.isLoggedIn && (
+            <Card className="border-0 shadow-lg overflow-hidden">
+              <CardContent className="p-5">
+                <div className="text-center mb-4">
+                  <div className="w-14 h-14 rounded-full bg-orange-50 flex items-center justify-center mx-auto mb-3">
+                    <User className="w-7 h-7 text-orange-500" />
+                  </div>
+                  <p className="font-bold text-base">Login to unlock all features</p>
+                  <p className="text-gray-400 text-xs mt-1">Track progress, compete & save data</p>
+                </div>
                 <Button
-                  className="w-full bg-gradient-to-r from-orange-500 to-red-500 text-white rounded-xl"
+                  className="w-full h-11 bg-gradient-to-r from-orange-500 to-red-500 text-white rounded-xl font-semibold"
                   onClick={() => setShowLoginModal(true)}
                 >
-                  <Phone className="w-4 h-4 mr-2" /> Login
+                  <Phone className="w-4 h-4 mr-2" /> Login with Phone
                 </Button>
-              )}
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Quick Actions Grid */}
+          <div className="grid grid-cols-2 gap-3">
+            <Card
+              className="border-0 shadow-sm cursor-pointer hover:shadow-md transition-all active:scale-[0.98]"
+              onClick={() => { pageHistoryRef.current.push(currentPage); setCurrentPage('exams') }}
+            >
+              <CardContent className="p-4">
+                <div className="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center mb-2">
+                  <BookOpen className="w-5 h-5 text-blue-600" />
+                </div>
+                <p className="font-semibold text-sm">My Exams</p>
+                <p className="text-gray-400 text-[10px] mt-0.5">{categories.length} categories</p>
+              </CardContent>
+            </Card>
+            <Card
+              className="border-0 shadow-sm cursor-pointer hover:shadow-md transition-all active:scale-[0.98]"
+              onClick={() => { pageHistoryRef.current.push(currentPage); setCurrentPage('leaderboard') }}
+            >
+              <CardContent className="p-4">
+                <div className="w-10 h-10 rounded-xl bg-amber-50 flex items-center justify-center mb-2">
+                  <Trophy className="w-5 h-5 text-amber-600" />
+                </div>
+                <p className="font-semibold text-sm">Leaderboard</p>
+                <p className="text-gray-400 text-[10px] mt-0.5">View rankings</p>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Settings Section */}
+          <div>
+            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider px-1 mb-2">Settings</p>
+            <Card className="border-0 shadow-sm overflow-hidden">
+              <CardContent className="p-0">
+                {/* Language */}
+                <button
+                  className="w-full flex items-center gap-3 p-4 hover:bg-gray-50/80 transition-colors active:bg-gray-100"
+                  onClick={() => setShowLanguageSheet(true)}
+                >
+                  <div className="w-9 h-9 rounded-xl bg-indigo-50 flex items-center justify-center">
+                    <BookOpen className="w-4 h-4 text-indigo-600" />
+                  </div>
+                  <div className="flex-1 text-left">
+                    <p className="font-semibold text-[13px]">Language</p>
+                    <p className="text-gray-400 text-[11px]">{selectedLanguage === 'en' ? 'English' : selectedLanguage === 'hi' ? 'Hindi' : 'Bengali'}</p>
+                  </div>
+                  <ChevronRight className="w-4 h-4 text-gray-300" />
+                </button>
+                <div className="mx-4 border-t border-gray-100" />
+                {/* About */}
+                <button
+                  className="w-full flex items-center gap-3 p-4 hover:bg-gray-50/80 transition-colors active:bg-gray-100"
+                  onClick={() => setShowAboutSheet(true)}
+                >
+                  <div className="w-9 h-9 rounded-xl bg-purple-50 flex items-center justify-center">
+                    <Shield className="w-4 h-4 text-purple-600" />
+                  </div>
+                  <div className="flex-1 text-left">
+                    <p className="font-semibold text-[13px]">About</p>
+                    <p className="text-gray-400 text-[11px]">App info & details</p>
+                  </div>
+                  <ChevronRight className="w-4 h-4 text-gray-300" />
+                </button>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Support Section */}
+          <div>
+            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider px-1 mb-2">Support</p>
+            <Card className="border-0 shadow-sm overflow-hidden">
+              <CardContent className="p-0">
+                <button
+                  className="w-full flex items-center gap-3 p-4 hover:bg-gray-50/80 transition-colors active:bg-gray-100"
+                  onClick={() => setShowAboutSheet(true)}
+                >
+                  <div className="w-9 h-9 rounded-xl bg-teal-50 flex items-center justify-center">
+                    <HelpCircle className="w-4 h-4 text-teal-600" />
+                  </div>
+                  <div className="flex-1 text-left">
+                    <p className="font-semibold text-[13px]">Help & FAQ</p>
+                    <p className="text-gray-400 text-[11px]">Get answers to common questions</p>
+                  </div>
+                  <ChevronRight className="w-4 h-4 text-gray-300" />
+                </button>
+                <div className="mx-4 border-t border-gray-100" />
+                <button
+                  className="w-full flex items-center gap-3 p-4 hover:bg-gray-50/80 transition-colors active:bg-gray-100"
+                  onClick={() => {
+                    if (navigator.share) {
+                      navigator.share({ title: 'ExamPrep Bharat', text: 'Prepare for government exams!', url: window.location.href })
+                    }
+                  }}
+                >
+                  <div className="w-9 h-9 rounded-xl bg-pink-50 flex items-center justify-center">
+                    <Share2 className="w-4 h-4 text-pink-600" />
+                  </div>
+                  <div className="flex-1 text-left">
+                    <p className="font-semibold text-[13px]">Share App</p>
+                    <p className="text-gray-400 text-[11px]">Tell your friends about us</p>
+                  </div>
+                  <ChevronRight className="w-4 h-4 text-gray-300" />
+                </button>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Logout Button */}
+          {auth.isLoggedIn && !auth.isGuest && (
+            <Button
+              variant="outline"
+              className="w-full rounded-xl border-red-200 text-red-500 hover:bg-red-50 hover:text-red-600 h-11 font-semibold"
+              onClick={() => auth.logout()}
+            >
+              <LogOut className="w-4 h-4 mr-2" /> Logout
+            </Button>
+          )}
+
+          {/* App Version */}
+          <p className="text-center text-gray-300 text-[10px] pt-2 pb-4">ExamPrep Bharat v1.0</p>
         </div>
 
         {/* Language Sheet */}
         {showLanguageSheet && (
-          <div className="fixed inset-0 bg-black/50 z-50 flex items-end justify-center" onClick={() => setShowLanguageSheet(false)}>
-            <div className="bg-white rounded-t-3xl w-full p-6" onClick={e => e.stopPropagation()}>
+          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-end justify-center" onClick={() => setShowLanguageSheet(false)}>
+            <div className="bg-white rounded-t-[28px] w-full p-6 animate-slide-up" onClick={e => e.stopPropagation()}>
+              <div className="w-10 h-1 rounded-full bg-gray-200 mx-auto mb-5" />
               <h3 className="font-bold text-lg mb-4">Select Language</h3>
               <div className="space-y-1">
                 {[
-                  { code: 'en', name: 'English', available: true },
-                  { code: 'hi', name: 'हिंदी (Hindi)', available: false },
-                  { code: 'bn', name: 'বাংলা (Bengali)', available: false },
+                  { code: 'en', name: 'English', flag: '🇬🇧', available: true },
+                  { code: 'hi', name: 'हिंदी (Hindi)', flag: '🇮🇳', available: false },
+                  { code: 'bn', name: 'বাংলা (Bengali)', flag: '🇮🇳', available: false },
                 ].map(lang => (
                   <button
                     key={lang.code}
-                    className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-gray-50 transition-colors"
+                    className={`w-full flex items-center gap-3 p-4 rounded-xl transition-colors ${
+                      lang.available ? 'hover:bg-gray-50 active:bg-gray-100' : 'opacity-50'
+                    }`}
                     onClick={() => {
                       if (lang.available) {
                         setSelectedLanguage(lang.code)
@@ -1245,15 +1365,20 @@ export default function ExamPrepApp() {
                       }
                     }}
                   >
-                    <span className="font-medium text-sm">{lang.name}</span>
-                    {!lang.available && <Badge variant="secondary" className="text-xs">Coming Soon</Badge>}
-                    {selectedLanguage === lang.code && <CheckCircle2 className="w-5 h-5 text-orange-500 ml-auto" />}
+                    <span className="text-xl">{lang.flag}</span>
+                    <span className="font-medium text-sm flex-1">{lang.name}</span>
+                    {!lang.available && <Badge variant="secondary" className="text-[10px]">Coming Soon</Badge>}
+                    {selectedLanguage === lang.code && (
+                      <div className="w-6 h-6 rounded-full bg-orange-500 flex items-center justify-center">
+                        <CheckCircle2 className="w-4 h-4 text-white" />
+                      </div>
+                    )}
                   </button>
                 ))}
               </div>
               <Button
                 variant="outline"
-                className="w-full mt-4 rounded-xl"
+                className="w-full mt-5 rounded-xl h-11"
                 onClick={() => setShowLanguageSheet(false)}
               >
                 Cancel
@@ -1264,45 +1389,35 @@ export default function ExamPrepApp() {
 
         {/* About Sheet */}
         {showAboutSheet && (
-          <div className="fixed inset-0 bg-black/50 z-50 flex items-end justify-center" onClick={() => setShowAboutSheet(false)}>
-            <div className="bg-white rounded-t-3xl w-full p-6" onClick={e => e.stopPropagation()}>
-              <div className="text-center mb-4">
-                <div className="w-16 h-16 bg-gradient-to-r from-orange-500 to-red-500 rounded-2xl flex items-center justify-center mx-auto mb-3">
+          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-end justify-center" onClick={() => setShowAboutSheet(false)}>
+            <div className="bg-white rounded-t-[28px] w-full p-6 animate-slide-up" onClick={e => e.stopPropagation()}>
+              <div className="w-10 h-1 rounded-full bg-gray-200 mx-auto mb-5" />
+              <div className="text-center mb-5">
+                <div className="w-16 h-16 bg-gradient-to-br from-orange-500 to-red-500 rounded-2xl flex items-center justify-center mx-auto mb-3 shadow-lg shadow-orange-500/20">
                   <span className="text-white text-2xl font-bold">E</span>
                 </div>
                 <h3 className="font-bold text-lg">ExamPrep Bharat</h3>
                 <p className="text-gray-400 text-sm">Version 1.0</p>
               </div>
               <div className="space-y-2">
-                <div className="flex justify-between text-sm p-2 bg-gray-50 rounded-lg">
-                  <span className="text-gray-500">Version</span>
-                  <span className="font-medium">1.0</span>
-                </div>
-                <div className="flex justify-between text-sm p-2 bg-gray-50 rounded-lg">
-                  <span className="text-gray-500">Size</span>
-                  <span className="font-medium">~5 MB</span>
-                </div>
-                <div className="flex justify-between text-sm p-2 bg-gray-50 rounded-lg">
-                  <span className="text-gray-500">Exams</span>
-                  <span className="font-medium">21+</span>
-                </div>
-                <div className="flex justify-between text-sm p-2 bg-gray-50 rounded-lg">
-                  <span className="text-gray-500">Questions</span>
-                  <span className="font-medium">210+</span>
-                </div>
-                <div className="flex justify-between text-sm p-2 bg-gray-50 rounded-lg">
-                  <span className="text-gray-500">Offline</span>
-                  <span className="font-medium text-emerald-600">Yes</span>
-                </div>
-                <div className="flex justify-between text-sm p-2 bg-gray-50 rounded-lg">
-                  <span className="text-gray-500">Ads</span>
-                  <span className="font-medium text-emerald-600">No</span>
-                </div>
+                {[
+                  { label: 'Version', value: '1.0' },
+                  { label: 'Size', value: '~5 MB' },
+                  { label: 'Exams', value: '21+' },
+                  { label: 'Questions', value: '210+' },
+                  { label: 'Offline', value: 'Yes', green: true },
+                  { label: 'Ads', value: 'No', green: true },
+                ].map(item => (
+                  <div key={item.label} className="flex justify-between text-sm p-3 bg-gray-50 rounded-xl">
+                    <span className="text-gray-500">{item.label}</span>
+                    <span className={`font-medium ${item.green ? 'text-emerald-600' : ''}`}>{item.value}</span>
+                  </div>
+                ))}
               </div>
-              <p className="text-center text-sm text-gray-400 mt-4">Made with ❤️ in India</p>
+              <p className="text-center text-sm text-gray-400 mt-5">Made with ❤️ in India</p>
               <Button
                 variant="outline"
-                className="w-full mt-4 rounded-xl"
+                className="w-full mt-4 rounded-xl h-11"
                 onClick={() => setShowAboutSheet(false)}
               >
                 Close
@@ -1322,29 +1437,36 @@ export default function ExamPrepApp() {
     const navItems = [
       { page: 'home' as Page, icon: Home, label: 'Home' },
       { page: 'exams' as Page, icon: BookOpen, label: 'Exams' },
-      { page: 'leaderboard' as Page, icon: BarChart3, label: 'Ranks' },
+      { page: 'leaderboard' as Page, icon: Trophy, label: 'Ranks' },
       { page: 'profile' as Page, icon: User, label: 'Profile' },
     ]
 
     return (
-      <div className="fixed bottom-0 left-0 right-0 bg-white border-t z-40 safe-area-pb">
-        <div className="flex items-center justify-around py-2 max-w-lg mx-auto">
-          {navItems.map(item => {
-            const isActive = currentPage === item.page
-            const Icon = item.icon
-            return (
-              <button
-                key={item.page}
-                onClick={() => handleBottomNav(item.page)}
-                className={`flex flex-col items-center gap-0.5 py-1 px-3 rounded-lg transition-colors ${
-                  isActive ? 'text-orange-600' : 'text-gray-400 hover:text-gray-600'
-                }`}
-              >
-                <Icon className={`w-5 h-5 ${isActive ? 'text-orange-600' : ''}`} />
-                <span className="text-[10px] font-medium">{item.label}</span>
-              </button>
-            )
-          })}
+      <div className="fixed bottom-0 left-0 right-0 z-40 safe-area-pb">
+        <div className="bg-white/95 backdrop-blur-lg border-t border-gray-100 max-w-lg mx-auto">
+          <div className="flex items-center justify-around py-2">
+            {navItems.map(item => {
+              const isActive = currentPage === item.page
+              const Icon = item.icon
+              return (
+                <button
+                  key={item.page}
+                  onClick={() => handleBottomNav(item.page)}
+                  className={`flex flex-col items-center gap-0.5 py-1 px-4 rounded-xl transition-all ${
+                    isActive ? 'text-orange-600' : 'text-gray-400 active:text-gray-600'
+                  }`}
+                >
+                  <div className={`relative ${isActive ? '' : ''}`}>
+                    <Icon className={`w-5 h-5 ${isActive ? 'text-orange-600' : ''}`} />
+                    {isActive && (
+                      <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-orange-500" />
+                    )}
+                  </div>
+                  <span className={`text-[10px] font-medium ${isActive ? 'text-orange-600' : ''}`}>{item.label}</span>
+                </button>
+              )
+            })}
+          </div>
         </div>
       </div>
     )
