@@ -8,6 +8,8 @@ import {
   updateProfile,
   onAuthStateChanged,
   signOut as firebaseSignOut,
+  sendEmailVerification as firebaseSendEmailVerification,
+  sendPasswordResetEmail as firebaseSendPasswordResetEmail,
   User
 } from 'firebase/auth'
 
@@ -24,6 +26,10 @@ export function useFirebaseAuth() {
   const [loginLoading, setLoginLoading] = useState(false)
   const [signupLoading, setSignupLoading] = useState(false)
   const [guestLoading, setGuestLoading] = useState(false)
+  const [resetLoading, setResetLoading] = useState(false)
+  const [verifyLoading, setVerifyLoading] = useState(false)
+  const [resetSent, setResetSent] = useState(false)
+  const [verifySent, setVerifySent] = useState(false)
   const [isLocalGuest, setIsLocalGuest] = useState(false)
 
   useEffect(() => {
@@ -101,6 +107,16 @@ export function useFirebaseAuth() {
       // Set display name
       if (credential.user) {
         await updateProfile(credential.user, { displayName: name })
+        // Send email verification
+        try {
+          await firebaseSendEmailVerification(credential.user, {
+            url: window.location.origin,
+            handleCodeInApp: true,
+          })
+          setVerifySent(true)
+        } catch (verifyErr) {
+          console.warn('Email verification send failed:', verifyErr)
+        }
       }
       // Clear local guest if signup succeeds
       localStorage.removeItem(GUEST_USER_KEY)
@@ -120,6 +136,52 @@ export function useFirebaseAuth() {
       }
     }
     setSignupLoading(false)
+  }
+
+  // Send Password Reset Email
+  const sendPasswordReset = async (email: string) => {
+    if (!auth || !isFirebaseReady()) {
+      setError('Firebase is not configured. Please use Guest mode instead.')
+      return
+    }
+    setError('')
+    setResetLoading(true)
+    setResetSent(false)
+    try {
+      await firebaseSendPasswordResetEmail(auth, email, {
+        url: window.location.origin,
+        handleCodeInApp: true,
+      })
+      setResetSent(true)
+    } catch (err: any) {
+      console.error('Password reset error:', err)
+      if (err.code === 'auth/user-not-found') {
+        setError('No account found with this email.')
+      } else if (err.code === 'auth/invalid-email') {
+        setError('Invalid email address.')
+      } else {
+        setError('Failed to send reset email. Please try again.')
+      }
+    }
+    setResetLoading(false)
+  }
+
+  // Resend Email Verification
+  const resendVerification = async () => {
+    if (!auth || !authState.user) return
+    setError('')
+    setVerifyLoading(true)
+    try {
+      await firebaseSendEmailVerification(authState.user, {
+        url: window.location.origin,
+        handleCodeInApp: true,
+      })
+      setVerifySent(true)
+    } catch (err: any) {
+      console.error('Resend verification error:', err)
+      setError('Failed to send verification email.')
+    }
+    setVerifyLoading(false)
   }
 
   const loginAsGuest = async () => {
@@ -195,6 +257,10 @@ export function useFirebaseAuth() {
     loginLoading,
     signupLoading,
     guestLoading,
+    resetLoading,
+    verifyLoading,
+    resetSent,
+    verifySent,
     isLoggedIn,
     isGuest,
     isEmailLoginAvailable,
@@ -204,6 +270,11 @@ export function useFirebaseAuth() {
     loginWithEmail,
     signUpWithEmail,
     loginAsGuest,
+    sendPasswordReset,
+    resendVerification,
+    setError,
+    setResetSent,
+    setVerifySent,
     logout,
   }
 }

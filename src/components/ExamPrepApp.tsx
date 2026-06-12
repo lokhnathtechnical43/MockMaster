@@ -171,6 +171,14 @@ export default function ExamPrepApp() {
   const [isEditingProfile, setIsEditingProfile] = useState(false)
   const [profileSaved, setProfileSaved] = useState(false)
 
+  // Auto-close login modal when auth succeeds
+  useEffect(() => {
+    if (auth.isLoggedIn && showLoginModal) {
+      setShowLoginModal(false)
+      setCurrentPage('home')
+    }
+  }, [auth.isLoggedIn])
+
   // Load bookmarks & preferences from localStorage
   useEffect(() => {
     try {
@@ -631,7 +639,7 @@ export default function ExamPrepApp() {
             <div className="mt-5 flex items-end justify-between">
               <div>
                 <p className="text-white/80 text-sm">{greeting} 👋</p>
-                <p className="text-white text-xl font-extrabold mt-0.5">{auth.isLoggedIn ? (auth.userName || 'Student') : 'Student'}</p>
+                <p className="text-white text-xl font-extrabold mt-0.5">{auth.isLoggedIn ? (auth.getUserDisplay() || 'Student') : 'Student'}</p>
               </div>
               <div className="flex items-center gap-1.5">
                 <div className="bg-white/15 backdrop-blur rounded-xl px-3 py-2 text-center">
@@ -3320,10 +3328,17 @@ export default function ExamPrepApp() {
           loginLoading={auth.loginLoading}
           signupLoading={auth.signupLoading}
           guestLoading={auth.guestLoading}
+          resetLoading={auth.resetLoading}
+          resetSent={auth.resetSent}
+          verifySent={auth.verifySent}
           onLogin={auth.loginWithEmail}
           onSignUp={auth.signUpWithEmail}
           onGuestLogin={auth.loginAsGuest}
-          onClose={() => setShowLoginModal(false)}
+          onPasswordReset={auth.sendPasswordReset}
+          onClearError={() => auth.setError('')}
+          onClearResetSent={() => auth.setResetSent(false)}
+          onClearVerifySent={() => auth.setVerifySent(false)}
+          onClose={() => { auth.setError(''); auth.setResetSent(false); auth.setVerifySent(false); setShowLoginModal(false) }}
         />
       )}
     </div>
