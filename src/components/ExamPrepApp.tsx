@@ -3393,17 +3393,23 @@ export default function ExamPrepApp() {
               >
                 {auth.isLoggedIn ? (
                   <div className="flex items-center gap-3">
-                    {/* Avatar */}
+                    {/* Student Photo */}
                     <div className="relative flex-shrink-0">
-                      <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-orange-400 via-rose-500 to-purple-600 flex items-center justify-center shadow-lg shadow-orange-500/20 ring-1 ring-white/20">
-                        <User className="w-5 h-5 text-white" />
+                      <div className="w-11 h-11 rounded-full bg-gradient-to-br from-orange-300 via-rose-400 to-purple-500 p-[2px] shadow-lg shadow-orange-400/20">
+                        <div className="w-full h-full rounded-full bg-gradient-to-br from-slate-900/90 to-indigo-900/90 flex items-center justify-center overflow-hidden">
+                          {auth.user?.photoURL ? (
+                            <img src={auth.user.photoURL} alt="Profile" className="w-full h-full rounded-full object-cover" />
+                          ) : (
+                            <span className="text-white text-base font-extrabold">{getAvatarDisplay()}</span>
+                          )}
+                        </div>
                       </div>
-                      <div className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 bg-emerald-400 rounded-full border-[1.5px] border-[#302b63]" />
+                      <div className="absolute bottom-0 right-0 w-3 h-3 bg-emerald-400 rounded-full border-2 border-[#302b63]" />
                     </div>
-                    {/* User info */}
+                    {/* Student Name */}
                     <div className="flex-1 min-w-0">
-                      <p className="text-white font-bold text-[13px] truncate">{auth.user?.displayName || auth.user?.email?.split('@')[0] || 'Student'}</p>
-                      <p className="text-white/35 text-[10px] truncate">{auth.user?.email || ''}</p>
+                      <p className="text-white font-bold text-[14px] truncate">{auth.user?.displayName || auth.user?.email?.split('@')[0] || 'Student'}</p>
+                      <p className="text-white/40 text-[10px] truncate">{auth.user?.email || ''}</p>
                     </div>
                     {/* Edit icon */}
                     <div className="flex-shrink-0 w-7 h-7 rounded-lg bg-white/10 flex items-center justify-center">
@@ -3412,7 +3418,7 @@ export default function ExamPrepApp() {
                   </div>
                 ) : (
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-slate-700 flex items-center justify-center ring-1 ring-white/10 flex-shrink-0">
+                    <div className="w-11 h-11 rounded-full bg-slate-700 flex items-center justify-center ring-1 ring-white/10 flex-shrink-0">
                       <User className="w-5 h-5 text-white/40" />
                     </div>
                     <div className="flex-1 min-w-0">
