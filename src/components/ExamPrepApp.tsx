@@ -20,16 +20,48 @@ import {
   ClipboardList, PenTool
 } from 'lucide-react'
 import {
-  getCategories, getTestsByExam, getTestById, saveResult, getLeaderboard,
+  getCategories as getLocalCategories, getTestsByExam as getLocalTestsByExam,
+  getTestById as getLocalTestById, saveResult as saveLocalResult,
+  getLeaderboard as getLocalLeaderboard,
   type LocalExamCategory, type LocalExam, type LocalTest, type LocalQuestion, type TestResult
 } from '@/lib/local-data'
+import {
+  getCategories as getFsCategories, getTests as getFsTests,
+  getTestById as getFsTestById, saveResult as saveFsResult,
+  getLeaderboard as getFsLeaderboard, getUseFirestore,
+  getAnnouncements as getFsAnnouncements, getNotifications as getFsNotifications,
+} from '@/lib/firestore-service'
 import { useFirebaseAuth } from '@/lib/use-firebase-auth'
 import LoginModal from '@/components/LoginModal'
 import { App } from '@capacitor/app'
-import { getAnnouncements, getNotifications } from '@/lib/admin-data'
+import { getAnnouncements as getLocalAnnouncements, getNotifications as getLocalNotifications } from '@/lib/admin-data'
 
 // ===== Types =====
 type Page = 'home' | 'exams' | 'tests' | 'test-info' | 'test-taking' | 'results' | 'leaderboard' | 'profile' | 'practice'
+
+// ===== Unified Data Access (Firestore or Local) =====
+const isFirestore = () => getUseFirestore()
+
+async function fetchCategories(): Promise<LocalExamCategory[]> {
+  if (isFirestore()) return getFsCategories()
+  return getLocalCategories()
+}
+async function fetchTestsByExam(examId: string): Promise<LocalTest[]> {
+  if (isFirestore()) return getFsTests(examId)
+  return getLocalTestsByExam(examId)
+}
+async function fetchTestById(testId: string): Promise<LocalTest | undefined> {
+  if (isFirestore()) return getFsTestById(testId) as Promise<LocalTest | undefined>
+  return getLocalTestById(testId)
+}
+async function fetchLeaderboard(testId: string): Promise<TestResult[]> {
+  if (isFirestore()) return getFsLeaderboard(testId) as Promise<TestResult[]>
+  return getLocalLeaderboard(testId)
+}
+async function storeResult(data: Omit<TestResult, 'id' | 'createdAt'>): Promise<TestResult> {
+  if (isFirestore()) return saveFsResult(data) as Promise<TestResult>
+  return saveLocalResult(data)
+}
 
 interface CategoryColor {
   bg: string
@@ -132,20 +164,36 @@ export default function ExamPrepApp() {
 
   // --- Load categories + admin data on mount ---
   useEffect(() => {
-    setCategories(getCategories())
-    // Load announcements and notifications from shared admin storage
-    setAnnouncements(getAnnouncements().map(a => ({ ...a, action: a.action as Page })))
-    setNotifications(getNotifications())
+    const loadData = async () => {
+      try {
+        const cats = await fetchCategories()
+        setCategories(cats)
+        if (isFirestore()) {
+          const anns = await getFsAnnouncements()
+          setAnnouncements(anns.map(a => ({ ...a, action: a.action as Page })))
+          const notifs = await getFsNotifications()
+          setNotifications(notifs)
+        } else {
+          setAnnouncements(getLocalAnnouncements().map(a => ({ ...a, action: a.action as Page })))
+          setNotifications(getLocalNotifications())
+        }
+      } catch (e) {
+        console.error('Data load failed, using local fallback:', e)
+        setCategories(getLocalCategories())
+        setAnnouncements(getLocalAnnouncements().map(a => ({ ...a, action: a.action as Page })))
+        setNotifications(getLocalNotifications())
+      }
+    }
+    loadData()
   }, [])
 
   // --- Listen for admin data changes (when admin panel updates localStorage) ---
   useEffect(() => {
     const handleStorageChange = () => {
-      setAnnouncements(getAnnouncements().map(a => ({ ...a, action: a.action as Page })))
-      setNotifications(getNotifications())
+      setAnnouncements(getLocalAnnouncements().map(a => ({ ...a, action: a.action as Page })))
+      setNotifications(getLocalNotifications())
     }
     window.addEventListener('storage', handleStorageChange)
-    // Also poll every 5 seconds in case same-tab update
     const interval = setInterval(handleStorageChange, 5000)
     return () => {
       window.removeEventListener('storage', handleStorageChange)
@@ -302,8 +350,8 @@ export default function ExamPrepApp() {
   }, [testActive])
 
   // --- Test Functions ---
-  function startTest(test: LocalTest) {
-    const fullTest = getTestById(test.id)
+  async function startTest(test: LocalTest) {
+    const fullTest = await fetchTestById(test.id)
     if (!fullTest) return
     setSelectedTest(fullTest)
     setAnswers({})
@@ -314,7 +362,7 @@ export default function ExamPrepApp() {
     navigateTo('test-taking')
   }
 
-  function handleFinishTest() {
+  async function handleFinishTest() {
     if (timerRef.current) clearInterval(timerRef.current)
     setTestActive(false)
 
@@ -341,7 +389,7 @@ export default function ExamPrepApp() {
     const maxScore = totalQuestions * test.markingCorrect
     const timeTaken = test.duration * 60 - timeLeft
 
-    const result = saveResult({
+    const result = await storeResult({
       testId: test.id,
       testName: test.title,
       examName: test.exam.name,
@@ -405,25 +453,25 @@ export default function ExamPrepApp() {
   }
 
   // --- Exam select handler ---
-  function openExam(exam: LocalExam, category: LocalExamCategory) {
+  async function openExam(exam: LocalExam, category: LocalExamCategory) {
     setSelectedExam(exam)
     setSelectedCategory(category)
-    const tests = getTestsByExam(exam.id)
+    const tests = await fetchTestsByExam(exam.id)
     setExamTests(tests)
     navigateTo('tests')
   }
 
-  function openTestInfo(test: LocalTest) {
-    const fullTest = getTestById(test.id)
+  async function openTestInfo(test: LocalTest) {
+    const fullTest = await fetchTestById(test.id)
     if (fullTest) {
       setSelectedTest(fullTest)
       navigateTo('test-info')
     }
   }
 
-  function openLeaderboard(testId: string) {
+  async function openLeaderboard(testId: string) {
     setLeaderboardTestId(testId)
-    setLeaderboardData(getLeaderboard(testId))
+    setLeaderboardData(await fetchLeaderboard(testId))
     navigateTo('leaderboard')
   }
 
@@ -690,7 +738,7 @@ export default function ExamPrepApp() {
                   size="sm"
                   className="bg-gradient-to-r from-orange-500 to-red-500 text-white rounded-xl"
                   onClick={() => {
-                    const allCats = getCategories()
+                    const allCats = categories
                     const allExams = allCats.flatMap(c => c.exams)
                     if (allExams.length > 0) {
                       const randomExam = allExams[Math.floor(Math.random() * allExams.length)]
@@ -1530,7 +1578,7 @@ export default function ExamPrepApp() {
             <h2 className="font-bold text-lg mb-3">Choose Practice Mode</h2>
             <div className="grid grid-cols-2 gap-3">
               <Card className="border-0 shadow-sm cursor-pointer hover:shadow-md transition-shadow" onClick={() => {
-                const allCats = getCategories()
+                const allCats = categories
                 const allExams = allCats.flatMap(c => c.exams)
                 if (allExams.length > 0) {
                   const randomExam = allExams[Math.floor(Math.random() * allExams.length)]
@@ -2097,7 +2145,7 @@ export default function ExamPrepApp() {
                 <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider px-3 mb-1">Quick Actions</p>
                 {[
                   { icon: Zap, label: 'Quick Practice', action: () => {
-                    const allCats = getCategories()
+                    const allCats = categories
                     const allExams = allCats.flatMap(c => c.exams)
                     if (allExams.length > 0) {
                       const randomExam = allExams[Math.floor(Math.random() * allExams.length)]

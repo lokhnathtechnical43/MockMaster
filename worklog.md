@@ -106,3 +106,88 @@ Stage Summary:
 - Users tab shows all user test data from localStorage
 - Can view individual user details and full test history
 - Search functionality to find users by ID
+
+---
+Task ID: 3-admin-rewrite
+Agent: Main Agent
+Task: Rewrite admin panel with Exams, Analytics, Settings tabs and improved Users tab
+
+Work Log:
+- Read existing files: firestore-service.ts (all exported functions/types), AdminPanel.tsx (933 lines), local-data.ts, admin-data.ts
+- Planned component structure: split 933-line AdminPanel into 7 sub-components + thin shell
+- Created DashboardTab.tsx - Stats grid (6 cards), quick actions (4 buttons), recent activity feed, uses getDashboardStats from firestore-service
+- Created ExamsTab.tsx - Full CRUD for categories/exams/tests/questions with:
+  - Drill-down navigation (categories → exams → tests → questions)
+  - Add/Edit/Delete for each level
+  - Single question add form with option selector
+  - Batch question import (pipe-delimited format)
+  - Seed Firestore button
+  - Breadcrumb navigation with back button
+- Created UsersTab.tsx - Improved users tab with:
+  - User list with search, stats overview, periodic refresh
+  - User detail view with test history
+  - NEW: Delete user button (calls fsDeleteUser)
+  - NEW: Export user data (JSON download)
+  - NEW: Ban/Unban user toggle (calls fsUpdateUser with role 'banned')
+  - NEW: Export all users button
+  - Banned user badge in list view
+- Created AnalyticsTab.tsx - Analytics dashboard with charts:
+  - Summary cards (Total Users, Tests Taken, Avg Score)
+  - Daily results bar chart (last 7 days, Recharts BarChart)
+  - Score trend line chart (Recharts LineChart)
+  - Category popularity pie chart (Recharts PieChart)
+  - Top performers list (sorted by avg score)
+  - Recent activity feed (last 10 results)
+  - Fallback to computed local data when Firestore unavailable
+- Created AnnouncementsTab.tsx - Extracted from original (identical functionality)
+- Created NotificationsTab.tsx - Extracted from original (identical functionality)
+- Created SettingsTab.tsx - New settings tab with:
+  - Firestore on/off toggle (calls setUseFirestore/getUseFirestore)
+  - Seed Firestore from local data button
+  - Clear all localStorage data button (with double confirmation)
+  - Change admin password form
+  - App version info section
+- Rewrote AdminPanel.tsx as thin shell (~160 lines):
+  - Login screen kept exactly as-is
+  - Header with 7 tabs: Dashboard, Exams, Users, Analytics, Announce, Notify, Settings
+  - Scrollable tab bar for mobile
+  - Data state management (announcements, notifications, results)
+  - Tab switching renders sub-components
+- Build passes successfully with `npx next build`
+- Total: 7 new sub-component files + 1 rewritten shell = 8 files
+
+Stage Summary:
+- Admin panel now has 7 tabs: Dashboard, Exams, Users, Analytics, Announcements, Notifications, Settings
+- Exams tab provides full CRUD for categories → exams → tests → questions with batch import
+- Analytics tab shows charts (bar, line, pie) using Recharts with Firestore fallback
+- Users tab improved with Delete, Export, Ban/Unban actions
+- Settings tab has Firestore toggle, seed, clear data, password change, app info
+- Code split into 7 sub-components (each ~150-300 lines) for maintainability
+- All Firestore service functions used from @/lib/firestore-service
+- Build passes, no type errors
+
+---
+Task ID: full-admin-upgrade
+Agent: Main Agent
+Task: Upgrade admin panel with full features and Firestore integration
+
+Work Log:
+- Created Firestore service layer (firestore-service.ts) with full CRUD for all entities
+- Added offline fallback: when Firestore is OFF, falls back to local-data.ts automatically
+- Rewrote AdminPanel.tsx into 8 sub-components for maintainability
+- Added Exams tab: CRUD for categories, exams, tests, questions (drill-down navigation)
+- Added Analytics tab: bar chart, line chart, pie chart, top performers, activity feed
+- Added Settings tab: Firestore toggle, seed data, clear data, password change
+- Enhanced Users tab: delete user, export data, ban/unban user
+- Updated ExamPrepApp.tsx to use unified data access layer (Firestore or local)
+- Changed key functions to async: startTest, handleFinishTest, openExam, openTestInfo, openLeaderboard
+- Replaced direct getCategories() calls with categories state variable
+- Build passes successfully, both routes work
+
+Stage Summary:
+- Admin panel now has 7 tabs: Dashboard, Exams, Users, Analytics, Announcements, Notifications, Settings
+- Firestore service provides cloud data persistence with auto-fallback to localStorage
+- App works in both modes: offline (localStorage) and online (Firestore)
+- All admin data (announcements, notifications, exams, tests, questions) manageable from admin panel
+- Analytics dashboard with Recharts for data visualization
+- Settings tab allows toggling Firestore and seeding data
