@@ -1324,26 +1324,25 @@ export default function ExamPrepApp() {
             <Button
               variant="outline"
               size="sm"
-              className="rounded-xl"
+              className="rounded-xl flex-1"
               disabled={currentQuestionIndex === 0}
               onClick={() => setCurrentQuestionIndex(prev => prev - 1)}
             >
-              <ChevronLeft className="w-4 h-4" />
+              <ChevronLeft className="w-4 h-4 mr-1" /> {_t('testTaking.previous')}
             </Button>
             <Button
-              className="rounded-xl flex-1 bg-gradient-to-r from-orange-500 to-red-500 text-white"
+              className="rounded-xl bg-gradient-to-r from-orange-500 to-red-500 text-white px-4"
               onClick={handleFinishTest}
             >
               {_t('testTaking.submit')}
             </Button>
             <Button
-              variant="outline"
               size="sm"
-              className="rounded-xl"
+              className="rounded-xl flex-1 bg-gradient-to-r from-orange-500 to-orange-600 text-white"
               disabled={currentQuestionIndex === questions.length - 1}
               onClick={() => setCurrentQuestionIndex(prev => prev + 1)}
             >
-              <ChevronRight className="w-4 h-4" />
+              {_t('testTaking.saveNext')} <ChevronRight className="w-4 h-4 ml-1" />
             </Button>
           </div>
         </div>
