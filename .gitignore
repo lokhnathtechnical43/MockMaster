@@ -32,10 +32,10 @@ yarn-error.log*
 
 # env files (can opt-in for committing if needed)
 .env*
+!.env.example
 
 # vercel
 .vercel
-
 
 # typescript
 *.tsbuildinfo
@@ -46,9 +46,31 @@ local-*
 *.log
 dev.log
 dev.out.log
-test
-prompt
-
 server.log
-# Skills directory
+
+# AI / internal tool files
 /skills/
+/tool-results/
+/agent-ctx/
+.zscripts/
+
+# Database
+/db/*.db
+
+# Uploads
+/upload/
+
+# Downloaded files
+/download/
+
+# Firebase (keep config, ignore deployed stuff)
+.firebase/
+
+# Android build
+android/app/build/
+android/.gradle/
+android/app/src/main/assets/public/
+
+# IDE
+.vscode/
+.idea/
