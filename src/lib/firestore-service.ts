@@ -226,8 +226,15 @@ async function firestoreOperation<T>(
   }
   try {
     return await firestoreFn()
-  } catch (error) {
-    console.error('[Firestore] Operation failed, falling back to local data:', error)
+  } catch (error: any) {
+    // Silently fall back to local data for permission/collection-not-found errors
+    // These are expected when Firestore rules aren't deployed yet or collections don't exist
+    const code = error?.code || ''
+    if (code === 'permission-denied' || code === 'PERMISSION_DENIED') {
+      console.warn('[Firestore] Permission denied - falling back to local data. Deploy firestore.rules to fix.')
+    } else {
+      console.warn('[Firestore] Operation failed, falling back to local data:', error?.message || error)
+    }
     return fallbackFn()
   }
 }

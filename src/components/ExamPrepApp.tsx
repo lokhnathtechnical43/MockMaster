@@ -279,32 +279,37 @@ export default function ExamPrepApp() {
       try {
         const cats = await fetchCategories()
         setCategories(cats)
-        const readIds = getReadNotifIds()
-        if (isFirestore()) {
-          // Load ALL admin data from Firestore
-          const anns = await getFsAnnouncements()
-          setAnnouncements(anns.map(a => ({ ...a, action: a.action as Page })))
-          const notifs = await getFsNotifications()
-          setNotifications(notifs.map(n => ({ ...n, read: n.read || readIds.has(n.id) })))
-          const upcoming = await getFsUpcomingExams()
-          setUpcomingExams(upcoming)
-          const tips = await getFsDailyTips()
-          setDailyTips(tips)
-        } else {
-          // Fallback to localStorage
-          setAnnouncements(getLocalAnnouncements().map(a => ({ ...a, action: a.action as Page })))
-          setNotifications(getLocalNotifications().map(n => ({ ...n, read: n.read || readIds.has(n.id) })))
-          setUpcomingExams(getLocalUpcomingExams())
-          setDailyTips(getLocalDailyTips())
-        }
       } catch (e) {
-        console.error('Data load failed, using local fallback:', e)
-        const readIds = getReadNotifIds()
+        console.warn('Categories load failed, using local:', e)
         setCategories(getLocalCategories())
-        setUpcomingExams(getLocalUpcomingExams())
-        setDailyTips(getLocalDailyTips())
+      }
+
+      const readIds = getReadNotifIds()
+
+      // Load each admin data type independently so one failure doesn't block others
+      if (isFirestore()) {
+        // Load ALL admin data from Firestore - each independently
+        getFsAnnouncements()
+          .then(anns => setAnnouncements(anns.map(a => ({ ...a, action: a.action as Page }))))
+          .catch(() => setAnnouncements(getLocalAnnouncements().map(a => ({ ...a, action: a.action as Page }))))
+
+        getFsNotifications()
+          .then(notifs => setNotifications(notifs.map(n => ({ ...n, read: n.read || readIds.has(n.id) }))))
+          .catch(() => setNotifications(getLocalNotifications().map(n => ({ ...n, read: n.read || readIds.has(n.id) }))))
+
+        getFsUpcomingExams()
+          .then(upcoming => setUpcomingExams(upcoming))
+          .catch(() => setUpcomingExams(getLocalUpcomingExams()))
+
+        getFsDailyTips()
+          .then(tips => setDailyTips(tips))
+          .catch(() => setDailyTips(getLocalDailyTips()))
+      } else {
+        // Fallback to localStorage
         setAnnouncements(getLocalAnnouncements().map(a => ({ ...a, action: a.action as Page })))
         setNotifications(getLocalNotifications().map(n => ({ ...n, read: n.read || readIds.has(n.id) })))
+        setUpcomingExams(getLocalUpcomingExams())
+        setDailyTips(getLocalDailyTips())
       }
     }
     loadData()
@@ -315,19 +320,22 @@ export default function ExamPrepApp() {
     const handleDataRefresh = async () => {
       const readIds = getReadNotifIds()
       if (isFirestore()) {
-        // Refresh from Firestore periodically
-        try {
-          const anns = await getFsAnnouncements()
-          setAnnouncements(anns.map(a => ({ ...a, action: a.action as Page })))
-          const notifs = await getFsNotifications()
-          setNotifications(notifs.map(n => ({ ...n, read: n.read || readIds.has(n.id) })))
-          const upcoming = await getFsUpcomingExams()
-          setUpcomingExams(upcoming)
-          const tips = await getFsDailyTips()
-          setDailyTips(tips)
-        } catch (e) {
-          // Silent fail - keep existing data
-        }
+        // Refresh each data type independently from Firestore
+        getFsAnnouncements()
+          .then(anns => setAnnouncements(anns.map(a => ({ ...a, action: a.action as Page }))))
+          .catch(() => {}) // Silent fail - keep existing data
+
+        getFsNotifications()
+          .then(notifs => setNotifications(notifs.map(n => ({ ...n, read: n.read || readIds.has(n.id) }))))
+          .catch(() => {})
+
+        getFsUpcomingExams()
+          .then(upcoming => setUpcomingExams(upcoming))
+          .catch(() => {})
+
+        getFsDailyTips()
+          .then(tips => setDailyTips(tips))
+          .catch(() => {})
       } else {
         setAnnouncements(getLocalAnnouncements().map(a => ({ ...a, action: a.action as Page })))
         setNotifications(getLocalNotifications().map(n => ({ ...n, read: n.read || readIds.has(n.id) })))
