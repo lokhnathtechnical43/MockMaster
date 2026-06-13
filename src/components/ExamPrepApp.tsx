@@ -356,25 +356,25 @@ export default function ExamPrepApp() {
       // If Firestore is available, also load from there (overrides local)
       if (isFirestore()) {
         getFsAnnouncements()
-          .then(anns => { if (anns.length > 0) setAnnouncements(anns.map(a => ({ ...a, action: a.action as Page }))) })
+          .then(anns => setAnnouncements(anns.map(a => ({ ...a, action: a.action as Page }))))
           .catch(() => {})
 
         getFsNotifications()
-          .then(notifs => { if (notifs.length > 0) setNotifications(notifs.map(n => ({ ...n, read: n.read || readIds.has(n.id) }))) })
+          .then(notifs => setNotifications(notifs.map(n => ({ ...n, read: n.read || readIds.has(n.id) }))))
           .catch(() => {})
 
         getFsUpcomingExams()
-          .then(upcoming => { if (upcoming.length > 0) setUpcomingExams(upcoming) })
+          .then(upcoming => setUpcomingExams(upcoming))
           .catch(() => {})
 
         getFsDailyTips()
-          .then(tips => { if (tips.length > 0) setDailyTips(tips) })
+          .then(tips => setDailyTips(tips))
           .catch(() => {})
 
         getFsPrevYearPapers()
           .then(papers => {
+            setPrevPapers(papers)
             if (papers.length > 0) {
-              setPrevPapers(papers)
               const years = [...new Set(papers.map(p => p.year))].sort((a, b) => Number(b) - Number(a))
               setSelectedPaperYear(years[0] || '')
             }
@@ -382,7 +382,7 @@ export default function ExamPrepApp() {
           .catch(() => {})
 
         getFsSidebarMenu()
-          .then(items => { if (items.length > 0) setSidebarMenu(items.filter(i => i.visible)) })
+          .then(items => setSidebarMenu(items.filter(i => i.visible)))
           .catch(() => {})
       }
     }
@@ -411,25 +411,25 @@ export default function ExamPrepApp() {
       // If Firestore is available, also refresh from there
       if (isFirestore()) {
         getFsAnnouncements()
-          .then(anns => { if (anns.length > 0) setAnnouncements(anns.map(a => ({ ...a, action: a.action as Page }))) })
+          .then(anns => setAnnouncements(anns.map(a => ({ ...a, action: a.action as Page }))))
           .catch(() => {})
 
         getFsNotifications()
-          .then(notifs => { if (notifs.length > 0) setNotifications(notifs.map(n => ({ ...n, read: n.read || readIds.has(n.id) }))) })
+          .then(notifs => setNotifications(notifs.map(n => ({ ...n, read: n.read || readIds.has(n.id) }))))
           .catch(() => {})
 
         getFsUpcomingExams()
-          .then(upcoming => { if (upcoming.length > 0) setUpcomingExams(upcoming) })
+          .then(upcoming => setUpcomingExams(upcoming))
           .catch(() => {})
 
         getFsDailyTips()
-          .then(tips => { if (tips.length > 0) setDailyTips(tips) })
+          .then(tips => setDailyTips(tips))
           .catch(() => {})
 
         getFsPrevYearPapers()
           .then(papers => {
+            setPrevPapers(papers)
             if (papers.length > 0) {
-              setPrevPapers(papers)
               const years = [...new Set(papers.map(p => p.year))].sort((a, b) => Number(b) - Number(a))
               setSelectedPaperYear(years[0] || '')
             }
@@ -437,7 +437,7 @@ export default function ExamPrepApp() {
           .catch(() => {})
 
         getFsSidebarMenu()
-          .then(items => { if (items.length > 0) setSidebarMenu(items.filter(i => i.visible)) })
+          .then(items => setSidebarMenu(items.filter(i => i.visible)))
           .catch(() => {})
       }
     }
