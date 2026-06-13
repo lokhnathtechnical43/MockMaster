@@ -130,32 +130,38 @@ export const DEFAULT_SIDEBAR_MENU: SidebarMenuItem[] = [
 
 // Client-side helpers (for static/Capacitor app)
 export function getAnnouncements(): Announcement[] {
-  if (typeof window === 'undefined') return DEFAULT_ANNOUNCEMENTS
+  if (typeof window === 'undefined') return []
   try {
     const stored = localStorage.getItem(STORAGE_KEYS.announcements)
-    return stored ? JSON.parse(stored) : DEFAULT_ANNOUNCEMENTS
+    if (!stored) return []
+    const parsed = JSON.parse(stored)
+    return Array.isArray(parsed) ? parsed : []
   } catch {
-    return DEFAULT_ANNOUNCEMENTS
+    return []
   }
 }
 
 export function getNotifications(): Notification[] {
-  if (typeof window === 'undefined') return DEFAULT_NOTIFICATIONS
+  if (typeof window === 'undefined') return []
   try {
     const stored = localStorage.getItem(STORAGE_KEYS.notifications)
-    return stored ? JSON.parse(stored) : DEFAULT_NOTIFICATIONS
+    if (!stored) return []
+    const parsed = JSON.parse(stored)
+    return Array.isArray(parsed) ? parsed : []
   } catch {
-    return DEFAULT_NOTIFICATIONS
+    return []
   }
 }
 
 export function getUpcomingExams(): UpcomingExam[] {
-  if (typeof window === 'undefined') return DEFAULT_UPCOMING_EXAMS
+  if (typeof window === 'undefined') return []
   try {
     const stored = localStorage.getItem(STORAGE_KEYS.upcomingExams)
-    return stored ? JSON.parse(stored) : DEFAULT_UPCOMING_EXAMS
+    if (!stored) return []
+    const parsed = JSON.parse(stored)
+    return Array.isArray(parsed) ? parsed : []
   } catch {
-    return DEFAULT_UPCOMING_EXAMS
+    return []
   }
 }
 
@@ -175,12 +181,14 @@ export function saveUpcomingExams(exams: UpcomingExam[]): void {
 }
 
 export function getDailyTips(): DailyTip[] {
-  if (typeof window === 'undefined') return DEFAULT_DAILY_TIPS
+  if (typeof window === 'undefined') return []
   try {
     const stored = localStorage.getItem(STORAGE_KEYS.dailyTips)
-    return stored ? JSON.parse(stored) : DEFAULT_DAILY_TIPS
+    if (!stored) return []
+    const parsed = JSON.parse(stored)
+    return Array.isArray(parsed) ? parsed : []
   } catch {
-    return DEFAULT_DAILY_TIPS
+    return []
   }
 }
 
@@ -190,12 +198,14 @@ export function saveDailyTips(tips: DailyTip[]): void {
 }
 
 export function getPrevYearPapers(): PrevYearPaper[] {
-  if (typeof window === 'undefined') return DEFAULT_PREV_YEAR_PAPERS
+  if (typeof window === 'undefined') return []
   try {
     const stored = localStorage.getItem(STORAGE_KEYS.prevYearPapers)
-    return stored ? JSON.parse(stored) : DEFAULT_PREV_YEAR_PAPERS
+    if (!stored) return []
+    const parsed = JSON.parse(stored)
+    return Array.isArray(parsed) ? parsed : []
   } catch {
-    return DEFAULT_PREV_YEAR_PAPERS
+    return []
   }
 }
 
@@ -205,12 +215,14 @@ export function savePrevYearPapers(papers: PrevYearPaper[]): void {
 }
 
 export function getSidebarMenu(): SidebarMenuItem[] {
-  if (typeof window === 'undefined') return DEFAULT_SIDEBAR_MENU
+  if (typeof window === 'undefined') return []
   try {
     const stored = localStorage.getItem(STORAGE_KEYS.sidebarMenu)
-    return stored ? JSON.parse(stored) : DEFAULT_SIDEBAR_MENU
+    if (!stored) return []
+    const parsed = JSON.parse(stored)
+    return Array.isArray(parsed) ? parsed : []
   } catch {
-    return DEFAULT_SIDEBAR_MENU
+    return []
   }
 }
 

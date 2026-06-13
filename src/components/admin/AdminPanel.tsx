@@ -568,53 +568,57 @@ export default function AdminPanel() {
   }
 
   // --- Admin Panel (Logged In) ---
-  const tabs: { id: AdminTab; icon: React.ElementType; label: string }[] = [
-    { id: 'dashboard', icon: BarChart3, label: 'Dashboard' },
-    { id: 'exams', icon: BookOpen, label: 'Exams' },
-    { id: 'users', icon: Users, label: 'Users' },
-    { id: 'analytics', icon: PieChart, label: 'Analytics' },
-    { id: 'announcements', icon: Flame, label: 'Announce' },
-    { id: 'notifications', icon: Bell, label: 'Notify' },
-    { id: 'upcoming', icon: Calendar, label: 'Upcoming' },
-    { id: 'dailytips', icon: Star, label: 'Tips' },
-    { id: 'papers', icon: FileText, label: 'Papers' },
-    { id: 'sidebar', icon: Menu, label: 'Sidebar' },
-    { id: 'settings', icon: Settings, label: 'Settings' },
+  const tabs: { id: AdminTab; icon: React.ElementType; label: string; color: string }[] = [
+    { id: 'dashboard', icon: BarChart3, label: 'Dashboard', color: 'from-violet-500 to-purple-500' },
+    { id: 'exams', icon: BookOpen, label: 'Mock Tests', color: 'from-blue-500 to-indigo-500' },
+    { id: 'users', icon: Users, label: 'Users', color: 'from-emerald-500 to-teal-500' },
+    { id: 'analytics', icon: PieChart, label: 'Analytics', color: 'from-pink-500 to-rose-500' },
+    { id: 'announcements', icon: Flame, label: 'Announce', color: 'from-orange-500 to-amber-500' },
+    { id: 'notifications', icon: Bell, label: 'Notify', color: 'from-cyan-500 to-blue-500' },
+    { id: 'upcoming', icon: Calendar, label: 'Upcoming', color: 'from-fuchsia-500 to-pink-500' },
+    { id: 'dailytips', icon: Star, label: 'Tips', color: 'from-yellow-500 to-amber-500' },
+    { id: 'papers', icon: FileText, label: 'Papers', color: 'from-lime-500 to-green-500' },
+    { id: 'sidebar', icon: Menu, label: 'Sidebar', color: 'from-sky-500 to-cyan-500' },
+    { id: 'settings', icon: Settings, label: 'Settings', color: 'from-gray-500 to-slate-500' },
   ]
 
   return (
     <div className="min-h-screen min-h-dvh bg-slate-50">
       {/* Header */}
-      <div className="bg-gradient-to-r from-slate-800 to-slate-900 px-4 pt-[calc(env(safe-area-inset-top,0px)+1rem)] pb-4 sticky top-0 z-30 shadow-lg">
+      <div className="bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 px-4 pt-[calc(env(safe-area-inset-top,0px)+1rem)] pb-5 sticky top-0 z-30 shadow-xl">
         <div className="max-w-4xl mx-auto">
-          <div className="flex items-center gap-3 mb-3">
+          <div className="flex items-center gap-3 mb-4">
             <div className="flex-1">
               <h1 className="text-white text-lg font-bold flex items-center gap-2">
-                <Shield className="w-5 h-5 text-orange-400" /> System Panel
+                <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-orange-400 to-amber-500 flex items-center justify-center shadow-lg shadow-orange-500/20">
+                  <Shield className="w-4 h-4 text-white" />
+                </div>
+                Admin Panel
               </h1>
-              <p className="text-slate-400 text-[11px]">
+              <p className="text-slate-400 text-[11px] mt-0.5">
                 {firebaseUser?.email || 'Admin'}
               </p>
             </div>
             <button
               onClick={handleLogout}
-              className="w-9 h-9 rounded-xl bg-white/10 flex items-center justify-center hover:bg-white/20 transition-colors"
+              className="h-9 px-3 rounded-xl bg-white/5 border border-white/10 flex items-center gap-2 hover:bg-white/10 transition-all text-white/50 hover:text-white/80"
               title="Logout"
             >
-              <LogOut className="w-4 h-4 text-white/60" />
+              <LogOut className="w-3.5 h-3.5" />
+              <span className="text-xs font-medium hidden sm:inline">Logout</span>
             </button>
           </div>
 
-          {/* Tabs - Scrollable */}
-          <div className="flex gap-1 overflow-x-auto scrollbar-hide pb-1 -mx-1 px-1">
+          {/* Tabs - Scrollable with active indicator */}
+          <div className="flex gap-1.5 overflow-x-auto scrollbar-hide pb-1 -mx-1 px-1">
             {tabs.map(tab => (
               <button
                 key={tab.id}
                 onClick={() => setAdminTab(tab.id)}
-                className={`flex-shrink-0 py-2 px-3 rounded-xl text-xs font-medium transition-all flex items-center gap-1.5 ${
+                className={`flex-shrink-0 py-2 px-3.5 rounded-xl text-xs font-semibold transition-all duration-200 flex items-center gap-1.5 ${
                   adminTab === tab.id
-                    ? 'bg-white/15 text-white shadow-sm'
-                    : 'text-white/40 hover:text-white/60'
+                    ? `bg-gradient-to-r ${tab.color} text-white shadow-lg shadow-black/20 scale-[1.02]`
+                    : 'text-white/35 hover:text-white/60 hover:bg-white/5'
                 }`}
               >
                 <tab.icon className="w-3.5 h-3.5" />
@@ -626,7 +630,7 @@ export default function AdminPanel() {
       </div>
 
       {/* Content */}
-      <div className="max-w-4xl mx-auto px-4 py-6">
+      <div className="max-w-4xl mx-auto px-4 py-5">
         {adminTab === 'dashboard' && (
           <DashboardTab
             announcements={announcements}
