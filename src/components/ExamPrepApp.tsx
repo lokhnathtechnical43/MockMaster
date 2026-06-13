@@ -194,7 +194,6 @@ export default function ExamPrepApp() {
   const [userStats, setUserStats] = useState({ testsTaken: 0, avgScore: 0, bestRank: 0 })
   const [showExitConfirm, setShowExitConfirm] = useState(false)
   const [currentTestMode, setCurrentTestMode] = useState<'real' | 'practice'>('real') // Track if current test is real or practice
-  const [showExamPageWarning, setShowExamPageWarning] = useState(false)
   const [showAnswerKey, setShowAnswerKey] = useState(false)
   const [pdfSharing, setPdfSharing] = useState(false)
 
@@ -469,11 +468,6 @@ export default function ExamPrepApp() {
       setShowExitConfirm(false)
       return
     }
-    // If exam page warning is showing, close it
-    if (showExamPageWarning) {
-      setShowExamPageWarning(false)
-      return
-    }
     // If back confirmation is showing, close it
     if (showBackConfirm) {
       setShowBackConfirm(false)
@@ -519,24 +513,19 @@ export default function ExamPrepApp() {
       setShowBackConfirm(true)
       return
     }
-    // If on exam/test pages, show warning before going back
-    if (['tests', 'test-info', 'practice', 'your-exam', 'prev-papers'].includes(currentPage)) {
-      setShowExamPageWarning(true)
-      return
-    }
     // If on home page, show exit confirmation instead of directly exiting
     if (currentPage === 'home') {
       setShowExitConfirm(true)
       return
     }
-    // Otherwise go back
+    // For all other pages, simply go back in history
     if (pageHistoryRef.current.length > 0) {
       goBack()
     } else {
       scrollPositionsRef.current.set(currentPage, window.scrollY)
       setCurrentPage('home')
     }
-  }, [currentPage, testActive, showBackConfirm, showExitConfirm, showExamPageWarning, showSideMenu, showQuestionNav, showLoginModal, showLanguageSheet, showAboutSheet, goBack])
+  }, [currentPage, testActive, showBackConfirm, showExitConfirm, showSideMenu, showQuestionNav, showLoginModal, showLanguageSheet, showAboutSheet, showFaqSheet, showNotificationPanel, goBack])
 
   // Capacitor hardware back button
   useEffect(() => {
@@ -802,7 +791,10 @@ export default function ExamPrepApp() {
   function handleBottomNav(page: Page) {
     // Save scroll position of current page before leaving
     scrollPositionsRef.current.set(currentPage, window.scrollY)
-    pageHistoryRef.current = []
+    // If navigating to the same page, do nothing
+    if (currentPage === page) return
+    // Save current page to history so user can go back
+    pageHistoryRef.current.push(currentPage)
     setCurrentPage(page)
   }
 
@@ -2114,7 +2106,7 @@ export default function ExamPrepApp() {
         <div className="bg-gradient-to-r from-orange-500 to-red-500 px-4 pt-[calc(env(safe-area-inset-top,0px)+0.5rem)] pb-8 rounded-b-3xl text-center relative">
           {/* Back Button */}
           <button
-            onClick={() => { scrollPositionsRef.current.set(currentPage, window.scrollY); pageHistoryRef.current = []; setCurrentPage('home') }}
+            onClick={goBack}
             className="absolute left-4 top-[calc(env(safe-area-inset-top,0px)+0.5rem)] w-9 h-9 rounded-lg bg-white/15 backdrop-blur flex items-center justify-center active:bg-white/25 transition-colors"
             style={{ touchAction: 'manipulation', WebkitTapHighlightColor: 'transparent' }}
           >
@@ -3988,46 +3980,6 @@ export default function ExamPrepApp() {
                 }}
               >
                 {_t('exitApp.yesExit')}
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* ===== Exam Page Back Warning Dialog ===== */}
-      {showExamPageWarning && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[150] flex items-center justify-center p-5">
-          <div className="bg-white rounded-3xl w-full max-w-sm shadow-2xl overflow-hidden animate-scale-in">
-            <div className="p-6 pb-4 text-center">
-              <div className="w-16 h-16 rounded-full bg-gradient-to-br from-amber-100 to-yellow-50 flex items-center justify-center mx-auto mb-4">
-                <AlertTriangle className="w-8 h-8 text-amber-500" />
-              </div>
-              <h3 className="font-bold text-xl text-gray-900">{_t('examWarning.title')}</h3>
-              <p className="text-gray-500 text-sm mt-2 leading-relaxed">
-                {_t('examWarning.message')}
-              </p>
-            </div>
-            <div className="px-6 pb-6 space-y-2.5">
-              <Button
-                className="w-full h-11 bg-gradient-to-r from-emerald-500 to-emerald-600 text-white rounded-xl font-semibold text-sm"
-                onClick={() => setShowExamPageWarning(false)}
-              >
-                {_t('examWarning.stayHere')}
-              </Button>
-              <Button
-                variant="outline"
-                className="w-full h-11 rounded-xl border-gray-200 text-gray-600 hover:bg-amber-50 hover:text-amber-600 hover:border-amber-200 font-semibold text-sm"
-                onClick={() => {
-                  setShowExamPageWarning(false)
-                  if (pageHistoryRef.current.length > 0) {
-                    goBack()
-                  } else {
-                    scrollPositionsRef.current.set(currentPage, window.scrollY)
-                    setCurrentPage('home')
-                  }
-                }}
-              >
-                {_t('examWarning.goBack')}
               </Button>
             </div>
           </div>
