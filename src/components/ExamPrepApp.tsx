@@ -326,19 +326,19 @@ export default function ExamPrepApp() {
         // Load ALL admin data from Firestore - each independently
         getFsAnnouncements()
           .then(anns => setAnnouncements(anns.map(a => ({ ...a, action: a.action as Page }))))
-          .catch(() => setAnnouncements(getLocalAnnouncements().map(a => ({ ...a, action: a.action as Page }))))
+          .catch(() => setAnnouncements([]))
 
         getFsNotifications()
           .then(notifs => setNotifications(notifs.map(n => ({ ...n, read: n.read || readIds.has(n.id) }))))
-          .catch(() => setNotifications(getLocalNotifications().map(n => ({ ...n, read: n.read || readIds.has(n.id) }))))
+          .catch(() => setNotifications([]))
 
         getFsUpcomingExams()
           .then(upcoming => setUpcomingExams(upcoming))
-          .catch(() => setUpcomingExams(getLocalUpcomingExams()))
+          .catch(() => setUpcomingExams([]))
 
         getFsDailyTips()
           .then(tips => setDailyTips(tips))
-          .catch(() => setDailyTips(getLocalDailyTips()))
+          .catch(() => setDailyTips([]))
 
         getFsPrevYearPapers()
           .then(papers => {
@@ -348,18 +348,11 @@ export default function ExamPrepApp() {
               setSelectedPaperYear(years[0] || '')
             }
           })
-          .catch(() => {
-            const local = getLocalPrevYearPapers()
-            setPrevPapers(local)
-            if (local.length > 0) {
-              const years = [...new Set(local.map(p => p.year))].sort((a, b) => Number(b) - Number(a))
-              setSelectedPaperYear(years[0] || '')
-            }
-          })
+          .catch(() => setPrevPapers([]))
 
         getFsSidebarMenu()
           .then(items => setSidebarMenu(items.filter(i => i.visible)))
-          .catch(() => setSidebarMenu(getLocalSidebarMenu().filter(i => i.visible)))
+          .catch(() => setSidebarMenu([]))
       } else {
         // Fallback to localStorage
         setAnnouncements(getLocalAnnouncements().map(a => ({ ...a, action: a.action as Page })))
@@ -373,6 +366,8 @@ export default function ExamPrepApp() {
           setSelectedPaperYear(paperYears[0] || '')
         }
         setSidebarMenu(getLocalSidebarMenu().filter(i => i.visible))
+        // Note: When Firestore is NOT configured, local defaults are used.
+        // This is expected for offline/local-only mode.
       }
     }
     loadData()
@@ -407,12 +402,8 @@ export default function ExamPrepApp() {
         getFsSidebarMenu()
           .then(items => setSidebarMenu(items.filter(i => i.visible)))
           .catch(() => {})
-      } else {
-        setAnnouncements(getLocalAnnouncements().map(a => ({ ...a, action: a.action as Page })))
-        setNotifications(getLocalNotifications().map(n => ({ ...n, read: n.read || readIds.has(n.id) })))
-        setUpcomingExams(getLocalUpcomingExams())
-        setDailyTips(getLocalDailyTips())
       }
+      // Note: No else block here - when Firestore is active, we don't fall back to local defaults on refresh
     }
     window.addEventListener('storage', handleDataRefresh)
     const interval = setInterval(handleDataRefresh, 30000) // Refresh every 30 seconds from Firestore

@@ -1094,7 +1094,7 @@ export async function getAnnouncements(): Promise<Announcement[]> {
       if (snap.empty) return [] // Return empty - don't auto-fill with defaults
       return snap.docs.map((d) => ({ id: d.id, ...d.data() } as Announcement))
     },
-    () => getLocalAnnouncements()
+    () => [] // No local fallback - if Firestore fails, show nothing
   )
 }
 
@@ -1142,7 +1142,7 @@ export async function getNotifications(): Promise<Notification[]> {
       if (snap.empty) return [] // Return empty - don't auto-fill with defaults
       return snap.docs.map((d) => ({ id: d.id, ...d.data() } as Notification))
     },
-    () => getLocalNotifications()
+    () => [] // No local fallback - if Firestore fails, show nothing
   )
 }
 
@@ -1450,7 +1450,7 @@ export async function getUpcomingExams(): Promise<UpcomingExam[]> {
       if (snap.empty) return []
       return snap.docs.map((d) => ({ id: d.id, ...d.data() } as UpcomingExam))
     },
-    () => getLocalUpcomingExams()
+    () => [] // No local fallback - if Firestore fails, show nothing
   )
 }
 
@@ -1498,7 +1498,7 @@ export async function getDailyTips(): Promise<DailyTip[]> {
       if (snap.empty) return []
       return snap.docs.map((d) => ({ id: d.id, ...d.data() } as DailyTip))
     },
-    () => getLocalDailyTips()
+    () => [] // No local fallback - if Firestore fails, show nothing
   )
 }
 
@@ -1546,7 +1546,7 @@ export async function getPrevYearPapers(): Promise<PrevYearPaper[]> {
       if (snap.empty) return []
       return snap.docs.map((d) => ({ id: d.id, ...d.data() } as PrevYearPaper))
     },
-    () => getLocalPrevYearPapers()
+    () => [] // No local fallback - if Firestore fails, show nothing
   )
 }
 
@@ -1590,7 +1590,7 @@ export async function getSidebarMenu(): Promise<SidebarMenuItem[]> {
       if (snap.empty) return []
       return snap.docs.map((d) => ({ id: d.id, ...d.data() } as SidebarMenuItem))
     },
-    () => getLocalSidebarMenu()
+    () => [] // No local fallback - if Firestore fails, show nothing
   )
 }
 
