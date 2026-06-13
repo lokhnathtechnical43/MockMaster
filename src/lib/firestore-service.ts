@@ -35,6 +35,26 @@ import {
   getResults as getLocalResults,
   getLeaderboard as getLocalLeaderboard,
   ALL_TESTS,
+  addCategory as localAddCategory,
+  updateCategory as localUpdateCategory,
+  deleteCategory as localDeleteCategory,
+  getExams as localGetExams,
+  addExam as localAddExam,
+  updateExam as localUpdateExam,
+  deleteExam as localDeleteExam,
+  deleteAllExamsInCategory as localDeleteAllExamsInCategory,
+  getQuestions as localGetQuestions,
+  addTest as localAddTest,
+  updateTest as localUpdateTest,
+  deleteTest as localDeleteTest,
+  deleteAllTestsInExam as localDeleteAllTestsInExam,
+  addQuestion as localAddQuestion,
+  addBatchQuestions as localAddBatchQuestions,
+  updateQuestion as localUpdateQuestion,
+  deleteQuestion as localDeleteQuestion,
+  deleteAllQuestionsInTest as localDeleteAllQuestionsInTest,
+  deleteAllExamData as localDeleteAllExamData,
+  seedLocalData as localSeedData,
 } from '@/lib/local-data'
 import {
   Announcement,
@@ -311,51 +331,63 @@ export async function getCategories(): Promise<LocalExamCategory[]> {
 }
 
 /**
- * Add a new category to Firestore.
+ * Add a new category. Always saves to localStorage, and to Firestore if available.
  */
 export async function addCategory(
   data: Omit<FirestoreExamCategory, 'id'>
 ): Promise<FirestoreExamCategory> {
-  try {
-    const docRef = await addDoc(collection(db, COLLECTIONS.categories), data)
-    return { id: docRef.id, ...data }
-  } catch (error) {
-    console.error('[Firestore] addCategory error:', error)
-    throw error
+  // Always save to local
+  const localCat = localAddCategory(data)
+  // Try Firestore if available
+  if (useFirestore && isFirebaseReady() && db) {
+    try {
+      const docRef = await addDoc(collection(db, COLLECTIONS.categories), data)
+      return { id: docRef.id, ...data }
+    } catch (error) {
+      console.warn('[Firestore] addCategory error, local saved:', error)
+    }
   }
+  return localCat
 }
 
 /**
- * Update an existing category.
+ * Update an existing category. Always updates localStorage, and Firestore if available.
  */
 export async function updateCategory(
   id: string,
   data: Partial<FirestoreExamCategory>
 ): Promise<void> {
-  try {
-    await updateDoc(doc(db, COLLECTIONS.categories, id), data)
-  } catch (error) {
-    console.error('[Firestore] updateCategory error:', error)
-    throw error
+  // Always update local
+  localUpdateCategory(id, data)
+  // Try Firestore if available
+  if (useFirestore && isFirebaseReady() && db) {
+    try {
+      await updateDoc(doc(db, COLLECTIONS.categories, id), data)
+    } catch (error) {
+      console.warn('[Firestore] updateCategory error, local updated:', error)
+    }
   }
 }
 
 /**
- * Delete a category and all its associated exams.
+ * Delete a category. Always deletes from localStorage, and Firestore if available.
  */
 export async function deleteCategory(id: string): Promise<void> {
-  try {
-    // Delete associated exams first
-    const examSnap = await getDocs(
-      query(collection(db, COLLECTIONS.exams), where('categoryId', '==', id))
-    )
-    const batch = writeBatch(db)
-    examSnap.docs.forEach((d) => batch.delete(d.ref))
-    batch.delete(doc(db, COLLECTIONS.categories, id))
-    await batch.commit()
-  } catch (error) {
-    console.error('[Firestore] deleteCategory error:', error)
-    throw error
+  // Always delete from local
+  localDeleteCategory(id)
+  // Try Firestore if available
+  if (useFirestore && isFirebaseReady() && db) {
+    try {
+      const examSnap = await getDocs(
+        query(collection(db, COLLECTIONS.exams), where('categoryId', '==', id))
+      )
+      const batch = writeBatch(db)
+      examSnap.docs.forEach((d) => batch.delete(d.ref))
+      batch.delete(doc(db, COLLECTIONS.categories, id))
+      await batch.commit()
+    } catch (error) {
+      console.warn('[Firestore] deleteCategory error, local deleted:', error)
+    }
   }
 }
 
@@ -406,58 +438,69 @@ export async function getExams(categoryId?: string): Promise<LocalExam[]> {
 }
 
 /**
- * Add a new exam.
+ * Add a new exam. Always saves to localStorage, and Firestore if available.
  */
 export async function addExam(
   data: Omit<FirestoreExam, 'id'>
 ): Promise<FirestoreExam> {
-  try {
-    const docRef = await addDoc(collection(db, COLLECTIONS.exams), data)
-    return { id: docRef.id, ...data }
-  } catch (error) {
-    console.error('[Firestore] addExam error:', error)
-    throw error
+  // Always save to local
+  const localExam = localAddExam(data)
+  // Try Firestore if available
+  if (useFirestore && isFirebaseReady() && db) {
+    try {
+      const docRef = await addDoc(collection(db, COLLECTIONS.exams), data)
+      return { id: docRef.id, ...data }
+    } catch (error) {
+      console.warn('[Firestore] addExam error, local saved:', error)
+    }
   }
+  return localExam
 }
 
 /**
- * Update an existing exam.
+ * Update an existing exam. Always updates localStorage, and Firestore if available.
  */
 export async function updateExam(
   id: string,
   data: Partial<FirestoreExam>
 ): Promise<void> {
-  try {
-    await updateDoc(doc(db, COLLECTIONS.exams, id), data)
-  } catch (error) {
-    console.error('[Firestore] updateExam error:', error)
-    throw error
+  // Always update local
+  localUpdateExam(id, data)
+  // Try Firestore if available
+  if (useFirestore && isFirebaseReady() && db) {
+    try {
+      await updateDoc(doc(db, COLLECTIONS.exams, id), data)
+    } catch (error) {
+      console.warn('[Firestore] updateExam error, local updated:', error)
+    }
   }
 }
 
 /**
- * Delete an exam and all its associated tests and questions.
+ * Delete an exam. Always deletes from localStorage, and Firestore if available.
  */
 export async function deleteExam(id: string): Promise<void> {
-  try {
-    // Delete associated tests
-    const testSnap = await getDocs(
-      query(collection(db, COLLECTIONS.tests), where('examId', '==', id))
-    )
-    const batch = writeBatch(db)
-    for (const testDoc of testSnap.docs) {
-      // Delete associated questions
-      const qSnap = await getDocs(
-        query(collection(db, COLLECTIONS.questions), where('testId', '==', testDoc.id))
+  // Always delete from local
+  localDeleteExam(id)
+  // Try Firestore if available
+  if (useFirestore && isFirebaseReady() && db) {
+    try {
+      const testSnap = await getDocs(
+        query(collection(db, COLLECTIONS.tests), where('examId', '==', id))
       )
-      qSnap.docs.forEach((q) => batch.delete(q.ref))
-      batch.delete(testDoc.ref)
+      const batch = writeBatch(db)
+      for (const testDoc of testSnap.docs) {
+        const qSnap = await getDocs(
+          query(collection(db, COLLECTIONS.questions), where('testId', '==', testDoc.id))
+        )
+        qSnap.docs.forEach((q) => batch.delete(q.ref))
+        batch.delete(testDoc.ref)
+      }
+      batch.delete(doc(db, COLLECTIONS.exams, id))
+      await batch.commit()
+    } catch (error) {
+      console.warn('[Firestore] deleteExam error, local deleted:', error)
     }
-    batch.delete(doc(db, COLLECTIONS.exams, id))
-    await batch.commit()
-  } catch (error) {
-    console.error('[Firestore] deleteExam error:', error)
-    throw error
   }
 }
 
@@ -611,45 +654,58 @@ export async function getTestById(id: string): Promise<LocalTest | null> {
 export async function addTest(
   data: Omit<FirestoreTest, 'id'>
 ): Promise<FirestoreTest> {
-  try {
-    const docRef = await addDoc(collection(db, COLLECTIONS.tests), data)
-    return { id: docRef.id, ...data }
-  } catch (error) {
-    console.error('[Firestore] addTest error:', error)
-    throw error
+  // Always save to local
+  const localTest = localAddTest(data)
+  // Try Firestore if available
+  if (useFirestore && isFirebaseReady() && db) {
+    try {
+      const docRef = await addDoc(collection(db, COLLECTIONS.tests), data)
+      return { id: docRef.id, ...data }
+    } catch (error) {
+      console.warn('[Firestore] addTest error, local saved:', error)
+    }
   }
+  return localTest as unknown as FirestoreTest
 }
 
 /**
- * Update an existing test.
+ * Update an existing test. Always updates localStorage, and Firestore if available.
  */
 export async function updateTest(
   id: string,
   data: Partial<FirestoreTest>
 ): Promise<void> {
-  try {
-    await updateDoc(doc(db, COLLECTIONS.tests, id), data)
-  } catch (error) {
-    console.error('[Firestore] updateTest error:', error)
-    throw error
+  // Always update local
+  localUpdateTest(id, data)
+  // Try Firestore if available
+  if (useFirestore && isFirebaseReady() && db) {
+    try {
+      await updateDoc(doc(db, COLLECTIONS.tests, id), data)
+    } catch (error) {
+      console.warn('[Firestore] updateTest error, local updated:', error)
+    }
   }
 }
 
 /**
- * Delete a test and all its associated questions.
+ * Delete a test. Always deletes from localStorage, and Firestore if available.
  */
 export async function deleteTest(id: string): Promise<void> {
-  try {
-    const qSnap = await getDocs(
-      query(collection(db, COLLECTIONS.questions), where('testId', '==', id))
-    )
-    const batch = writeBatch(db)
-    qSnap.docs.forEach((q) => batch.delete(q.ref))
-    batch.delete(doc(db, COLLECTIONS.tests, id))
-    await batch.commit()
-  } catch (error) {
-    console.error('[Firestore] deleteTest error:', error)
-    throw error
+  // Always delete from local
+  localDeleteTest(id)
+  // Try Firestore if available
+  if (useFirestore && isFirebaseReady() && db) {
+    try {
+      const qSnap = await getDocs(
+        query(collection(db, COLLECTIONS.questions), where('testId', '==', id))
+      )
+      const batch = writeBatch(db)
+      qSnap.docs.forEach((q) => batch.delete(q.ref))
+      batch.delete(doc(db, COLLECTIONS.tests, id))
+      await batch.commit()
+    } catch (error) {
+      console.warn('[Firestore] deleteTest error, local deleted:', error)
+    }
   }
 }
 
@@ -699,85 +755,100 @@ export async function getQuestions(testId: string): Promise<LocalQuestion[]> {
 }
 
 /**
- * Add a single question.
+ * Add a single question. Always saves to localStorage, and Firestore if available.
  */
 export async function addQuestion(
   data: Omit<FirestoreQuestion, 'id'>
 ): Promise<FirestoreQuestion> {
-  try {
-    const docRef = await addDoc(collection(db, COLLECTIONS.questions), data)
-    return { id: docRef.id, ...data }
-  } catch (error) {
-    console.error('[Firestore] addQuestion error:', error)
-    throw error
+  // Always save to local
+  const localQ = localAddQuestion(data)
+  // Try Firestore if available
+  if (useFirestore && isFirebaseReady() && db) {
+    try {
+      const docRef = await addDoc(collection(db, COLLECTIONS.questions), data)
+      return { id: docRef.id, ...data }
+    } catch (error) {
+      console.warn('[Firestore] addQuestion error, local saved:', error)
+    }
   }
+  return localQ as unknown as FirestoreQuestion
 }
 
 /**
- * Update an existing question.
+ * Update an existing question. Always updates localStorage, and Firestore if available.
  */
 export async function updateQuestion(
   id: string,
   data: Partial<FirestoreQuestion>
 ): Promise<void> {
-  try {
-    await updateDoc(doc(db, COLLECTIONS.questions, id), data)
-  } catch (error) {
-    console.error('[Firestore] updateQuestion error:', error)
-    throw error
+  // Always update local
+  localUpdateQuestion(id, data)
+  // Try Firestore if available
+  if (useFirestore && isFirebaseReady() && db) {
+    try {
+      await updateDoc(doc(db, COLLECTIONS.questions, id), data)
+    } catch (error) {
+      console.warn('[Firestore] updateQuestion error, local updated:', error)
+    }
   }
 }
 
 /**
- * Delete a question.
+ * Delete a question. Always deletes from localStorage, and Firestore if available.
  */
 export async function deleteQuestion(id: string): Promise<void> {
-  try {
-    await deleteDoc(doc(db, COLLECTIONS.questions, id))
-  } catch (error) {
-    console.error('[Firestore] deleteQuestion error:', error)
-    throw error
+  // Always delete from local
+  localDeleteQuestion(id)
+  // Try Firestore if available
+  if (useFirestore && isFirebaseReady() && db) {
+    try {
+      await deleteDoc(doc(db, COLLECTIONS.questions, id))
+    } catch (error) {
+      console.warn('[Firestore] deleteQuestion error, local deleted:', error)
+    }
   }
 }
 
 /**
- * Add multiple questions at once using a Firestore batch write.
- * Returns the list of created questions with their generated IDs.
+ * Add multiple questions at once. Always saves to localStorage, and Firestore if available.
  */
 export async function addBatchQuestions(
   testId: string,
   questions: Omit<LocalQuestion, 'id'>[]
 ): Promise<LocalQuestion[]> {
-  try {
-    const batch = writeBatch(db)
-    const created: LocalQuestion[] = []
-
-    for (const qData of questions) {
-      const docRef = doc(collection(db, COLLECTIONS.questions))
-      const firestoreQ: FirestoreQuestion = {
-        id: docRef.id,
-        questionText: qData.questionText,
-        questionImage: qData.questionImage,
-        optionA: qData.optionA,
-        optionB: qData.optionB,
-        optionC: qData.optionC,
-        optionD: qData.optionD,
-        correctAnswer: qData.correctAnswer,
-        explanation: qData.explanation,
-        subject: qData.subject,
-        order: qData.order,
-        testId,
+  // Always save to local
+  const localQs = localAddBatchQuestions(testId, questions)
+  // Try Firestore if available
+  if (useFirestore && isFirebaseReady() && db) {
+    try {
+      const batch = writeBatch(db)
+      const created: LocalQuestion[] = []
+      for (const qData of questions) {
+        const docRef = doc(collection(db, COLLECTIONS.questions))
+        const firestoreQ: FirestoreQuestion = {
+          id: docRef.id,
+          questionText: qData.questionText,
+          questionImage: qData.questionImage,
+          optionA: qData.optionA,
+          optionB: qData.optionB,
+          optionC: qData.optionC,
+          optionD: qData.optionD,
+          correctAnswer: qData.correctAnswer,
+          explanation: qData.explanation,
+          subject: qData.subject,
+          order: qData.order,
+          testId,
+        }
+        batch.set(docRef, firestoreQ)
+        created.push({ ...qData, id: docRef.id })
       }
-      batch.set(docRef, firestoreQ)
-      created.push({ ...qData, id: docRef.id })
+      await batch.commit()
+      return created
+    } catch (error) {
+      console.warn('[Firestore] addBatchQuestions error, local saved:', error)
     }
-
-    await batch.commit()
-    return created
-  } catch (error) {
-    console.error('[Firestore] addBatchQuestions error:', error)
-    throw error
   }
+  return localQs
 }
 
 // ============================================================
@@ -785,104 +856,106 @@ export async function addBatchQuestions(
 // ============================================================
 
 /**
- * Delete all questions in a specific test.
+ * Delete all questions in a specific test. Always deletes from localStorage, and Firestore if available.
  */
 export async function deleteAllQuestionsInTest(testId: string): Promise<number> {
-  try {
-    const qSnap = await getDocs(
-      query(collection(db, COLLECTIONS.questions), where('testId', '==', testId))
-    )
-    if (qSnap.empty) return 0
-    // Firestore batch limit is 500, so chunk if needed
-    const docs = qSnap.docs
-    let deleted = 0
-    for (let i = 0; i < docs.length; i += 500) {
-      const chunk = docs.slice(i, i + 500)
-      const batch = writeBatch(db)
-      chunk.forEach(d => batch.delete(d.ref))
-      await batch.commit()
-      deleted += chunk.length
+  // Always delete from local
+  const localCount = localDeleteAllQuestionsInTest(testId)
+  // Try Firestore if available
+  if (useFirestore && isFirebaseReady() && db) {
+    try {
+      const qSnap = await getDocs(
+        query(collection(db, COLLECTIONS.questions), where('testId', '==', testId))
+      )
+      if (qSnap.empty) return localCount
+      const docs = qSnap.docs
+      for (let i = 0; i < docs.length; i += 500) {
+        const chunk = docs.slice(i, i + 500)
+        const batch = writeBatch(db)
+        chunk.forEach(d => batch.delete(d.ref))
+        await batch.commit()
+      }
+      return docs.length
+    } catch (error) {
+      console.warn('[Firestore] deleteAllQuestionsInTest error, local deleted:', error)
     }
-    return deleted
-  } catch (error) {
-    console.error('[Firestore] deleteAllQuestionsInTest error:', error)
-    throw error
   }
+  return localCount
 }
 
 /**
- * Delete all tests in a specific exam (including their questions).
+ * Delete all tests in a specific exam. Always deletes from localStorage, and Firestore if available.
  */
 export async function deleteAllTestsInExam(examId: string): Promise<number> {
-  try {
-    const tSnap = await getDocs(
-      query(collection(db, COLLECTIONS.tests), where('examId', '==', examId))
-    )
-    if (tSnap.empty) return 0
-    let deleted = 0
-    for (const testDoc of tSnap.docs) {
-      // Delete questions for this test
-      await deleteAllQuestionsInTest(testDoc.id)
-      // Delete the test itself
-      await deleteDoc(testDoc.ref)
-      deleted++
+  // Always delete from local
+  const localCount = localDeleteAllTestsInExam(examId)
+  // Try Firestore if available
+  if (useFirestore && isFirebaseReady() && db) {
+    try {
+      const tSnap = await getDocs(
+        query(collection(db, COLLECTIONS.tests), where('examId', '==', examId))
+      )
+      if (tSnap.empty) return localCount
+      for (const testDoc of tSnap.docs) {
+        await deleteAllQuestionsInTest(testDoc.id)
+        await deleteDoc(testDoc.ref)
+      }
+      return tSnap.docs.length
+    } catch (error) {
+      console.warn('[Firestore] deleteAllTestsInExam error, local deleted:', error)
     }
-    return deleted
-  } catch (error) {
-    console.error('[Firestore] deleteAllTestsInExam error:', error)
-    throw error
   }
+  return localCount
 }
 
 /**
- * Delete all exams in a category (including their tests and questions).
+ * Delete all exams in a category. Always deletes from localStorage, and Firestore if available.
  */
 export async function deleteAllExamsInCategory(categoryId: string): Promise<number> {
-  try {
-    const eSnap = await getDocs(
-      query(collection(db, COLLECTIONS.exams), where('categoryId', '==', categoryId))
-    )
-    if (eSnap.empty) return 0
-    let deleted = 0
-    for (const examDoc of eSnap.docs) {
-      await deleteAllTestsInExam(examDoc.id)
-      await deleteDoc(examDoc.ref)
-      deleted++
+  // Always delete from local
+  const localCount = localDeleteAllExamsInCategory(categoryId)
+  // Try Firestore if available
+  if (useFirestore && isFirebaseReady() && db) {
+    try {
+      const eSnap = await getDocs(
+        query(collection(db, COLLECTIONS.exams), where('categoryId', '==', categoryId))
+      )
+      if (eSnap.empty) return localCount
+      for (const examDoc of eSnap.docs) {
+        await deleteAllTestsInExam(examDoc.id)
+        await deleteDoc(examDoc.ref)
+      }
+      return eSnap.docs.length
+    } catch (error) {
+      console.warn('[Firestore] deleteAllExamsInCategory error, local deleted:', error)
     }
-    return deleted
-  } catch (error) {
-    console.error('[Firestore] deleteAllExamsInCategory error:', error)
-    throw error
   }
+  return localCount
 }
 
 /**
- * Delete ALL data from Firestore (categories, exams, tests, questions).
- * Use with extreme caution!
+ * Delete ALL exam data. Always deletes from localStorage, and Firestore if available.
  */
 export async function deleteAllExamData(): Promise<void> {
-  try {
-    // Delete questions
-    const qSnap = await getDocs(collection(db, COLLECTIONS.questions))
-    // Delete tests
-    const tSnap = await getDocs(collection(db, COLLECTIONS.tests))
-    // Delete exams
-    const eSnap = await getDocs(collection(db, COLLECTIONS.exams))
-    // Delete categories
-    const cSnap = await getDocs(collection(db, COLLECTIONS.categories))
-
-    const allDocs = [...qSnap.docs, ...tSnap.docs, ...eSnap.docs, ...cSnap.docs]
-    
-    for (let i = 0; i < allDocs.length; i += 500) {
-      const chunk = allDocs.slice(i, i + 500)
-      const batch = writeBatch(db)
-      chunk.forEach(d => batch.delete(d.ref))
-      await batch.commit()
+  // Always delete from local
+  localDeleteAllExamData()
+  // Try Firestore if available
+  if (useFirestore && isFirebaseReady() && db) {
+    try {
+      const qSnap = await getDocs(collection(db, COLLECTIONS.questions))
+      const tSnap = await getDocs(collection(db, COLLECTIONS.tests))
+      const eSnap = await getDocs(collection(db, COLLECTIONS.exams))
+      const cSnap = await getDocs(collection(db, COLLECTIONS.categories))
+      const allDocs = [...qSnap.docs, ...tSnap.docs, ...eSnap.docs, ...cSnap.docs]
+      for (let i = 0; i < allDocs.length; i += 500) {
+        const chunk = allDocs.slice(i, i + 500)
+        const batch = writeBatch(db)
+        chunk.forEach(d => batch.delete(d.ref))
+        await batch.commit()
+      }
+    } catch (error) {
+      console.warn('[Firestore] deleteAllExamData error, local deleted:', error)
     }
-    console.log('[Firestore] All exam data deleted successfully')
-  } catch (error) {
-    console.error('[Firestore] deleteAllExamData error:', error)
-    throw error
   }
 }
 
@@ -1462,13 +1535,16 @@ export async function getDailyStats(days: number = 7): Promise<DailyStats[]> {
  * Useful for initial setup.
  */
 export async function seedFirestoreIfEmpty(): Promise<boolean> {
+  // Always seed local first
+  localSeedData()
+  
   if (!db || !isFirebaseReady()) {
-    console.error('[Firestore] Cannot seed: Firebase is not configured. Add config to .env.local')
-    return false
+    console.log('[Firestore] Firebase not configured, local data seeded')
+    return true
   }
   try {
     const catSnap = await getDocs(collection(db, COLLECTIONS.categories))
-    if (catSnap.size > 0) return false // Already seeded
+    if (catSnap.size > 0) return false // Already seeded in Firestore
 
     const batch = writeBatch(db)
     const localCategories = getLocalCategories()

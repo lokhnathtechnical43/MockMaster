@@ -106,13 +106,13 @@ export default function ExamsTab() {
       const cats = await getCategories()
       setCategories(cats.map(c => ({
         id: c.id, name: c.name, slug: c.slug, icon: c.icon,
-        description: c.description, order: c.order
+        description: c.description, order: c.order, imageUrl: c.imageUrl
       })))
     } catch {
       const local = getLocalCategories()
       setCategories(local.map(c => ({
         id: c.id, name: c.name, slug: c.slug, icon: c.icon,
-        description: c.description, order: c.order
+        description: c.description, order: c.order, imageUrl: c.imageUrl
       })))
     } finally {
       setLoading(false)

@@ -471,15 +471,19 @@ export function updateCategory(id: string, data: Partial<LocalExamCategory>): vo
 export function deleteCategory(id: string): void {
   const cats = lsGet<any>(CATEGORIES_KEY, []).filter((c: any) => c.id !== id)
   lsSet(CATEGORIES_KEY, cats)
-  // Also delete associated exams, tests, questions
-  const exams = lsGet<LocalExam>(EXAMS_KEY, []).filter(e => e.categoryId !== id)
-  lsSet(EXAMS_KEY, exams)
-  const examIds = new Set(exams.map(e => e.id))
-  const tests = lsGet<LocalTest>(TESTS_KEY, []).filter(t => examIds.has(t.examId))
-  lsSet(TESTS_KEY, tests)
-  const testIds = new Set(tests.map(t => t.id))
-  const questions = lsGet<LocalQuestion>(QUESTIONS_KEY, []).filter(q => testIds.has(q.testId || ''))
-  lsSet(QUESTIONS_KEY, questions)
+  // Find exams to delete (associated with this category)
+  const allExams = lsGet<LocalExam>(EXAMS_KEY, [])
+  const deletedExamIds = new Set(allExams.filter(e => e.categoryId === id).map(e => e.id))
+  const remainingExams = allExams.filter(e => e.categoryId !== id)
+  lsSet(EXAMS_KEY, remainingExams)
+  // Delete tests associated with deleted exams
+  const allTests = lsGet<LocalTest>(TESTS_KEY, [])
+  const deletedTestIds = new Set(allTests.filter(t => deletedExamIds.has(t.examId)).map(t => t.id))
+  const remainingTests = allTests.filter(t => !deletedExamIds.has(t.examId))
+  lsSet(TESTS_KEY, remainingTests)
+  // Delete questions associated with deleted tests
+  const remainingQuestions = lsGet<LocalQuestion>(QUESTIONS_KEY, []).filter(q => !deletedTestIds.has(q.testId || ''))
+  lsSet(QUESTIONS_KEY, remainingQuestions)
 }
 
 // ===== Exam CRUD (localStorage) =====
@@ -522,14 +526,16 @@ export function updateExam(id: string, data: Partial<LocalExam>): void {
 }
 
 export function deleteExam(id: string): void {
-  const exams = lsGet<LocalExam>(EXAMS_KEY, []).filter(e => e.id !== id)
-  lsSet(EXAMS_KEY, exams)
-  // Also delete associated tests and questions
-  const tests = lsGet<LocalTest>(TESTS_KEY, []).filter(t => t.examId !== id)
-  const testIds = new Set(tests.map(t => t.id))
-  const questions = lsGet<LocalQuestion>(QUESTIONS_KEY, []).filter(q => testIds.has(q.testId || ''))
-  lsSet(TESTS_KEY, tests)
-  lsSet(QUESTIONS_KEY, questions)
+  const remainingExams = lsGet<LocalExam>(EXAMS_KEY, []).filter(e => e.id !== id)
+  lsSet(EXAMS_KEY, remainingExams)
+  // Delete tests associated with this exam
+  const allTests = lsGet<LocalTest>(TESTS_KEY, [])
+  const deletedTestIds = new Set(allTests.filter(t => t.examId === id).map(t => t.id))
+  const remainingTests = allTests.filter(t => t.examId !== id)
+  lsSet(TESTS_KEY, remainingTests)
+  // Delete questions associated with deleted tests
+  const remainingQuestions = lsGet<LocalQuestion>(QUESTIONS_KEY, []).filter(q => !deletedTestIds.has(q.testId || ''))
+  lsSet(QUESTIONS_KEY, remainingQuestions)
 }
 
 export function deleteAllExamsInCategory(categoryId: string): number {
@@ -539,11 +545,12 @@ export function deleteAllExamsInCategory(categoryId: string): number {
   lsSet(EXAMS_KEY, remaining)
   // Delete associated tests and questions
   const deleteExamIds = new Set(toDelete.map(e => e.id))
-  const tests = lsGet<LocalTest>(TESTS_KEY, []).filter(t => !deleteExamIds.has(t.examId))
-  const testIds = new Set(tests.map(t => t.id))
-  const questions = lsGet<LocalQuestion>(QUESTIONS_KEY, []).filter(q => testIds.has(q.testId || ''))
-  lsSet(TESTS_KEY, tests)
-  lsSet(QUESTIONS_KEY, questions)
+  const allTests = lsGet<LocalTest>(TESTS_KEY, [])
+  const deletedTestIds = new Set(allTests.filter(t => deleteExamIds.has(t.examId)).map(t => t.id))
+  const remainingTests = allTests.filter(t => !deleteExamIds.has(t.examId))
+  lsSet(TESTS_KEY, remainingTests)
+  const remainingQuestions = lsGet<LocalQuestion>(QUESTIONS_KEY, []).filter(q => !deletedTestIds.has(q.testId || ''))
+  lsSet(QUESTIONS_KEY, remainingQuestions)
   return toDelete.length
 }
 

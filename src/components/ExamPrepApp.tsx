@@ -24,7 +24,7 @@ import {
 import {
   getCategories as getLocalCategories, getTestsByExam as getLocalTestsByExam,
   getTestById as getLocalTestById, saveResult as saveLocalResult,
-  getLeaderboard as getLocalLeaderboard,
+  getLeaderboard as getLocalLeaderboard, seedLocalData,
   type LocalExamCategory, type LocalExam, type LocalTest, type LocalQuestion, type TestResult
 } from '@/lib/local-data'
 import {
@@ -320,63 +320,69 @@ export default function ExamPrepApp() {
   // --- Load categories + data on mount ---
   useEffect(() => {
     const loadData = async () => {
+      // Seed local data on first load (if localStorage is empty)
+      seedLocalData()
+
+      // Always load categories from local (which merges localStorage + defaults)
+      const cats = getLocalCategories()
+      setCategories(cats)
+
+      // Also try Firestore if available, but local is the primary source
       try {
-        const cats = await fetchCategories()
-        setCategories(cats)
+        if (isFirestore()) {
+          const fsCats = await fetchCategories()
+          if (fsCats.length > 0) setCategories(fsCats)
+        }
       } catch (e) {
-        console.warn('Categories load failed, using local:', e)
-        setCategories(getLocalCategories())
+        console.warn('Firestore categories load failed, using local:', e)
       }
 
       const readIds = getReadNotifIds()
 
-      // Load each admin data type independently so one failure doesn't block others
+      // Load admin data - always from local first, then Firestore if available
+      setAnnouncements(getLocalAnnouncements().map(a => ({ ...a, action: a.action as Page })))
+      setNotifications(getLocalNotifications().map(n => ({ ...n, read: n.read || readIds.has(n.id) })))
+      setUpcomingExams(getLocalUpcomingExams())
+      setDailyTips(getLocalDailyTips())
+      const localPapers = getLocalPrevYearPapers()
+      setPrevPapers(localPapers)
+      if (localPapers.length > 0) {
+        const paperYears = [...new Set(localPapers.map(p => p.year))].sort((a, b) => Number(b) - Number(a))
+        setSelectedPaperYear(paperYears[0] || '')
+      }
+      setSidebarMenu(getLocalSidebarMenu().filter(i => i.visible))
+
+      // If Firestore is available, also load from there (overrides local)
       if (isFirestore()) {
-        // Load ALL admin data from Firestore - each independently
         getFsAnnouncements()
-          .then(anns => setAnnouncements(anns.map(a => ({ ...a, action: a.action as Page }))))
-          .catch(() => setAnnouncements([]))
+          .then(anns => { if (anns.length > 0) setAnnouncements(anns.map(a => ({ ...a, action: a.action as Page }))) })
+          .catch(() => {})
 
         getFsNotifications()
-          .then(notifs => setNotifications(notifs.map(n => ({ ...n, read: n.read || readIds.has(n.id) }))))
-          .catch(() => setNotifications([]))
+          .then(notifs => { if (notifs.length > 0) setNotifications(notifs.map(n => ({ ...n, read: n.read || readIds.has(n.id) }))) })
+          .catch(() => {})
 
         getFsUpcomingExams()
-          .then(upcoming => setUpcomingExams(upcoming))
-          .catch(() => setUpcomingExams([]))
+          .then(upcoming => { if (upcoming.length > 0) setUpcomingExams(upcoming) })
+          .catch(() => {})
 
         getFsDailyTips()
-          .then(tips => setDailyTips(tips))
-          .catch(() => setDailyTips([]))
+          .then(tips => { if (tips.length > 0) setDailyTips(tips) })
+          .catch(() => {})
 
         getFsPrevYearPapers()
           .then(papers => {
-            setPrevPapers(papers)
             if (papers.length > 0) {
+              setPrevPapers(papers)
               const years = [...new Set(papers.map(p => p.year))].sort((a, b) => Number(b) - Number(a))
               setSelectedPaperYear(years[0] || '')
             }
           })
-          .catch(() => setPrevPapers([]))
+          .catch(() => {})
 
         getFsSidebarMenu()
-          .then(items => setSidebarMenu(items.filter(i => i.visible)))
-          .catch(() => setSidebarMenu([]))
-      } else {
-        // Fallback to localStorage
-        setAnnouncements(getLocalAnnouncements().map(a => ({ ...a, action: a.action as Page })))
-        setNotifications(getLocalNotifications().map(n => ({ ...n, read: n.read || readIds.has(n.id) })))
-        setUpcomingExams(getLocalUpcomingExams())
-        setDailyTips(getLocalDailyTips())
-        const localPapers = getLocalPrevYearPapers()
-        setPrevPapers(localPapers)
-        if (localPapers.length > 0) {
-          const paperYears = [...new Set(localPapers.map(p => p.year))].sort((a, b) => Number(b) - Number(a))
-          setSelectedPaperYear(paperYears[0] || '')
-        }
-        setSidebarMenu(getLocalSidebarMenu().filter(i => i.visible))
-        // Note: When Firestore is NOT configured, local defaults are used.
-        // This is expected for offline/local-only mode.
+          .then(items => { if (items.length > 0) setSidebarMenu(items.filter(i => i.visible)) })
+          .catch(() => {})
       }
     }
     loadData()
@@ -386,36 +392,56 @@ export default function ExamPrepApp() {
   useEffect(() => {
     const handleDataRefresh = async () => {
       const readIds = getReadNotifIds()
+
+      // Always refresh from local first (immediate, always works)
+      setCategories(getLocalCategories())
+      setAnnouncements(getLocalAnnouncements().map(a => ({ ...a, action: a.action as Page })))
+      setNotifications(getLocalNotifications().map(n => ({ ...n, read: n.read || readIds.has(n.id) })))
+      setUpcomingExams(getLocalUpcomingExams())
+      setDailyTips(getLocalDailyTips())
+      const localPapers = getLocalPrevYearPapers()
+      setPrevPapers(localPapers)
+      if (localPapers.length > 0) {
+        const years = [...new Set(localPapers.map(p => p.year))].sort((a, b) => Number(b) - Number(a))
+        setSelectedPaperYear(years[0] || '')
+      }
+      setSidebarMenu(getLocalSidebarMenu().filter(i => i.visible))
+
+      // If Firestore is available, also refresh from there
       if (isFirestore()) {
-        // Refresh each data type independently from Firestore
         getFsAnnouncements()
-          .then(anns => setAnnouncements(anns.map(a => ({ ...a, action: a.action as Page }))))
-          .catch(() => {}) // Silent fail - keep existing data
+          .then(anns => { if (anns.length > 0) setAnnouncements(anns.map(a => ({ ...a, action: a.action as Page }))) })
+          .catch(() => {})
 
         getFsNotifications()
-          .then(notifs => setNotifications(notifs.map(n => ({ ...n, read: n.read || readIds.has(n.id) }))))
+          .then(notifs => { if (notifs.length > 0) setNotifications(notifs.map(n => ({ ...n, read: n.read || readIds.has(n.id) }))) })
           .catch(() => {})
 
         getFsUpcomingExams()
-          .then(upcoming => setUpcomingExams(upcoming))
+          .then(upcoming => { if (upcoming.length > 0) setUpcomingExams(upcoming) })
           .catch(() => {})
 
         getFsDailyTips()
-          .then(tips => setDailyTips(tips))
+          .then(tips => { if (tips.length > 0) setDailyTips(tips) })
           .catch(() => {})
 
         getFsPrevYearPapers()
-          .then(papers => setPrevPapers(papers))
+          .then(papers => {
+            if (papers.length > 0) {
+              setPrevPapers(papers)
+              const years = [...new Set(papers.map(p => p.year))].sort((a, b) => Number(b) - Number(a))
+              setSelectedPaperYear(years[0] || '')
+            }
+          })
           .catch(() => {})
 
         getFsSidebarMenu()
-          .then(items => setSidebarMenu(items.filter(i => i.visible)))
+          .then(items => { if (items.length > 0) setSidebarMenu(items.filter(i => i.visible)) })
           .catch(() => {})
       }
-      // Note: No else block here - when Firestore is active, we don't fall back to local defaults on refresh
     }
     window.addEventListener('storage', handleDataRefresh)
-    const interval = setInterval(handleDataRefresh, 30000) // Refresh every 30 seconds from Firestore
+    const interval = setInterval(handleDataRefresh, 30000) // Refresh every 30 seconds
     return () => {
       window.removeEventListener('storage', handleDataRefresh)
       clearInterval(interval)
