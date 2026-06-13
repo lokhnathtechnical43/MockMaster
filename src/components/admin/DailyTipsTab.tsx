@@ -11,6 +11,7 @@ import {
   type DailyTip,
   DEFAULT_DAILY_TIPS
 } from '@/lib/admin-data'
+import ImageUploadField from './ImageUploadField'
 
 interface DailyTipsTabProps {
   tips: DailyTip[]
@@ -19,16 +20,20 @@ interface DailyTipsTabProps {
 
 export default function DailyTipsTab({ tips, onUpdate }: DailyTipsTabProps) {
   const [newText, setNewText] = useState('')
+  const [newImageUrl, setNewImageUrl] = useState('')
   const [editingIndex, setEditingIndex] = useState<number | null>(null)
   const [editText, setEditText] = useState('')
+  const [editImageUrl, setEditImageUrl] = useState('')
 
   const handleAdd = () => {
     const newTip: DailyTip = {
       id: Date.now().toString(),
       text: newText,
+      ...(newImageUrl ? { imageUrl: newImageUrl } : {}),
     }
     onUpdate([...tips, newTip])
     setNewText('')
+    setNewImageUrl('')
   }
 
   const handleDelete = (index: number) => {
@@ -40,6 +45,7 @@ export default function DailyTipsTab({ tips, onUpdate }: DailyTipsTabProps) {
     const t = tips[index]
     setEditingIndex(index)
     setEditText(t.text)
+    setEditImageUrl(t.imageUrl || '')
   }
 
   const handleCancelEdit = () => {
@@ -52,6 +58,7 @@ export default function DailyTipsTab({ tips, onUpdate }: DailyTipsTabProps) {
     updated[editingIndex] = {
       ...updated[editingIndex],
       text: editText,
+      ...(editImageUrl ? { imageUrl: editImageUrl } : { imageUrl: undefined }),
     }
     onUpdate(updated)
     setEditingIndex(null)
@@ -90,6 +97,12 @@ export default function DailyTipsTab({ tips, onUpdate }: DailyTipsTabProps) {
               placeholder="Enter tip text (e.g. Solve at least 50 questions daily from different topics)"
               rows={3}
               className="w-full px-3 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-amber-300 resize-none"
+            />
+            <ImageUploadField
+              imageUrl={newImageUrl}
+              onImageUrlChange={setNewImageUrl}
+              folder="daily-tips"
+              label="Image (Optional — shows with tip)"
             />
             <Button
               className="w-full bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white rounded-xl h-11 font-semibold"
@@ -163,16 +176,27 @@ export default function DailyTipsTab({ tips, onUpdate }: DailyTipsTabProps) {
                       rows={3}
                       className="w-full px-3 py-2.5 rounded-xl border border-amber-200 text-sm focus:outline-none focus:ring-2 focus:ring-amber-300 resize-none"
                     />
+                    <ImageUploadField
+                      imageUrl={editImageUrl}
+                      onImageUrlChange={setEditImageUrl}
+                      folder="daily-tips"
+                      label="Image (Optional)"
+                    />
                   </CardContent>
                 ) : (
                   /* View Mode */
                   <CardContent className="p-3">
                     <div className="flex items-start gap-3">
-                      <div className="w-10 h-10 rounded-xl bg-amber-50 flex items-center justify-center flex-shrink-0">
-                        <Star className="w-5 h-5 text-amber-500" />
+                      <div className="w-10 h-10 rounded-xl bg-amber-50 flex items-center justify-center flex-shrink-0 overflow-hidden">
+                        {tip.imageUrl ? (
+                          <img src={tip.imageUrl} alt="" className="w-10 h-10 object-cover rounded-xl" />
+                        ) : (
+                          <Star className="w-5 h-5 text-amber-500" />
+                        )}
                       </div>
                       <div className="flex-1 min-w-0">
                         <p className="text-sm text-gray-700 leading-relaxed">{tip.text}</p>
+                        {tip.imageUrl && <span className="text-[9px] text-orange-500 font-medium">Has image</span>}
                       </div>
                       <div className="flex items-center gap-1 flex-shrink-0">
                         <button

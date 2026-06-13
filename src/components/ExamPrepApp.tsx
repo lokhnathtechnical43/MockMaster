@@ -1161,8 +1161,12 @@ export default function ExamPrepApp() {
                       className={`px-4 py-3 border-b border-gray-50 last:border-b-0 active:bg-gray-50 transition-colors cursor-pointer ${!notification.read ? 'bg-orange-50/50' : ''}`}
                     >
                       <div className="flex items-start gap-3">
-                        <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 ${notification.type === 'update' ? 'bg-blue-100' : notification.type === 'alert' ? 'bg-amber-100' : 'bg-green-100'}`}>
-                          {notification.type === 'update' ? <Zap className="w-4 h-4 text-blue-500" /> : notification.type === 'alert' ? <AlertTriangle className="w-4 h-4 text-amber-500" /> : <Gift className="w-4 h-4 text-green-500" />}
+                        <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 overflow-hidden ${notification.imageUrl ? '' : notification.type === 'update' ? 'bg-blue-100' : notification.type === 'alert' ? 'bg-amber-100' : 'bg-green-100'}`}>
+                          {notification.imageUrl ? (
+                            <img src={notification.imageUrl} alt="" className="w-8 h-8 object-cover rounded-full" />
+                          ) : (
+                            notification.type === 'update' ? <Zap className="w-4 h-4 text-blue-500" /> : notification.type === 'alert' ? <AlertTriangle className="w-4 h-4 text-amber-500" /> : <Gift className="w-4 h-4 text-green-500" />
+                          )}
                         </div>
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2">
@@ -1241,28 +1245,49 @@ export default function ExamPrepApp() {
                 <button key={a.id} onClick={() => handleBottomNav(a.action)} className="flex-shrink-0 w-full snap-center px-1">
                   <div className={`bg-gradient-to-br ${a.gradient} rounded-2xl overflow-hidden shadow-md active:scale-[0.98] transition-transform`}>
                     <div className="h-32 relative flex items-center justify-center overflow-hidden">
-                      <div className="absolute inset-0 opacity-10">
-                        <div className="absolute top-3 left-6 w-24 h-24 rounded-full border-4 border-white" />
-                        <div className="absolute bottom-2 right-8 w-20 h-20 rounded-full border-4 border-white" />
-                        <div className="absolute top-10 right-16 w-10 h-10 rounded-full bg-white" />
-                        <div className="absolute bottom-4 left-20 w-6 h-6 rounded-full bg-white" />
-                      </div>
-                      <div className="relative z-10 flex items-center gap-4 px-4">
-                        <div className="w-16 h-16 bg-white/20 backdrop-blur rounded-2xl flex items-center justify-center flex-shrink-0">
-                          {a.image === 'ssc' && <BookOpen className="w-8 h-8 text-white" />}
-                          {a.image === 'banking' && <Building className="w-8 h-8 text-white" />}
-                          {a.image === 'leaderboard' && <Trophy className="w-8 h-8 text-white" />}
-                          {a.image === 'practice' && <Zap className="w-8 h-8 text-white" />}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-white font-bold text-base leading-tight">{a.title}</p>
-                          <p className="text-white/80 text-xs mt-1">{a.subtitle}</p>
-                          <div className="flex items-center gap-1 mt-2">
-                            <span className="text-white/50 text-[10px]">{_t('home.tapExplore')}</span>
-                            <ChevronRight className="w-3 h-3 text-white/50" />
+                      {a.imageUrl ? (
+                        /* Full-width image mode */
+                        <>
+                          <img src={a.imageUrl} alt={a.title} className="absolute inset-0 w-full h-full object-cover" />
+                          <div className="absolute inset-0 bg-gradient-to-r from-black/60 via-black/30 to-transparent" />
+                          <div className="relative z-10 flex items-center gap-3 px-4 w-full">
+                            <div className="flex-1 min-w-0">
+                              <p className="text-white font-bold text-base leading-tight drop-shadow-lg">{a.title}</p>
+                              <p className="text-white/90 text-xs mt-1 drop-shadow-md">{a.subtitle}</p>
+                              <div className="flex items-center gap-1 mt-2">
+                                <span className="text-white/60 text-[10px]">{_t('home.tapExplore')}</span>
+                                <ChevronRight className="w-3 h-3 text-white/60" />
+                              </div>
+                            </div>
                           </div>
-                        </div>
-                      </div>
+                        </>
+                      ) : (
+                        /* Icon mode (original) */
+                        <>
+                          <div className="absolute inset-0 opacity-10">
+                            <div className="absolute top-3 left-6 w-24 h-24 rounded-full border-4 border-white" />
+                            <div className="absolute bottom-2 right-8 w-20 h-20 rounded-full border-4 border-white" />
+                            <div className="absolute top-10 right-16 w-10 h-10 rounded-full bg-white" />
+                            <div className="absolute bottom-4 left-20 w-6 h-6 rounded-full bg-white" />
+                          </div>
+                          <div className="relative z-10 flex items-center gap-4 px-4">
+                            <div className="w-16 h-16 bg-white/20 backdrop-blur rounded-2xl flex items-center justify-center flex-shrink-0">
+                              {a.image === 'ssc' && <BookOpen className="w-8 h-8 text-white" />}
+                              {a.image === 'banking' && <Building className="w-8 h-8 text-white" />}
+                              {a.image === 'leaderboard' && <Trophy className="w-8 h-8 text-white" />}
+                              {a.image === 'practice' && <Zap className="w-8 h-8 text-white" />}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-white font-bold text-base leading-tight">{a.title}</p>
+                              <p className="text-white/80 text-xs mt-1">{a.subtitle}</p>
+                              <div className="flex items-center gap-1 mt-2">
+                                <span className="text-white/50 text-[10px]">{_t('home.tapExplore')}</span>
+                                <ChevronRight className="w-3 h-3 text-white/50" />
+                              </div>
+                            </div>
+                          </div>
+                        </>
+                      )}
                     </div>
                   </div>
                 </button>
@@ -1417,14 +1442,24 @@ export default function ExamPrepApp() {
             <div className="space-y-2">
               {dailyTips.slice(0, 3).map((tip, i) => (
                 <Card key={tip.id || i} className="border-0 shadow-md overflow-hidden">
-                  <div className="bg-gradient-to-r from-amber-50 to-orange-50 p-4">
-                    <div className="flex items-start gap-3">
-                      <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-400 to-orange-400 flex items-center justify-center flex-shrink-0 shadow-sm">
-                        <Star className="w-5 h-5 text-white" />
+                  {tip.imageUrl ? (
+                    <div className="relative">
+                      <img src={tip.imageUrl} alt="" className="w-full h-32 object-cover" />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent" />
+                      <div className="absolute bottom-0 left-0 right-0 p-4">
+                        <p className="text-sm text-white leading-relaxed drop-shadow-md">{tip.text}</p>
                       </div>
-                      <p className="text-sm text-gray-700 leading-relaxed pt-1">{tip.text}</p>
                     </div>
-                  </div>
+                  ) : (
+                    <div className="bg-gradient-to-r from-amber-50 to-orange-50 p-4">
+                      <div className="flex items-start gap-3">
+                        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-400 to-orange-400 flex items-center justify-center flex-shrink-0 shadow-sm">
+                          <Star className="w-5 h-5 text-white" />
+                        </div>
+                        <p className="text-sm text-gray-700 leading-relaxed pt-1">{tip.text}</p>
+                      </div>
+                    </div>
+                  )}
                 </Card>
               ))}
             </div>
@@ -1445,8 +1480,12 @@ export default function ExamPrepApp() {
                 <Card key={i} className="border-0 shadow-sm overflow-hidden cursor-pointer active:scale-[0.98] transition-transform" onClick={() => { setSelectedUpcomingExam(exam); navigateTo('upcoming-exam-detail') }}>
                   <CardContent className="p-0">
                     <div className="flex items-center gap-3 p-3">
-                      <div className="w-11 h-11 rounded-2xl bg-blue-50 flex items-center justify-center">
-                        <Calendar className="w-5 h-5 text-blue-500" />
+                      <div className="w-11 h-11 rounded-2xl bg-blue-50 flex items-center justify-center overflow-hidden flex-shrink-0">
+                        {exam.imageUrl ? (
+                          <img src={exam.imageUrl} alt={exam.name} className="w-11 h-11 object-cover rounded-2xl" />
+                        ) : (
+                          <Calendar className="w-5 h-5 text-blue-500" />
+                        )}
                       </div>
                       <div className="flex-1 min-w-0">
                         <p className="font-semibold text-sm truncate">{exam.name}</p>
@@ -3987,8 +4026,14 @@ export default function ExamPrepApp() {
     return (
       <div className="min-h-screen min-h-dvh bg-slate-50">
         {/* Header */}
-        <div className="bg-gradient-to-br from-blue-600 via-indigo-600 to-blue-700 text-white">
-          <div className="px-3 pt-[calc(env(safe-area-inset-top,0px)+0.75rem)] pb-5">
+        <div className="relative bg-gradient-to-br from-blue-600 via-indigo-600 to-blue-700 text-white overflow-hidden">
+          {exam.imageUrl && (
+            <>
+              <img src={exam.imageUrl} alt={exam.name} className="absolute inset-0 w-full h-full object-cover opacity-30" />
+              <div className="absolute inset-0 bg-gradient-to-b from-blue-600/80 via-indigo-600/90 to-blue-700/95" />
+            </>
+          )}
+          <div className="relative z-10 px-3 pt-[calc(env(safe-area-inset-top,0px)+0.75rem)] pb-5">
             <div className="flex items-center gap-3 mb-3">
               <button
                 onClick={goBack}

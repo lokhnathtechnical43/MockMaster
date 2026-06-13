@@ -11,6 +11,7 @@ import {
   type Notification,
   DEFAULT_NOTIFICATIONS
 } from '@/lib/admin-data'
+import ImageUploadField from './ImageUploadField'
 
 interface NotificationsTabProps {
   notifications: Notification[]
@@ -21,10 +22,12 @@ export default function NotificationsTab({ notifications, onUpdate }: Notificati
   const [newNotifTitle, setNewNotifTitle] = useState('')
   const [newNotifMessage, setNewNotifMessage] = useState('')
   const [newNotifType, setNewNotifType] = useState<'update' | 'alert' | 'info'>('info')
+  const [newNotifImageUrl, setNewNotifImageUrl] = useState('')
   const [editingIndex, setEditingIndex] = useState<number | null>(null)
   const [editTitle, setEditTitle] = useState('')
   const [editMessage, setEditMessage] = useState('')
   const [editType, setEditType] = useState<'update' | 'alert' | 'info'>('info')
+  const [editImageUrl, setEditImageUrl] = useState('')
 
   const handleSend = () => {
     const newNotif: Notification = {
@@ -34,10 +37,12 @@ export default function NotificationsTab({ notifications, onUpdate }: Notificati
       time: 'Just now',
       read: false,
       type: newNotifType,
+      ...(newNotifImageUrl ? { imageUrl: newNotifImageUrl } : {}),
     }
     onUpdate([newNotif, ...notifications])
     setNewNotifTitle('')
     setNewNotifMessage('')
+    setNewNotifImageUrl('')
   }
 
   const handleDelete = (index: number) => {
@@ -51,6 +56,7 @@ export default function NotificationsTab({ notifications, onUpdate }: Notificati
     setEditTitle(n.title)
     setEditMessage(n.message)
     setEditType(n.type)
+    setEditImageUrl(n.imageUrl || '')
   }
 
   const handleCancelEdit = () => {
@@ -65,6 +71,7 @@ export default function NotificationsTab({ notifications, onUpdate }: Notificati
       title: editTitle,
       message: editMessage,
       type: editType,
+      ...(editImageUrl ? { imageUrl: editImageUrl } : { imageUrl: undefined }),
     }
     onUpdate(updated)
     setEditingIndex(null)
@@ -133,6 +140,12 @@ export default function NotificationsTab({ notifications, onUpdate }: Notificati
                 ))}
               </div>
             </div>
+            <ImageUploadField
+              imageUrl={newNotifImageUrl}
+              onImageUrlChange={setNewNotifImageUrl}
+              folder="notifications"
+              label="Image (Optional — shows in notification)"
+            />
             <Button
               className="w-full bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white rounded-xl h-11 font-semibold"
               disabled={!newNotifTitle || !newNotifMessage}
@@ -228,19 +241,31 @@ export default function NotificationsTab({ notifications, onUpdate }: Notificati
                         ))}
                       </div>
                     </div>
+                    <ImageUploadField
+                      imageUrl={editImageUrl}
+                      onImageUrlChange={setEditImageUrl}
+                      folder="notifications"
+                      label="Image (Optional)"
+                    />
                   </CardContent>
                 ) : (
                   /* View Mode */
                   <CardContent className="p-3">
                     <div className="flex items-start gap-3">
-                      <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 ${
+                      <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 overflow-hidden ${
                         n.type === 'update' ? 'bg-blue-100' :
                         n.type === 'alert' ? 'bg-amber-100' :
                         'bg-green-100'
                       }`}>
-                        {n.type === 'update' ? <Zap className="w-4 h-4 text-blue-500" /> :
-                         n.type === 'alert' ? <AlertTriangle className="w-4 h-4 text-amber-500" /> :
-                         <Gift className="w-4 h-4 text-green-500" />}
+                        {n.imageUrl ? (
+                          <img src={n.imageUrl} alt="" className="w-8 h-8 object-cover rounded-full" />
+                        ) : (
+                          <>
+                            {n.type === 'update' ? <Zap className="w-4 h-4 text-blue-500" /> :
+                             n.type === 'alert' ? <AlertTriangle className="w-4 h-4 text-amber-500" /> :
+                             <Gift className="w-4 h-4 text-green-500" />}
+                          </>
+                        )}
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2">
@@ -249,6 +274,7 @@ export default function NotificationsTab({ notifications, onUpdate }: Notificati
                         </div>
                         <p className="text-gray-400 text-xs truncate">{n.message}</p>
                         <p className="text-gray-300 text-[10px] mt-0.5">{n.time}</p>
+                        {n.imageUrl && <span className="text-[9px] text-orange-500 font-medium">Has image</span>}
                       </div>
                       <div className="flex items-center gap-1 flex-shrink-0">
                         <button

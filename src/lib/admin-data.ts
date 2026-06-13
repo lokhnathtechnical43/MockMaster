@@ -3,7 +3,8 @@
 
 export interface Announcement {
   id: string
-  image: string
+  image: string        // icon key: 'ssc' | 'banking' | 'leaderboard' | 'practice'
+  imageUrl?: string    // uploaded image URL (takes priority over icon if set)
   title: string
   subtitle: string
   action: string
@@ -17,6 +18,7 @@ export interface Notification {
   time: string
   read: boolean
   type: 'update' | 'alert' | 'info'
+  imageUrl?: string    // optional uploaded image URL
 }
 
 export interface UpcomingExam {
@@ -25,6 +27,7 @@ export interface UpcomingExam {
   date: string
   status: string
   statusType: 'open' | 'coming' | 'admit' | 'closed'
+  imageUrl?: string              // optional uploaded image URL
   // Detail fields (shown when user taps on an upcoming exam)
   description?: string           // Brief description of the exam
   conductingBody?: string        // e.g. "SSC", "IBPS", "UPSC"
@@ -43,6 +46,7 @@ export interface UpcomingExam {
 export interface DailyTip {
   id: string
   text: string
+  imageUrl?: string    // optional uploaded image URL
 }
 
 // Question inside a Previous Year Paper

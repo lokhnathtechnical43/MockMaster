@@ -12,6 +12,7 @@ import {
   type UpcomingExam,
   DEFAULT_UPCOMING_EXAMS
 } from '@/lib/admin-data'
+import ImageUploadField from './ImageUploadField'
 
 interface UpcomingExamsTabProps {
   exams: UpcomingExam[]
@@ -61,6 +62,7 @@ export default function UpcomingExamsTab({ exams, onUpdate }: UpcomingExamsTabPr
   const [newStatus, setNewStatus] = useState('')
   const [newStatusType, setNewStatusType] = useState<UpcomingExam['statusType']>('coming')
   const [newDetails, setNewDetails] = useState<Record<string, string>>(emptyDetailFields())
+  const [newImageUrl, setNewImageUrl] = useState('')
   const [showNewDetails, setShowNewDetails] = useState(false)
 
   const [editingIndex, setEditingIndex] = useState<number | null>(null)
@@ -69,6 +71,7 @@ export default function UpcomingExamsTab({ exams, onUpdate }: UpcomingExamsTabPr
   const [editStatus, setEditStatus] = useState('')
   const [editStatusType, setEditStatusType] = useState<UpcomingExam['statusType']>('coming')
   const [editDetails, setEditDetails] = useState<Record<string, string>>(emptyDetailFields())
+  const [editImageUrl, setEditImageUrl] = useState('')
   const [showEditDetails, setShowEditDetails] = useState(false)
 
   // Track which exam cards are expanded (showing detail preview)
@@ -88,12 +91,14 @@ export default function UpcomingExamsTab({ exams, onUpdate }: UpcomingExamsTabPr
       date: newDate,
       status: newStatus,
       statusType: newStatusType,
+      ...(newImageUrl ? { imageUrl: newImageUrl } : {}),
       ...Object.fromEntries(Object.entries(newDetails).filter(([_, v]) => v.trim() !== '')),
     }
     onUpdate([...exams, newExam])
     setNewName('')
     setNewDate('')
     setNewStatus('')
+    setNewImageUrl('')
     setNewDetails(emptyDetailFields())
     setShowNewDetails(false)
   }
@@ -111,6 +116,7 @@ export default function UpcomingExamsTab({ exams, onUpdate }: UpcomingExamsTabPr
     setEditDate(e.date)
     setEditStatus(e.status)
     setEditStatusType(e.statusType)
+    setEditImageUrl(e.imageUrl || '')
     // Load existing detail fields
     setEditDetails(extractDetailFields(e))
     // Auto-open detail section if requested or if exam has existing details
@@ -130,6 +136,7 @@ export default function UpcomingExamsTab({ exams, onUpdate }: UpcomingExamsTabPr
       date: editDate,
       status: editStatus,
       statusType: editStatusType,
+      ...(editImageUrl ? { imageUrl: editImageUrl } : { imageUrl: undefined }),
       // Only include non-empty detail fields
       ...Object.fromEntries(Object.entries(editDetails).filter(([_, v]) => v.trim() !== '')),
     }
@@ -284,6 +291,13 @@ export default function UpcomingExamsTab({ exams, onUpdate }: UpcomingExamsTabPr
               </span>
               {showNewDetails ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
             </button>
+
+            <ImageUploadField
+              imageUrl={newImageUrl}
+              onImageUrlChange={setNewImageUrl}
+              folder="upcoming-exams"
+              label="Exam Image (Optional — shows in exam card & detail)"
+            />
 
             {showNewDetails && (
               <div className="space-y-2.5 p-3 bg-blue-50/50 rounded-xl border border-blue-100">
@@ -450,6 +464,13 @@ export default function UpcomingExamsTab({ exams, onUpdate }: UpcomingExamsTabPr
                       {showEditDetails ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
                     </button>
 
+                    <ImageUploadField
+                      imageUrl={editImageUrl}
+                      onImageUrlChange={setEditImageUrl}
+                      folder="upcoming-exams"
+                      label="Exam Image (Optional)"
+                    />
+
                     {showEditDetails && (
                       <div className="space-y-2.5 p-3 bg-blue-50/50 rounded-xl border border-blue-100">
                         <div className="flex items-center justify-between">
@@ -496,8 +517,12 @@ export default function UpcomingExamsTab({ exams, onUpdate }: UpcomingExamsTabPr
                   /* View Mode */
                   <CardContent className="p-3">
                     <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center flex-shrink-0">
-                        <Calendar className="w-5 h-5 text-blue-500" />
+                      <div className="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center flex-shrink-0 overflow-hidden">
+                        {exam.imageUrl ? (
+                          <img src={exam.imageUrl} alt={exam.name} className="w-10 h-10 object-cover rounded-xl" />
+                        ) : (
+                          <Calendar className="w-5 h-5 text-blue-500" />
+                        )}
                       </div>
                       <div className="flex-1 min-w-0">
                         <p className="font-semibold text-sm truncate">{exam.name}</p>
@@ -511,6 +536,9 @@ export default function UpcomingExamsTab({ exams, onUpdate }: UpcomingExamsTabPr
                           }`}>
                             {exam.status}
                           </Badge>
+                          {exam.imageUrl && (
+                            <Badge className="text-[9px] font-bold border-0 bg-orange-50 text-orange-600">Has image</Badge>
+                          )}
                           {hasDetails(exam) ? (
                             <Badge className="text-[9px] font-bold border-0 bg-purple-100 text-purple-700">
                               {countDetails(exam)}/{DETAIL_FIELDS.length} details
