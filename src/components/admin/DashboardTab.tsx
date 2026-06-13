@@ -6,7 +6,7 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import {
   BookOpen, Trophy, Flame, Zap, Building, Bell,
-  Users, FileText, Home, Plus, XCircle, AlertTriangle, Gift,
+  Users, FileText, AlertTriangle, AlertCircle, Gift,
   CheckCircle2, Edit3, Database
 } from 'lucide-react'
 import {

@@ -4,12 +4,12 @@ import { useState, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import {
-  Shield, LogOut, Lock, Eye, EyeOff,
-  BarChart3, Users, Settings,
+  Shield, LogOut, Eye, EyeOff,
+  Users, Settings,
   BookOpen, Bell, Flame, PieChart, Calendar,
   AlertCircle, Loader2, Star, FileText, Menu,
-  ChevronLeft, Sparkles, Zap, Activity,
-  Database, Crown
+  ChevronLeft, Sparkles, Activity,
+  Crown
 } from 'lucide-react'
 import {
   type Announcement, type Notification, type UpcomingExam, type DailyTip, type PrevYearPaper, type SidebarMenuItem,
