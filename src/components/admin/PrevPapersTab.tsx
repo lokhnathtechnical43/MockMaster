@@ -6,7 +6,7 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import {
   FileText, Plus, Trash2, RefreshCw, Edit3, X, Check,
-  ArrowUp, ArrowDown, ChevronDown, ChevronRight, HelpCircle, ListChecks
+  ArrowUp, ArrowDown, ChevronDown, ChevronRight, HelpCircle, ListChecks, Upload
 } from 'lucide-react'
 import {
   type PrevYearPaper, type PaperQuestion,
@@ -50,6 +50,10 @@ export default function PrevPapersTab({ papers, onUpdate }: PrevPapersTabProps) 
   const [editQD, setEditQD] = useState('')
   const [editQCorrect, setEditQCorrect] = useState('A')
   const [editQExplanation, setEditQExplanation] = useState('')
+
+  // Bulk import states
+  const [showBulkImport, setShowBulkImport] = useState<string | null>(null) // paperId
+  const [bulkText, setBulkText] = useState('')
 
   // Get unique years sorted descending
   const years = [...new Set(papers.map(p => p.year))].sort((a, b) => Number(b) - Number(a))
@@ -252,6 +256,53 @@ export default function PrevPapersTab({ papers, onUpdate }: PrevPapersTabProps) 
     updatePaper(paperId, { questions: qs })
   }
 
+  // Bulk import questions
+  const handleBulkImport = (paperId: string) => {
+    if (!bulkText.trim()) return
+    const paper = papers.find(p => p.id === paperId)
+    if (!paper) return
+
+    try {
+      const lines = bulkText.trim().split('\n').filter(l => l.trim())
+      const existingQuestions = paper.questions || []
+      const newQuestions: PaperQuestion[] = lines.map((line, i) => {
+        const parts = line.split('|')
+        return {
+          id: `${Date.now()}-${i}`,
+          questionText: parts[0]?.trim() || '',
+          optionA: parts[1]?.trim() || '',
+          optionB: parts[2]?.trim() || '',
+          optionC: parts[3]?.trim() || '',
+          optionD: parts[4]?.trim() || '',
+          correctAnswer: parts[5]?.trim() || 'A',
+          explanation: parts[6]?.trim() || undefined,
+        }
+      }).filter(q => q.questionText && q.optionA && q.optionB && q.optionC && q.optionD)
+
+      if (newQuestions.length === 0) return
+
+      const allQuestions = [...existingQuestions, ...newQuestions]
+      updatePaper(paperId, {
+        questions: allQuestions,
+        totalQuestions: allQuestions.length,
+      })
+      setBulkText('')
+      setShowBulkImport(null)
+    } catch (e) {
+      console.error('Bulk import failed:', e)
+    }
+  }
+
+  // Parse bulk text to show preview count
+  const getParsedCount = (): number => {
+    if (!bulkText.trim()) return 0
+    const lines = bulkText.trim().split('\n').filter(l => l.trim())
+    return lines.filter(line => {
+      const parts = line.split('|')
+      return parts[0]?.trim() && parts[1]?.trim() && parts[2]?.trim() && parts[3]?.trim() && parts[4]?.trim()
+    }).length
+  }
+
   const correctOptionColor = (opt: string, correct: string) =>
     opt === correct ? 'bg-emerald-100 text-emerald-700 border-emerald-300' : 'bg-gray-50 text-gray-600 border-gray-200'
 
@@ -452,10 +503,70 @@ export default function PrevPapersTab({ papers, onUpdate }: PrevPapersTabProps) 
                       {/* Expanded: Question Management */}
                       {isExpanded && (
                         <div className="border-t border-gray-100 p-3 bg-gray-50/50">
-                          <div className="flex items-center gap-2 mb-3">
-                            <HelpCircle className="w-4 h-4 text-indigo-500" />
-                            <h4 className="font-bold text-xs text-gray-600">QUESTIONS ({questions.length})</h4>
+                          <div className="flex items-center justify-between mb-3">
+                            <div className="flex items-center gap-2">
+                              <HelpCircle className="w-4 h-4 text-indigo-500" />
+                              <h4 className="font-bold text-xs text-gray-600">QUESTIONS ({questions.length})</h4>
+                            </div>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="rounded-xl text-xs border-purple-200 text-purple-600 hover:bg-purple-50 h-7"
+                              onClick={() => { setShowBulkImport(showBulkImport === paper.id ? null : paper.id); setBulkText('') }}
+                            >
+                              <Upload className="w-3 h-3 mr-1" /> Bulk Import
+                            </Button>
                           </div>
+
+                          {/* Bulk Import Section */}
+                          {showBulkImport === paper.id && (
+                            <div className="mb-3 bg-white rounded-xl border-2 border-purple-100 p-3 space-y-2">
+                              <p className="text-sm font-semibold text-purple-700">Bulk Import Questions</p>
+                              <p className="text-[10px] text-gray-500 leading-relaxed">
+                                Format: <code className="bg-gray-100 px-1 py-0.5 rounded text-purple-600">Question|OptionA|OptionB|OptionC|OptionD|Answer|Explanation</code>
+                              </p>
+                              <p className="text-[10px] text-gray-400">
+                                One question per line. Answer must be A, B, C, or D. Explanation is optional.
+                              </p>
+                              <div className="bg-gray-50 rounded-lg p-2 text-[10px] text-gray-500 font-mono">
+                                <p className="text-gray-400">Example:</p>
+                                <p>What is the capital of India?|Mumbai|New Delhi|Kolkata|Chennai|B|New Delhi is the capital of India</p>
+                                <p>Who wrote Ramayana?|Vyasa|Valmiki|Tulsidas|Kalidas|B</p>
+                              </div>
+                              <textarea
+                                value={bulkText}
+                                onChange={e => setBulkText(e.target.value)}
+                                placeholder="Paste questions here...&#10;Question|OptionA|OptionB|OptionC|OptionD|Answer|Explanation"
+                                rows={8}
+                                className="w-full px-3 py-2 rounded-lg border border-purple-200 text-xs font-mono focus:outline-none focus:ring-2 focus:ring-purple-300 resize-y"
+                              />
+                              <div className="flex items-center justify-between">
+                                <p className="text-xs text-gray-500">
+                                  {bulkText.trim()
+                                    ? <span className="font-semibold text-purple-600">{getParsedCount()} question(s) detected</span>
+                                    : 'Paste your questions above'}
+                                </p>
+                                <div className="flex gap-2">
+                                  <Button
+                                    size="sm"
+                                    className="rounded-xl bg-gradient-to-r from-purple-500 to-fuchsia-600 text-white h-8 text-xs"
+                                    onClick={() => handleBulkImport(paper.id)}
+                                    disabled={!bulkText.trim() || getParsedCount() === 0}
+                                  >
+                                    <Upload className="w-3 h-3 mr-1" /> Import ({getParsedCount()})
+                                  </Button>
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    className="rounded-xl h-8 text-xs"
+                                    onClick={() => setShowBulkImport(null)}
+                                  >
+                                    Cancel
+                                  </Button>
+                                </div>
+                              </div>
+                            </div>
+                          )}
 
                           {/* Existing Questions List */}
                           {questions.length > 0 && (
@@ -534,57 +645,59 @@ export default function PrevPapersTab({ papers, onUpdate }: PrevPapersTabProps) 
                             </div>
                           )}
 
-                          {questions.length === 0 && (
+                          {questions.length === 0 && !showBulkImport && (
                             <div className="text-center py-3 mb-3 bg-white rounded-xl border border-dashed border-gray-200">
                               <HelpCircle className="w-6 h-6 text-gray-300 mx-auto mb-1" />
                               <p className="text-gray-400 text-xs">No questions yet</p>
-                              <p className="text-gray-300 text-[10px]">Add questions below</p>
+                              <p className="text-gray-300 text-[10px]">Add one by one below, or use Bulk Import</p>
                             </div>
                           )}
 
                           {/* Add New Question Form */}
-                          <div className="bg-white rounded-xl border border-indigo-100 p-3 space-y-2">
-                            <p className="text-[10px] font-bold text-indigo-500">ADD NEW QUESTION</p>
-                            <textarea
-                              value={newQText}
-                              onChange={e => setNewQText(e.target.value)}
-                              placeholder="Type your question here..."
-                              rows={2}
-                              className="w-full px-2.5 py-2 rounded-lg border border-gray-200 text-xs focus:outline-none focus:ring-1 focus:ring-indigo-300 resize-none"
-                            />
-                            <div className="grid grid-cols-2 gap-1.5">
-                              <div className="flex items-center gap-1">
-                                <button onClick={() => setNewQCorrect('A')} className={`w-6 h-6 rounded text-[9px] font-bold border ${correctOptionColor('A', newQCorrect)}`}>A</button>
-                                <input value={newQA} onChange={e => setNewQA(e.target.value)} placeholder="Option A" className="flex-1 px-2 py-1.5 rounded-lg border border-gray-200 text-xs focus:outline-none focus:ring-1 focus:ring-indigo-300" />
+                          {!showBulkImport && (
+                            <div className="bg-white rounded-xl border border-indigo-100 p-3 space-y-2">
+                              <p className="text-[10px] font-bold text-indigo-500">ADD NEW QUESTION</p>
+                              <textarea
+                                value={newQText}
+                                onChange={e => setNewQText(e.target.value)}
+                                placeholder="Type your question here..."
+                                rows={2}
+                                className="w-full px-2.5 py-2 rounded-lg border border-gray-200 text-xs focus:outline-none focus:ring-1 focus:ring-indigo-300 resize-none"
+                              />
+                              <div className="grid grid-cols-2 gap-1.5">
+                                <div className="flex items-center gap-1">
+                                  <button onClick={() => setNewQCorrect('A')} className={`w-6 h-6 rounded text-[9px] font-bold border ${correctOptionColor('A', newQCorrect)}`}>A</button>
+                                  <input value={newQA} onChange={e => setNewQA(e.target.value)} placeholder="Option A" className="flex-1 px-2 py-1.5 rounded-lg border border-gray-200 text-xs focus:outline-none focus:ring-1 focus:ring-indigo-300" />
+                                </div>
+                                <div className="flex items-center gap-1">
+                                  <button onClick={() => setNewQCorrect('B')} className={`w-6 h-6 rounded text-[9px] font-bold border ${correctOptionColor('B', newQCorrect)}`}>B</button>
+                                  <input value={newQB} onChange={e => setNewQB(e.target.value)} placeholder="Option B" className="flex-1 px-2 py-1.5 rounded-lg border border-gray-200 text-xs focus:outline-none focus:ring-1 focus:ring-indigo-300" />
+                                </div>
+                                <div className="flex items-center gap-1">
+                                  <button onClick={() => setNewQCorrect('C')} className={`w-6 h-6 rounded text-[9px] font-bold border ${correctOptionColor('C', newQCorrect)}`}>C</button>
+                                  <input value={newQC} onChange={e => setNewQC(e.target.value)} placeholder="Option C" className="flex-1 px-2 py-1.5 rounded-lg border border-gray-200 text-xs focus:outline-none focus:ring-1 focus:ring-indigo-300" />
+                                </div>
+                                <div className="flex items-center gap-1">
+                                  <button onClick={() => setNewQCorrect('D')} className={`w-6 h-6 rounded text-[9px] font-bold border ${correctOptionColor('D', newQCorrect)}`}>D</button>
+                                  <input value={newQD} onChange={e => setNewQD(e.target.value)} placeholder="Option D" className="flex-1 px-2 py-1.5 rounded-lg border border-gray-200 text-xs focus:outline-none focus:ring-1 focus:ring-indigo-300" />
+                                </div>
                               </div>
-                              <div className="flex items-center gap-1">
-                                <button onClick={() => setNewQCorrect('B')} className={`w-6 h-6 rounded text-[9px] font-bold border ${correctOptionColor('B', newQCorrect)}`}>B</button>
-                                <input value={newQB} onChange={e => setNewQB(e.target.value)} placeholder="Option B" className="flex-1 px-2 py-1.5 rounded-lg border border-gray-200 text-xs focus:outline-none focus:ring-1 focus:ring-indigo-300" />
-                              </div>
-                              <div className="flex items-center gap-1">
-                                <button onClick={() => setNewQCorrect('C')} className={`w-6 h-6 rounded text-[9px] font-bold border ${correctOptionColor('C', newQCorrect)}`}>C</button>
-                                <input value={newQC} onChange={e => setNewQC(e.target.value)} placeholder="Option C" className="flex-1 px-2 py-1.5 rounded-lg border border-gray-200 text-xs focus:outline-none focus:ring-1 focus:ring-indigo-300" />
-                              </div>
-                              <div className="flex items-center gap-1">
-                                <button onClick={() => setNewQCorrect('D')} className={`w-6 h-6 rounded text-[9px] font-bold border ${correctOptionColor('D', newQCorrect)}`}>D</button>
-                                <input value={newQD} onChange={e => setNewQD(e.target.value)} placeholder="Option D" className="flex-1 px-2 py-1.5 rounded-lg border border-gray-200 text-xs focus:outline-none focus:ring-1 focus:ring-indigo-300" />
-                              </div>
+                              <p className="text-[9px] text-gray-400">Click A/B/C/D button to set correct answer (green = correct)</p>
+                              <input
+                                value={newQExplanation}
+                                onChange={e => setNewQExplanation(e.target.value)}
+                                placeholder="Explanation (optional)"
+                                className="w-full px-2.5 py-1.5 rounded-lg border border-gray-200 text-xs focus:outline-none focus:ring-1 focus:ring-indigo-300"
+                              />
+                              <Button
+                                className="w-full bg-gradient-to-r from-indigo-500 to-purple-500 hover:from-indigo-600 hover:to-purple-600 text-white rounded-xl h-9 text-xs font-semibold"
+                                disabled={!newQText.trim() || !newQA.trim() || !newQB.trim() || !newQC.trim() || !newQD.trim()}
+                                onClick={() => handleAddQuestion(paper.id)}
+                              >
+                                <Plus className="w-3 h-3 mr-1" /> Add Question
+                              </Button>
                             </div>
-                            <p className="text-[9px] text-gray-400">Click A/B/C/D button to set correct answer (green = correct)</p>
-                            <input
-                              value={newQExplanation}
-                              onChange={e => setNewQExplanation(e.target.value)}
-                              placeholder="Explanation (optional)"
-                              className="w-full px-2.5 py-1.5 rounded-lg border border-gray-200 text-xs focus:outline-none focus:ring-1 focus:ring-indigo-300"
-                            />
-                            <Button
-                              className="w-full bg-gradient-to-r from-indigo-500 to-purple-500 hover:from-indigo-600 hover:to-purple-600 text-white rounded-xl h-9 text-xs font-semibold"
-                              disabled={!newQText.trim() || !newQA.trim() || !newQB.trim() || !newQC.trim() || !newQD.trim()}
-                              onClick={() => handleAddQuestion(paper.id)}
-                            >
-                              <Plus className="w-3 h-3 mr-1" /> Add Question
-                            </Button>
-                          </div>
+                          )}
                         </div>
                       )}
                     </CardContent>
