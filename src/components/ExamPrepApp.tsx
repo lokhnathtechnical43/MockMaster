@@ -46,7 +46,7 @@ import { getAnnouncements as getLocalAnnouncements, getNotifications as getLocal
 import { t, type Lang } from '@/lib/i18n'
 
 // ===== Types =====
-type Page = 'home' | 'exams' | 'tests' | 'test-info' | 'test-taking' | 'results' | 'leaderboard' | 'profile' | 'practice' | 'bookmarks' | 'perf-report' | 'daily-routine' | 'prev-papers' | 'your-exam' | 'upcoming-exam-detail'
+type Page = 'home' | 'exams' | 'tests' | 'test-info' | 'test-taking' | 'results' | 'leaderboard' | 'profile' | 'practice' | 'bookmarks' | 'perf-report' | 'daily-routine' | 'prev-papers' | 'your-exam' | 'upcoming-exam-detail' | 'daily-tip-detail' | 'announcement-detail'
 
 // ===== Unified Data Access (Firestore or Local) =====
 const isFirestore = () => getUseFirestore()
@@ -302,12 +302,14 @@ export default function ExamPrepApp() {
 
   // --- Announcements ---
   const [announcements, setAnnouncements] = useState<
-    { id: string; image: string; title: string; subtitle: string; action: Page; gradient: string }[]
+    { id: string; image: string; imageUrl?: string; title: string; subtitle: string; action: Page; gradient: string }[]
   >([])
   const [activeAnnouncement, setActiveAnnouncement] = useState(0)
   const [upcomingExams, setUpcomingExams] = useState<UpcomingExam[]>([])
   const [selectedUpcomingExam, setSelectedUpcomingExam] = useState<UpcomingExam | null>(null)
   const [dailyTips, setDailyTips] = useState<DailyTip[]>([])
+  const [selectedDailyTip, setSelectedDailyTip] = useState<DailyTip | null>(null)
+  const [selectedAnnouncement, setSelectedAnnouncement] = useState<{ id: string; image: string; imageUrl?: string; title: string; subtitle: string; action: Page; gradient: string } | null>(null)
   const [prevPapers, setPrevPapers] = useState<PrevYearPaper[]>([])
   const [sidebarMenu, setSidebarMenu] = useState<SidebarMenuItem[]>([])
   const [selectedPaperYear, setSelectedPaperYear] = useState<string>('')
@@ -1242,7 +1244,7 @@ export default function ExamPrepApp() {
               className="flex overflow-x-auto scrollbar-hide snap-x snap-mandatory"
             >
               {announcements.map((a, index) => (
-                <button key={a.id} onClick={() => handleBottomNav(a.action)} className="flex-shrink-0 w-full snap-center px-1">
+                <button key={a.id} onClick={() => { setSelectedAnnouncement(a); navigateTo('announcement-detail') }} className="flex-shrink-0 w-full snap-center px-1">
                   <div className={`bg-gradient-to-br ${a.gradient} rounded-2xl overflow-hidden shadow-md active:scale-[0.98] transition-transform`}>
                     <div className="h-32 relative flex items-center justify-center overflow-hidden">
                       {a.imageUrl ? (
@@ -1440,14 +1442,17 @@ export default function ExamPrepApp() {
               <h2 className="font-bold text-lg">{_t('home.dailyTips')}</h2>
             </div>
             <div className="space-y-2">
-              {dailyTips.slice(0, 3).map((tip, i) => (
-                <Card key={tip.id || i} className="border-0 shadow-md overflow-hidden">
+              {dailyTips.map((tip, i) => (
+                <Card key={tip.id || i} className="border-0 shadow-md overflow-hidden cursor-pointer active:scale-[0.98] transition-transform" onClick={() => { setSelectedDailyTip(tip); navigateTo('daily-tip-detail') }}>
                   {tip.imageUrl ? (
                     <div className="relative">
                       <img src={tip.imageUrl} alt="" className="w-full h-32 object-cover" />
                       <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent" />
                       <div className="absolute bottom-0 left-0 right-0 p-4">
-                        <p className="text-sm text-white leading-relaxed drop-shadow-md">{tip.text}</p>
+                        <p className="text-sm text-white leading-relaxed drop-shadow-md line-clamp-2">{tip.text}</p>
+                      </div>
+                      <div className="absolute top-2 right-2 w-6 h-6 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center">
+                        <ChevronRight className="w-3.5 h-3.5 text-white" />
                       </div>
                     </div>
                   ) : (
@@ -1456,7 +1461,8 @@ export default function ExamPrepApp() {
                         <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-400 to-orange-400 flex items-center justify-center flex-shrink-0 shadow-sm">
                           <Star className="w-5 h-5 text-white" />
                         </div>
-                        <p className="text-sm text-gray-700 leading-relaxed pt-1">{tip.text}</p>
+                        <p className="text-sm text-gray-700 leading-relaxed pt-1 flex-1 line-clamp-2">{tip.text}</p>
+                        <ChevronRight className="w-4 h-4 text-amber-400 flex-shrink-0 mt-1" />
                       </div>
                     </div>
                   )}
@@ -4232,6 +4238,206 @@ export default function ExamPrepApp() {
     )
   }
 
+  // ===== DAILY TIP DETAIL PAGE =====
+  function renderDailyTipDetail() {
+    const tip = selectedDailyTip
+    if (!tip) return null
+
+    return (
+      <div className="min-h-screen min-h-dvh bg-slate-50">
+        {/* Header */}
+        <div className="relative bg-gradient-to-br from-amber-500 via-orange-500 to-red-500 text-white overflow-hidden">
+          <div className="absolute inset-0 opacity-10">
+            <div className="absolute top-4 left-8 w-28 h-28 rounded-full border-4 border-white" />
+            <div className="absolute bottom-3 right-10 w-20 h-20 rounded-full border-4 border-white" />
+            <div className="absolute top-12 right-20 w-8 h-8 rounded-full bg-white" />
+          </div>
+          <div className="relative z-10 px-3 pt-[calc(env(safe-area-inset-top,0px)+0.75rem)] pb-5">
+            <div className="flex items-center gap-3 mb-4">
+              <button
+                onClick={goBack}
+                className="w-9 h-9 rounded-lg bg-white/15 hover:bg-white/25 flex items-center justify-center transition-colors flex-shrink-0"
+              >
+                <ArrowLeft className="w-4 h-4" />
+              </button>
+              <div className="flex-1 min-w-0">
+                <p className="text-white/60 text-[10px] uppercase tracking-wider font-medium">{_t('home.dailyTips')}</p>
+              </div>
+              <div className="w-9 h-9 rounded-lg bg-white/15 flex items-center justify-center">
+                <Star className="w-5 h-5 text-white" />
+              </div>
+            </div>
+            <h1 className="text-xl font-bold leading-tight">Daily Tip</h1>
+          </div>
+        </div>
+
+        <div className="px-3 -mt-3 pb-6 space-y-3">
+          {/* Image Card */}
+          {tip.imageUrl && (
+            <Card className="border-0 shadow-lg overflow-hidden">
+              <div className="relative">
+                <img src={tip.imageUrl} alt="" className="w-full max-h-80 object-cover" />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent" />
+              </div>
+            </Card>
+          )}
+
+          {/* Tip Content Card */}
+          <Card className="border-0 shadow-md">
+            <CardContent className="p-5">
+              <div className="flex items-start gap-4">
+                <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center flex-shrink-0 shadow-md">
+                  <Star className="w-6 h-6 text-white" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <h2 className="font-bold text-base text-gray-800 mb-2">{_t('home.dailyTips')}</h2>
+                  <p className="text-gray-700 text-sm leading-relaxed whitespace-pre-wrap">{tip.text}</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* More Tips Section */}
+          {dailyTips.filter(t => t.id !== tip.id).length > 0 && (
+            <Card className="border-0 shadow-md">
+              <CardContent className="p-4">
+                <h3 className="font-bold text-sm text-gray-700 mb-3">More Tips</h3>
+                <div className="space-y-2">
+                  {dailyTips.filter(t => t.id !== tip.id).slice(0, 5).map((otherTip) => (
+                    <button
+                      key={otherTip.id}
+                      onClick={() => { setSelectedDailyTip(otherTip); window.scrollTo({ top: 0, behavior: 'smooth' }) }}
+                      className="w-full text-left flex items-center gap-3 p-2.5 rounded-xl bg-amber-50/60 hover:bg-amber-50 active:bg-amber-100 transition-colors"
+                    >
+                      <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-amber-400 to-orange-400 flex items-center justify-center flex-shrink-0">
+                        <Star className="w-4 h-4 text-white" />
+                      </div>
+                      <p className="text-xs text-gray-600 leading-relaxed flex-1 line-clamp-2">{otherTip.text}</p>
+                      <ChevronRight className="w-4 h-4 text-amber-400 flex-shrink-0" />
+                    </button>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+        </div>
+      </div>
+    )
+  }
+
+  // ===== ANNOUNCEMENT DETAIL PAGE =====
+  function renderAnnouncementDetail() {
+    const ann = selectedAnnouncement
+    if (!ann) return null
+
+    return (
+      <div className="min-h-screen min-h-dvh bg-slate-50">
+        {/* Header with gradient/image */}
+        <div className={`relative bg-gradient-to-br ${ann.gradient} text-white overflow-hidden`}>
+          {ann.imageUrl && (
+            <>
+              <img src={ann.imageUrl} alt={ann.title} className="absolute inset-0 w-full h-full object-cover opacity-40" />
+              <div className={`absolute inset-0 bg-gradient-to-b from-black/40 via-black/20 to-black/60`} />
+            </>
+          )}
+          <div className="absolute inset-0 opacity-10">
+            <div className="absolute top-4 left-8 w-28 h-28 rounded-full border-4 border-white" />
+            <div className="absolute bottom-3 right-10 w-20 h-20 rounded-full border-4 border-white" />
+          </div>
+          <div className="relative z-10 px-3 pt-[calc(env(safe-area-inset-top,0px)+0.75rem)] pb-6">
+            <div className="flex items-center gap-3 mb-4">
+              <button
+                onClick={goBack}
+                className="w-9 h-9 rounded-lg bg-white/15 hover:bg-white/25 flex items-center justify-center transition-colors flex-shrink-0"
+              >
+                <ArrowLeft className="w-4 h-4" />
+              </button>
+              <div className="flex-1 min-w-0">
+                <p className="text-white/60 text-[10px] uppercase tracking-wider font-medium">Announcement</p>
+              </div>
+              {!ann.imageUrl && (
+                <div className="w-10 h-10 rounded-xl bg-white/20 backdrop-blur flex items-center justify-center">
+                  {ann.image === 'ssc' && <BookOpen className="w-5 h-5 text-white" />}
+                  {ann.image === 'banking' && <Building className="w-5 h-5 text-white" />}
+                  {ann.image === 'leaderboard' && <Trophy className="w-5 h-5 text-white" />}
+                  {ann.image === 'practice' && <Zap className="w-5 h-5 text-white" />}
+                </div>
+              )}
+            </div>
+            <h1 className="text-2xl font-bold leading-tight drop-shadow-lg">{ann.title}</h1>
+            <p className="text-white/80 text-sm mt-2 leading-relaxed drop-shadow-md">{ann.subtitle}</p>
+          </div>
+        </div>
+
+        <div className="px-3 -mt-3 pb-6 space-y-3">
+          {/* Full Image Card */}
+          {ann.imageUrl && (
+            <Card className="border-0 shadow-lg overflow-hidden">
+              <div className="relative">
+                <img src={ann.imageUrl} alt={ann.title} className="w-full max-h-96 object-cover" />
+              </div>
+            </Card>
+          )}
+
+          {/* Action Card */}
+          <Card className="border-0 shadow-md">
+            <CardContent className="p-5">
+              <div className="flex items-center gap-3 mb-3">
+                <div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${ann.gradient} flex items-center justify-center flex-shrink-0`}>
+                  {ann.image === 'ssc' && <BookOpen className="w-5 h-5 text-white" />}
+                  {ann.image === 'banking' && <Building className="w-5 h-5 text-white" />}
+                  {ann.image === 'leaderboard' && <Trophy className="w-5 h-5 text-white" />}
+                  {ann.image === 'practice' && <Zap className="w-5 h-5 text-white" />}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="font-semibold text-sm text-gray-800">{ann.title}</p>
+                  <p className="text-gray-500 text-xs">{ann.subtitle}</p>
+                </div>
+              </div>
+              <Button
+                onClick={() => handleBottomNav(ann.action)}
+                className={`w-full bg-gradient-to-r ${ann.gradient} hover:opacity-90 text-white rounded-xl h-11 font-semibold`}
+              >
+                <span className="capitalize">{ann.action === 'exams' ? 'View Exams' : ann.action === 'leaderboard' ? 'Leaderboard' : ann.action === 'practice' ? 'Practice Now' : 'Explore'}</span>
+                <ChevronRight className="w-4 h-4 ml-1" />
+              </Button>
+            </CardContent>
+          </Card>
+
+          {/* Other Announcements */}
+          {announcements.filter(a => a.id !== ann.id).length > 0 && (
+            <Card className="border-0 shadow-md">
+              <CardContent className="p-4">
+                <h3 className="font-bold text-sm text-gray-700 mb-3">More Announcements</h3>
+                <div className="space-y-2">
+                  {announcements.filter(a => a.id !== ann.id).slice(0, 5).map((otherAnn) => (
+                    <button
+                      key={otherAnn.id}
+                      onClick={() => { setSelectedAnnouncement(otherAnn); window.scrollTo({ top: 0, behavior: 'smooth' }) }}
+                      className="w-full text-left flex items-center gap-3 p-2.5 rounded-xl bg-gray-50 hover:bg-gray-100 active:bg-gray-200 transition-colors"
+                    >
+                      <div className={`w-8 h-8 rounded-lg bg-gradient-to-br ${otherAnn.gradient} flex items-center justify-center flex-shrink-0`}>
+                        {otherAnn.image === 'ssc' && <BookOpen className="w-4 h-4 text-white" />}
+                        {otherAnn.image === 'banking' && <Building className="w-4 h-4 text-white" />}
+                        {otherAnn.image === 'leaderboard' && <Trophy className="w-4 h-4 text-white" />}
+                        {otherAnn.image === 'practice' && <Zap className="w-4 h-4 text-white" />}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs font-medium text-gray-700 truncate">{otherAnn.title}</p>
+                        <p className="text-[10px] text-gray-400 truncate">{otherAnn.subtitle}</p>
+                      </div>
+                      <ChevronRight className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                    </button>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+        </div>
+      </div>
+    )
+  }
+
   // ===== MAIN RENDER =====
   const renderPage = () => {
     switch (currentPage) {
@@ -4250,6 +4456,8 @@ export default function ExamPrepApp() {
       case 'prev-papers': return renderPrevPapers()
       case 'your-exam': return renderYourExam()
       case 'upcoming-exam-detail': return renderUpcomingExamDetail()
+      case 'daily-tip-detail': return renderDailyTipDetail()
+      case 'announcement-detail': return renderAnnouncementDetail()
       default: return renderHome()
     }
   }

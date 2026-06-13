@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import {
   Star, Plus, Trash2, RefreshCw, Edit3, X, Check,
-  ArrowUp, ArrowDown
+  ArrowUp, ArrowDown, Eye
 } from 'lucide-react'
 import {
   type DailyTip,
@@ -24,6 +24,7 @@ export default function DailyTipsTab({ tips, onUpdate }: DailyTipsTabProps) {
   const [editingIndex, setEditingIndex] = useState<number | null>(null)
   const [editText, setEditText] = useState('')
   const [editImageUrl, setEditImageUrl] = useState('')
+  const [previewTip, setPreviewTip] = useState<DailyTip | null>(null)
 
   const handleAdd = () => {
     const newTip: DailyTip = {
@@ -84,6 +85,71 @@ export default function DailyTipsTab({ tips, onUpdate }: DailyTipsTabProps) {
 
   return (
     <div className="space-y-4">
+      {/* Preview Modal */}
+      {previewTip && (
+        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4" onClick={() => setPreviewTip(null)}>
+          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full max-h-[85vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+            {/* Preview Header */}
+            <div className="relative bg-gradient-to-br from-amber-500 via-orange-500 to-red-500 text-white overflow-hidden rounded-t-2xl">
+              <div className="absolute inset-0 opacity-10">
+                <div className="absolute top-4 left-8 w-24 h-24 rounded-full border-4 border-white" />
+                <div className="absolute bottom-3 right-10 w-16 h-16 rounded-full border-4 border-white" />
+              </div>
+              <div className="relative z-10 px-4 py-4 flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Star className="w-5 h-5" />
+                  <h3 className="font-bold text-sm">Preview — Daily Tip</h3>
+                </div>
+                <button
+                  onClick={() => setPreviewTip(null)}
+                  className="w-8 h-8 rounded-lg bg-white/20 hover:bg-white/30 flex items-center justify-center transition-colors"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+
+            {/* Preview Content - Same as user sees */}
+            <div className="p-4 space-y-4">
+              {previewTip.imageUrl ? (
+                <div className="relative rounded-xl overflow-hidden shadow-md">
+                  <img src={previewTip.imageUrl} alt="" className="w-full h-48 object-cover" />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent" />
+                  <div className="absolute bottom-0 left-0 right-0 p-4">
+                    <p className="text-sm text-white leading-relaxed drop-shadow-md">{previewTip.text}</p>
+                  </div>
+                </div>
+              ) : (
+                <div className="bg-gradient-to-r from-amber-50 to-orange-50 p-4 rounded-xl">
+                  <div className="flex items-start gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-400 to-orange-400 flex items-center justify-center flex-shrink-0 shadow-sm">
+                      <Star className="w-5 h-5 text-white" />
+                    </div>
+                    <p className="text-sm text-gray-700 leading-relaxed pt-1">{previewTip.text}</p>
+                  </div>
+                </div>
+              )}
+
+              {/* Full Image Preview */}
+              {previewTip.imageUrl && (
+                <div>
+                  <p className="text-xs text-gray-400 mb-2 font-medium">Full Image Preview</p>
+                  <div className="rounded-xl overflow-hidden border border-gray-100">
+                    <img src={previewTip.imageUrl} alt="" className="w-full object-contain max-h-64" />
+                  </div>
+                </div>
+              )}
+
+              {/* Full Text */}
+              <div>
+                <p className="text-xs text-gray-400 mb-1 font-medium">Full Text</p>
+                <p className="text-sm text-gray-700 leading-relaxed whitespace-pre-wrap bg-gray-50 p-3 rounded-xl">{previewTip.text}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Add New Daily Tip */}
       <Card className="border-0 shadow-md">
         <CardContent className="p-4">
@@ -187,7 +253,7 @@ export default function DailyTipsTab({ tips, onUpdate }: DailyTipsTabProps) {
                   /* View Mode */
                   <CardContent className="p-3">
                     <div className="flex items-start gap-3">
-                      <div className="w-10 h-10 rounded-xl bg-amber-50 flex items-center justify-center flex-shrink-0 overflow-hidden">
+                      <div className="w-10 h-10 rounded-xl bg-amber-50 flex items-center justify-center flex-shrink-0 overflow-hidden cursor-pointer" onClick={() => setPreviewTip(tip)} title="Preview tip">
                         {tip.imageUrl ? (
                           <img src={tip.imageUrl} alt="" className="w-10 h-10 object-cover rounded-xl" />
                         ) : (
@@ -199,6 +265,13 @@ export default function DailyTipsTab({ tips, onUpdate }: DailyTipsTabProps) {
                         {tip.imageUrl && <span className="text-[9px] text-orange-500 font-medium">Has image</span>}
                       </div>
                       <div className="flex items-center gap-1 flex-shrink-0">
+                        <button
+                          onClick={() => setPreviewTip(tip)}
+                          className="w-7 h-7 rounded-lg bg-blue-50 hover:bg-blue-100 flex items-center justify-center transition-colors"
+                          title="Preview"
+                        >
+                          <Eye className="w-3.5 h-3.5 text-blue-500" />
+                        </button>
                         <button
                           onClick={() => handleMoveUp(i)}
                           disabled={i === 0}
