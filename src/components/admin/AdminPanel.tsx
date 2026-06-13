@@ -14,6 +14,14 @@ import {
   saveAnnouncements, saveNotifications,
 } from '@/lib/admin-data'
 import { getResults, type TestResult } from '@/lib/local-data'
+import {
+  getAnnouncements as getFsAnnouncements,
+  getNotifications as getFsNotifications,
+  saveAnnouncements as saveFsAnnouncements,
+  saveNotifications as saveFsNotifications,
+  getResults as getFsResults,
+  getUseFirestore,
+} from '@/lib/firestore-service'
 import Link from 'next/link'
 
 import DashboardTab from './DashboardTab'
@@ -42,26 +50,75 @@ export default function AdminPanel() {
 
   // --- Load data on mount ---
   useEffect(() => {
-    setAnnouncements(getAnnouncements())
-    setNotifications(getNotifications())
-    setAllResults(getResults())
+    async function loadData() {
+      // Load announcements
+      if (getUseFirestore()) {
+        try {
+          const fsAnn = await getFsAnnouncements()
+          if (fsAnn && fsAnn.length > 0) {
+            setAnnouncements(fsAnn)
+          } else {
+            setAnnouncements(getAnnouncements())
+          }
+          const fsNotif = await getFsNotifications()
+          if (fsNotif && fsNotif.length > 0) {
+            setNotifications(fsNotif)
+          } else {
+            setNotifications(getNotifications())
+          }
+          const fsResults = await getFsResults()
+          setAllResults(fsResults as TestResult[] || getResults())
+        } catch (e) {
+          console.warn('[Admin] Firestore load failed, using local:', e)
+          setAnnouncements(getAnnouncements())
+          setNotifications(getNotifications())
+          setAllResults(getResults())
+        }
+      } else {
+        setAnnouncements(getAnnouncements())
+        setNotifications(getNotifications())
+        setAllResults(getResults())
+      }
+    }
+    loadData()
   }, [])
 
   // Refresh user data periodically
   useEffect(() => {
-    const interval = setInterval(() => {
-      setAllResults(getResults())
+    const interval = setInterval(async () => {
+      if (getUseFirestore()) {
+        try {
+          const fsResults = await getFsResults()
+          setAllResults(fsResults as TestResult[] || [])
+        } catch (e) {}
+      } else {
+        setAllResults(getResults())
+      }
     }, 5000)
     return () => clearInterval(interval)
   }, [])
 
-  // Save data when it changes
+  // Save data when it changes (both local + Firestore)
   useEffect(() => {
-    if (announcements.length > 0) saveAnnouncements(announcements)
+    if (announcements.length > 0) {
+      saveAnnouncements(announcements)
+      if (getUseFirestore()) {
+        saveFsAnnouncements(announcements).catch(e =>
+          console.warn('[Admin] Firestore save announcements failed:', e)
+        )
+      }
+    }
   }, [announcements])
 
   useEffect(() => {
-    if (notifications.length > 0) saveNotifications(notifications)
+    if (notifications.length > 0) {
+      saveNotifications(notifications)
+      if (getUseFirestore()) {
+        saveFsNotifications(notifications).catch(e =>
+          console.warn('[Admin] Firestore save notifications failed:', e)
+        )
+      }
+    }
   }, [notifications])
 
   const ADMIN_PASSWORD = 'admin123'
