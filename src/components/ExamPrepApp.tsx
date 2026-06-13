@@ -839,39 +839,44 @@ export default function ExamPrepApp() {
       setShowGuestAuthModal(true)
       return
     }
-    const allCats = categories
-    const allExams = allCats.flatMap(c => c.exams)
+    // Get fresh categories directly from local data (not stale state)
+    const freshCats = getLocalCategories()
+    const allExams = freshCats.flatMap(c => c.exams)
     if (allExams.length === 0) return
     // Try to find an exam with tests that have questions
-    for (let attempt = 0; attempt < Math.min(allExams.length, 10); attempt++) {
-      const randomExam = allExams[Math.floor(Math.random() * allExams.length)]
-      const randomCat = allCats.find(c => c.exams.some(e => e.id === randomExam.id))
+    // Shuffle exams for randomness, try all of them
+    const shuffledExams = [...allExams].sort(() => Math.random() - 0.5)
+    for (const randomExam of shuffledExams) {
+      const randomCat = freshCats.find(c => c.exams.some(e => e.id === randomExam.id))
       if (!randomCat) continue
-      const tests = await fetchTestsByExam(randomExam.id)
-      if (tests.length > 0) {
-        // Find a test with questions
-        for (const test of tests) {
-          const fullTest = await fetchTestById(test.id)
-          if (fullTest && fullTest.questions && fullTest.questions.length > 0) {
-            setSelectedExam(randomExam)
-            setSelectedCategory(randomCat)
-            setExamTests(tests)
-            setCurrentTestMode('practice')
-            // Directly set up test (bypass startTest guest gate since this is Quick Practice)
-            setSelectedTest(fullTest)
-            setAnswers({})
-            setMarkedForReview(new Set())
-            setCurrentQuestionIndex(0)
-            setTimeLeft(fullTest.duration * 60)
-            setTestActive(true)
-            navigateTo('test-taking')
-            // Mark that free Quick Practice has been used
-            if (auth.needsRealAccount) {
-              auth.markGuestQuickPracticeUsed()
+      try {
+        const tests = await fetchTestsByExam(randomExam.id)
+        if (tests.length > 0) {
+          // Find a test with questions
+          for (const test of tests) {
+            const fullTest = await fetchTestById(test.id)
+            if (fullTest && fullTest.questions && fullTest.questions.length > 0) {
+              setSelectedExam(randomExam)
+              setSelectedCategory(randomCat)
+              setExamTests(tests)
+              setCurrentTestMode('practice')
+              setSelectedTest(fullTest)
+              setAnswers({})
+              setMarkedForReview(new Set())
+              setCurrentQuestionIndex(0)
+              setTimeLeft(fullTest.duration * 60)
+              setTestActive(true)
+              navigateTo('test-taking')
+              if (auth.needsRealAccount) {
+                auth.markGuestQuickPracticeUsed()
+              }
+              return
             }
-            return
           }
         }
+      } catch (e) {
+        console.warn('Quick Practice: failed for exam', randomExam.id, e)
+        continue
       }
     }
   }
