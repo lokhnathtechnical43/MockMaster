@@ -87,8 +87,12 @@ export interface TestResult {
   mode?: 'real' | 'practice'
 }
 
-// Storage key
+// Storage keys
 const RESULTS_KEY = 'examprep_results'
+const CATEGORIES_KEY = 'examprep_local_categories'
+const EXAMS_KEY = 'examprep_local_exams'
+const TESTS_KEY = 'examprep_local_tests'
+const QUESTIONS_KEY = 'examprep_local_questions'
 
 // ===== Default Exam Data =====
 const DEFAULT_CATEGORIES: LocalExamCategory[] = [
@@ -404,28 +408,285 @@ export const ALL_TESTS: LocalTest[] = [
   { id: 'test-niacl-ao-1', examId: 'niacl-ao', title: 'NIACL AO Mock Test 1', description: 'Full mock test for NIACL AO', duration: 60, totalMarks: 100, passingMarks: 60, questions: mixQuestions([ENGLISH_QUESTIONS, MATH_QUESTIONS, REASONING_QUESTIONS], 25), createdAt: new Date().toISOString(), difficulty: 'Hard' },
 ]
 
-// ===== CRUD Functions =====
-
-export function getCategories(): LocalExamCategory[] {
-  return DEFAULT_CATEGORIES
+// ===== Helper: safe localStorage read/write =====
+function lsGet<T>(key: string, fallback: T[]): T[] {
+  if (typeof window === 'undefined') return fallback
+  try {
+    const stored = localStorage.getItem(key)
+    if (!stored) return fallback
+    const parsed = JSON.parse(stored)
+    return Array.isArray(parsed) ? parsed : fallback
+  } catch { return fallback }
 }
 
+function lsSet<T>(key: string, data: T[]): void {
+  if (typeof window === 'undefined') return
+  try { localStorage.setItem(key, JSON.stringify(data)) } catch {}
+}
+
+// ===== Category CRUD (localStorage) =====
+
+export function getCategories(): LocalExamCategory[] {
+  // If localStorage has data, merge exams into categories
+  const storedCats = lsGet<LocalExamCategory>(CATEGORIES_KEY, [])
+  const storedExams = lsGet<LocalExam>(EXAMS_KEY, [])
+  if (storedCats.length === 0) {
+    // First time: return default categories with embedded exams
+    return DEFAULT_CATEGORIES
+  }
+  // Merge exams into categories
+  return storedCats.map(cat => ({
+    ...cat,
+    exams: storedExams.filter(e => e.categoryId === cat.id)
+  }))
+}
+
+export function saveCategories(categories: LocalExamCategory[]): void {
+  // Save categories (without nested exams) and exams separately
+  const exams = categories.flatMap(c => c.exams || [])
+  const catsWithoutExams = categories.map(({ exams: _, ...cat }) => cat)
+  lsSet(CATEGORIES_KEY, catsWithoutExams)
+  lsSet(EXAMS_KEY, exams)
+}
+
+export function addCategory(data: Omit<LocalExamCategory, 'id' | 'exams'>): LocalExamCategory {
+  const cat: LocalExamCategory = {
+    ...data,
+    id: `cat-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    exams: [],
+  }
+  const cats = lsGet<LocalExamCategory>(CATEGORIES_KEY, [])
+  // Strip exams for storage
+  const { exams: _, ...catNoExams } = cat
+  lsSet(CATEGORIES_KEY, [...cats, catNoExams])
+  return cat
+}
+
+export function updateCategory(id: string, data: Partial<LocalExamCategory>): void {
+  const cats = lsGet<any>(CATEGORIES_KEY, [])
+  const updated = cats.map((c: any) => c.id === id ? { ...c, ...data, exams: undefined } : c)
+  lsSet(CATEGORIES_KEY, updated)
+}
+
+export function deleteCategory(id: string): void {
+  const cats = lsGet<any>(CATEGORIES_KEY, []).filter((c: any) => c.id !== id)
+  lsSet(CATEGORIES_KEY, cats)
+  // Also delete associated exams, tests, questions
+  const exams = lsGet<LocalExam>(EXAMS_KEY, []).filter(e => e.categoryId !== id)
+  lsSet(EXAMS_KEY, exams)
+  const examIds = new Set(exams.map(e => e.id))
+  const tests = lsGet<LocalTest>(TESTS_KEY, []).filter(t => examIds.has(t.examId))
+  lsSet(TESTS_KEY, tests)
+  const testIds = new Set(tests.map(t => t.id))
+  const questions = lsGet<LocalQuestion>(QUESTIONS_KEY, []).filter(q => testIds.has(q.testId || ''))
+  lsSet(QUESTIONS_KEY, questions)
+}
+
+// ===== Exam CRUD (localStorage) =====
+
+export function getExams(categoryId: string): LocalExam[] {
+  const exams = lsGet<LocalExam>(EXAMS_KEY, [])
+  if (exams.length === 0) {
+    // Fallback: extract from default categories
+    const defaultCat = DEFAULT_CATEGORIES.find(c => c.id === categoryId)
+    return defaultCat?.exams || []
+  }
+  return exams.filter(e => e.categoryId === categoryId)
+}
+
+export function getExamById(id: string): LocalExam | undefined {
+  const exams = lsGet<LocalExam>(EXAMS_KEY, [])
+  if (exams.length === 0) {
+    for (const cat of DEFAULT_CATEGORIES) {
+      const exam = cat.exams.find(e => e.id === id)
+      if (exam) return exam
+    }
+    return undefined
+  }
+  return exams.find(e => e.id === id)
+}
+
+export function addExam(data: Omit<LocalExam, 'id'>): LocalExam {
+  const exam: LocalExam = {
+    ...data,
+    id: `exam-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+  }
+  const exams = lsGet<LocalExam>(EXAMS_KEY, [])
+  lsSet(EXAMS_KEY, [...exams, exam])
+  return exam
+}
+
+export function updateExam(id: string, data: Partial<LocalExam>): void {
+  const exams = lsGet<LocalExam>(EXAMS_KEY, [])
+  lsSet(EXAMS_KEY, exams.map(e => e.id === id ? { ...e, ...data } : e))
+}
+
+export function deleteExam(id: string): void {
+  const exams = lsGet<LocalExam>(EXAMS_KEY, []).filter(e => e.id !== id)
+  lsSet(EXAMS_KEY, exams)
+  // Also delete associated tests and questions
+  const tests = lsGet<LocalTest>(TESTS_KEY, []).filter(t => t.examId !== id)
+  const testIds = new Set(tests.map(t => t.id))
+  const questions = lsGet<LocalQuestion>(QUESTIONS_KEY, []).filter(q => testIds.has(q.testId || ''))
+  lsSet(TESTS_KEY, tests)
+  lsSet(QUESTIONS_KEY, questions)
+}
+
+export function deleteAllExamsInCategory(categoryId: string): number {
+  const exams = lsGet<LocalExam>(EXAMS_KEY, [])
+  const toDelete = exams.filter(e => e.categoryId === categoryId)
+  const remaining = exams.filter(e => e.categoryId !== categoryId)
+  lsSet(EXAMS_KEY, remaining)
+  // Delete associated tests and questions
+  const deleteExamIds = new Set(toDelete.map(e => e.id))
+  const tests = lsGet<LocalTest>(TESTS_KEY, []).filter(t => !deleteExamIds.has(t.examId))
+  const testIds = new Set(tests.map(t => t.id))
+  const questions = lsGet<LocalQuestion>(QUESTIONS_KEY, []).filter(q => testIds.has(q.testId || ''))
+  lsSet(TESTS_KEY, tests)
+  lsSet(QUESTIONS_KEY, questions)
+  return toDelete.length
+}
+
+// ===== Test CRUD (localStorage) =====
+
 export function getTestsByExam(examId: string): LocalTest[] {
-  return ALL_TESTS.filter(t => t.examId === examId)
+  const tests = lsGet<LocalTest>(TESTS_KEY, [])
+  if (tests.length === 0) {
+    // Fallback: use default tests
+    return ALL_TESTS.filter(t => t.examId === examId)
+  }
+  return tests.filter(t => t.examId === examId)
 }
 
 export function getTestById(testId: string): LocalTest | undefined {
-  return ALL_TESTS.find(t => t.id === testId)
+  const tests = lsGet<LocalTest>(TESTS_KEY, [])
+  if (tests.length === 0) {
+    return ALL_TESTS.find(t => t.id === testId)
+  }
+  return tests.find(t => t.id === testId)
 }
 
-export function getResults(): TestResult[] {
-  if (typeof window === 'undefined') return []
-  try {
-    const stored = localStorage.getItem(RESULTS_KEY)
-    return stored ? JSON.parse(stored) : []
-  } catch {
-    return []
+export function addTest(data: Omit<LocalTest, 'id' | 'createdAt'>): LocalTest {
+  const test: LocalTest = {
+    ...data,
+    id: `test-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    createdAt: new Date().toISOString(),
+    questions: [],
   }
+  const tests = lsGet<LocalTest>(TESTS_KEY, [])
+  // Don't store questions in the test - they're stored separately
+  const { questions: _, ...testNoQs } = test
+  lsSet(TESTS_KEY, [...tests, testNoQs])
+  return test
+}
+
+export function updateTest(id: string, data: Partial<LocalTest>): void {
+  const tests = lsGet<LocalTest>(TESTS_KEY, [])
+  lsSet(TESTS_KEY, tests.map(t => t.id === id ? { ...t, ...data } : t))
+}
+
+export function deleteTest(id: string): void {
+  const tests = lsGet<LocalTest>(TESTS_KEY, []).filter(t => t.id !== id)
+  lsSet(TESTS_KEY, tests)
+  // Delete associated questions
+  const questions = lsGet<LocalQuestion>(QUESTIONS_KEY, []).filter(q => q.testId !== id)
+  lsSet(QUESTIONS_KEY, questions)
+}
+
+export function deleteAllTestsInExam(examId: string): number {
+  const tests = lsGet<LocalTest>(TESTS_KEY, [])
+  const toDelete = tests.filter(t => t.examId === examId)
+  const remaining = tests.filter(t => t.examId !== examId)
+  lsSet(TESTS_KEY, remaining)
+  // Delete associated questions
+  const deleteTestIds = new Set(toDelete.map(t => t.id))
+  const questions = lsGet<LocalQuestion>(QUESTIONS_KEY, []).filter(q => !deleteTestIds.has(q.testId || ''))
+  lsSet(QUESTIONS_KEY, questions)
+  return toDelete.length
+}
+
+// ===== Question CRUD (localStorage) =====
+
+export function getQuestions(testId: string): LocalQuestion[] {
+  const questions = lsGet<LocalQuestion>(QUESTIONS_KEY, [])
+  if (questions.length === 0) {
+    // Fallback: use default tests' questions
+    const test = ALL_TESTS.find(t => t.id === testId)
+    return test?.questions || []
+  }
+  return questions.filter(q => q.testId === testId)
+}
+
+export function addQuestion(data: Omit<LocalQuestion, 'id'>): LocalQuestion {
+  const question: LocalQuestion = {
+    ...data,
+    id: `q-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+  }
+  const questions = lsGet<LocalQuestion>(QUESTIONS_KEY, [])
+  lsSet(QUESTIONS_KEY, [...questions, question])
+  return question
+}
+
+export function addBatchQuestions(testId: string, items: Omit<LocalQuestion, 'id' | 'testId'>[]): LocalQuestion[] {
+  const questions = lsGet<LocalQuestion>(QUESTIONS_KEY, [])
+  const newQuestions: LocalQuestion[] = items.map(item => ({
+    ...item,
+    id: `q-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    testId,
+  }))
+  lsSet(QUESTIONS_KEY, [...questions, ...newQuestions])
+  return newQuestions
+}
+
+export function updateQuestion(id: string, data: Partial<LocalQuestion>): void {
+  const questions = lsGet<LocalQuestion>(QUESTIONS_KEY, [])
+  lsSet(QUESTIONS_KEY, questions.map(q => q.id === id ? { ...q, ...data } : q))
+}
+
+export function deleteQuestion(id: string): void {
+  const questions = lsGet<LocalQuestion>(QUESTIONS_KEY, []).filter(q => q.id !== id)
+  lsSet(QUESTIONS_KEY, questions)
+}
+
+export function deleteAllQuestionsInTest(testId: string): number {
+  const questions = lsGet<LocalQuestion>(QUESTIONS_KEY, [])
+  const toDelete = questions.filter(q => q.testId === testId)
+  lsSet(QUESTIONS_KEY, questions.filter(q => q.testId !== testId))
+  return toDelete.length
+}
+
+// ===== Bulk Delete =====
+
+export function deleteAllExamData(): void {
+  lsSet(CATEGORIES_KEY, [])
+  lsSet(EXAMS_KEY, [])
+  lsSet(TESTS_KEY, [])
+  lsSet(QUESTIONS_KEY, [])
+}
+
+// ===== Seed from defaults =====
+
+export function seedLocalData(): void {
+  const existingCats = lsGet<any>(CATEGORIES_KEY, [])
+  if (existingCats.length > 0) return // Already seeded
+  // Save default categories (without exams)
+  const catsWithoutExams = DEFAULT_CATEGORIES.map(({ exams: _, ...cat }) => cat)
+  lsSet(CATEGORIES_KEY, catsWithoutExams)
+  // Save default exams
+  const allExams = DEFAULT_CATEGORIES.flatMap(c => c.exams)
+  lsSet(EXAMS_KEY, allExams)
+  // Save default tests (without questions - stored separately)
+  const testsWithoutQs = ALL_TESTS.map(({ questions: _, ...t }) => t)
+  lsSet(TESTS_KEY, testsWithoutQs)
+  // Save default questions
+  const allQuestions = ALL_TESTS.flatMap(t => t.questions)
+  lsSet(QUESTIONS_KEY, allQuestions)
+}
+
+// ===== Results (localStorage) =====
+
+export function getResults(): TestResult[] {
+  return lsGet<TestResult>(RESULTS_KEY, [])
 }
 
 export function saveResult(data: Omit<TestResult, 'id' | 'createdAt'>): TestResult {
@@ -436,9 +697,7 @@ export function saveResult(data: Omit<TestResult, 'id' | 'createdAt'>): TestResu
   }
   const results = getResults()
   results.push(result)
-  if (typeof window !== 'undefined') {
-    localStorage.setItem(RESULTS_KEY, JSON.stringify(results))
-  }
+  lsSet(RESULTS_KEY, results)
   return result
 }
 
