@@ -3823,16 +3823,21 @@ export default function ExamPrepApp() {
           signupLoading={auth.signupLoading}
           guestLoading={auth.guestLoading}
           resetLoading={auth.resetLoading}
+          verifyLoading={auth.verifyLoading}
           resetSent={auth.resetSent}
           verifySent={auth.verifySent}
+          needsVerification={auth.needsVerification}
+          pendingVerifyEmail={auth.pendingVerifyEmail}
           onLogin={auth.loginWithEmail}
           onSignUp={auth.signUpWithEmail}
           onGuestLogin={auth.loginAsGuest}
           onPasswordReset={auth.sendPasswordReset}
+          onResendVerification={auth.resendVerificationWithCredentials}
           onClearError={() => auth.setError('')}
           onClearResetSent={() => auth.setResetSent(false)}
           onClearVerifySent={() => auth.setVerifySent(false)}
-          onClose={() => { auth.setError(''); auth.setResetSent(false); auth.setVerifySent(false); setShowLoginModal(false) }}
+          onClearNeedsVerification={() => { auth.setNeedsVerification(false); auth.setPendingVerifyEmail('') }}
+          onClose={() => { auth.setError(''); auth.setResetSent(false); auth.setVerifySent(false); auth.setNeedsVerification(false); auth.setPendingVerifyEmail(''); setShowLoginModal(false) }}
         />
       )}
     </div>

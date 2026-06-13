@@ -31,6 +31,8 @@ export function useFirebaseAuth() {
   const [resetSent, setResetSent] = useState(false)
   const [verifySent, setVerifySent] = useState(false)
   const [isLocalGuest, setIsLocalGuest] = useState(false)
+  const [needsVerification, setNeedsVerification] = useState(false)
+  const [pendingVerifyEmail, setPendingVerifyEmail] = useState('')
 
   useEffect(() => {
     // Check for local guest user first
@@ -71,7 +73,16 @@ export function useFirebaseAuth() {
     setError('')
     setLoginLoading(true)
     try {
-      await signInWithEmailAndPassword(auth, email, password)
+      const credential = await signInWithEmailAndPassword(auth, email, password)
+      // Check if email is verified
+      if (credential.user && !credential.user.emailVerified) {
+        setPendingVerifyEmail(email)
+        setNeedsVerification(true)
+        // Sign out the unverified user
+        await firebaseSignOut(auth)
+        setLoginLoading(false)
+        return
+      }
       // Clear local guest if email login succeeds
       localStorage.removeItem(GUEST_USER_KEY)
       setIsLocalGuest(false)
@@ -166,9 +177,13 @@ export function useFirebaseAuth() {
     setResetLoading(false)
   }
 
-  // Resend Email Verification
+  // Resend Email Verification (only works if user is currently signed in)
   const resendVerification = async () => {
-    if (!auth || !authState.user) return
+    if (!auth || !isFirebaseReady()) return
+    if (!authState.user) {
+      setError('Please login with your credentials to resend verification email.')
+      return
+    }
     setError('')
     setVerifyLoading(true)
     try {
@@ -179,7 +194,40 @@ export function useFirebaseAuth() {
       setVerifySent(true)
     } catch (err: any) {
       console.error('Resend verification error:', err)
-      setError('Failed to send verification email.')
+      if (err.code === 'auth/too-many-requests') {
+        setError('Too many verification emails sent. Please wait a few minutes and try again.')
+      } else {
+        setError('Failed to send verification email. Please try again.')
+      }
+    }
+    setVerifyLoading(false)
+  }
+
+  // Resend verification by signing in with credentials
+  const resendVerificationWithCredentials = async (email: string, password: string) => {
+    if (!auth || !isFirebaseReady()) return
+    setError('')
+    setVerifyLoading(true)
+    try {
+      const credential = await signInWithEmailAndPassword(auth, email, password)
+      if (credential.user) {
+        await firebaseSendEmailVerification(credential.user, {
+          url: window.location.origin,
+          handleCodeInApp: true,
+        })
+        // Sign out after sending verification
+        await firebaseSignOut(auth)
+        setVerifySent(true)
+      }
+    } catch (err: any) {
+      console.error('Resend verification with credentials error:', err)
+      if (err.code === 'auth/too-many-requests') {
+        setError('Too many verification emails sent. Please wait a few minutes and try again.')
+      } else if (err.code === 'auth/wrong-password' || err.code === 'auth/invalid-credential') {
+        setError('Incorrect password. Please try again.')
+      } else {
+        setError('Failed to send verification email. Please try again.')
+      }
     }
     setVerifyLoading(false)
   }
@@ -264,6 +312,8 @@ export function useFirebaseAuth() {
     isLoggedIn,
     isGuest,
     isEmailLoginAvailable,
+    needsVerification,
+    pendingVerifyEmail,
     getUserDisplay,
     getUserEmail,
     getUserId,
@@ -272,6 +322,9 @@ export function useFirebaseAuth() {
     loginAsGuest,
     sendPasswordReset,
     resendVerification,
+    resendVerificationWithCredentials,
+    setNeedsVerification,
+    setPendingVerifyEmail,
     setError,
     setResetSent,
     setVerifySent,

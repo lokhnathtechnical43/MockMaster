@@ -1,12 +1,12 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import {
   Mail, Shield, ArrowLeft, Loader2, User, Lock, UserPlus,
   Eye, EyeOff, KeyRound, CheckCircle2, Sparkles, X,
-  ChevronRight, Send, RefreshCw
+  ChevronRight, Send, RefreshCw, AlertTriangle, Inbox
 } from 'lucide-react'
 
 interface LoginModalProps {
@@ -15,15 +15,20 @@ interface LoginModalProps {
   signupLoading: boolean
   guestLoading: boolean
   resetLoading: boolean
+  verifyLoading: boolean
   resetSent: boolean
   verifySent: boolean
+  needsVerification: boolean
+  pendingVerifyEmail: string
   onLogin: (email: string, password: string) => void
   onSignUp: (email: string, password: string, name: string) => void
   onGuestLogin: () => void
   onPasswordReset: (email: string) => void
+  onResendVerification: (email: string, password: string) => void
   onClearError: () => void
   onClearResetSent: () => void
   onClearVerifySent: () => void
+  onClearNeedsVerification: () => void
   onClose: () => void
 }
 
@@ -33,15 +38,20 @@ export default function LoginModal({
   signupLoading,
   guestLoading,
   resetLoading,
+  verifyLoading,
   resetSent,
   verifySent,
+  needsVerification,
+  pendingVerifyEmail,
   onLogin,
   onSignUp,
   onGuestLogin,
   onPasswordReset,
+  onResendVerification,
   onClearError,
   onClearResetSent,
   onClearVerifySent,
+  onClearNeedsVerification,
   onClose
 }: LoginModalProps) {
   const [mode, setMode] = useState<'login' | 'signup' | 'forgot' | 'verify'>('login')
@@ -49,6 +59,23 @@ export default function LoginModal({
   const [password, setPassword] = useState('')
   const [name, setName] = useState('')
   const [showPassword, setShowPassword] = useState(false)
+
+  // Auto-switch to verify mode when needsVerification becomes true
+  useEffect(() => {
+    if (needsVerification) {
+      setMode('verify')
+      if (pendingVerifyEmail) {
+        setEmail(pendingVerifyEmail)
+      }
+    }
+  }, [needsVerification, pendingVerifyEmail])
+
+  // Auto-switch to verify mode after signup when verifySent is true
+  useEffect(() => {
+    if (mode === 'signup' && verifySent) {
+      // Stay on signup to show the success message, but prepare for verify mode
+    }
+  }, [verifySent, mode])
 
   const handleLogin = () => {
     if (email && password) {
@@ -68,9 +95,19 @@ export default function LoginModal({
     }
   }
 
+  const handleResendVerification = () => {
+    if (email && password) {
+      onResendVerification(email, password)
+    }
+  }
+
   const switchMode = (newMode: 'login' | 'signup' | 'forgot' | 'verify') => {
     onClearError()
     onClearResetSent()
+    if (newMode === 'login') {
+      onClearNeedsVerification()
+      onClearVerifySent()
+    }
     setMode(newMode)
   }
 
@@ -142,15 +179,15 @@ export default function LoginModal({
             </div>
           )}
 
-          {/* Verify Sent Success */}
-          {mode === 'signup' && verifySent && (
+          {/* Verify Sent Success (shown in signup and verify modes) */}
+          {(mode === 'signup' || mode === 'verify') && verifySent && (
             <div className="mb-4 bg-emerald-50 border border-emerald-200 rounded-xl px-4 py-3">
               <div className="flex items-center gap-2 mb-1.5">
                 <CheckCircle2 className="w-5 h-5 text-emerald-500" />
                 <span className="text-emerald-700 text-sm font-bold">Verification Email Sent!</span>
               </div>
               <p className="text-emerald-600 text-xs leading-relaxed">
-                We&apos;ve sent a verification email to <strong>{email}</strong>. Please check your inbox and verify your email to login.
+                We&apos;ve sent a verification email to <strong>{email}</strong>. Please check your inbox (and spam folder) and verify your email to login.
               </p>
             </div>
           )}
@@ -333,9 +370,20 @@ export default function LoginModal({
               <div className="bg-blue-50 border border-blue-100 rounded-xl px-3 py-2.5 flex items-start gap-2">
                 <Send className="w-4 h-4 text-blue-500 flex-shrink-0 mt-0.5" />
                 <p className="text-blue-600 text-[11px] leading-relaxed font-medium">
-                  After signup, we&apos;ll send a verification email with our logo. Please verify your email to login.
+                  After signup, we&apos;ll send a verification email. Please check your inbox and spam folder, then verify your email to login.
                 </p>
               </div>
+
+              {/* After signup success, show button to go to verify mode */}
+              {verifySent && (
+                <Button
+                  onClick={() => setMode('verify')}
+                  variant="outline"
+                  className="w-full h-10 border-2 border-emerald-300 text-emerald-600 hover:bg-emerald-50 rounded-xl font-bold text-xs"
+                >
+                  <Inbox className="w-4 h-4 mr-2" /> I didn&apos;t receive the email
+                </Button>
+              )}
 
               {/* Switch to Login */}
               <div className="text-center">
@@ -372,6 +420,103 @@ export default function LoginModal({
                   <><User className="w-4 h-4" /> Skip & Continue as Guest <ChevronRight className="w-4 h-4" /></>
                 )}
               </button>
+            </div>
+          )}
+
+          {/* ====== VERIFY EMAIL FORM ====== */}
+          {mode === 'verify' && (
+            <div className="space-y-4">
+              {/* Warning about unverified email */}
+              {!verifySent && (
+                <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3">
+                  <div className="flex items-center gap-2 mb-1.5">
+                    <AlertTriangle className="w-5 h-5 text-amber-500" />
+                    <span className="text-amber-700 text-sm font-bold">Email Not Verified</span>
+                  </div>
+                  <p className="text-amber-600 text-xs leading-relaxed">
+                    Your email <strong>{email || pendingVerifyEmail}</strong> has not been verified yet. Please check your inbox and spam folder for the verification email. If you didn&apos;t receive it, you can resend it below.
+                  </p>
+                </div>
+              )}
+
+              {/* Illustration */}
+              <div className="text-center mb-2">
+                <div className="w-16 h-16 rounded-full bg-gradient-to-br from-amber-100 to-orange-100 flex items-center justify-center mx-auto mb-3">
+                  <Inbox className="w-8 h-8 text-amber-500" />
+                </div>
+                <p className="text-gray-500 text-xs leading-relaxed">
+                  Enter your email and password to resend the verification email. Make sure to check your spam/junk folder too!
+                </p>
+              </div>
+
+              <div className="space-y-3">
+                <div className="relative">
+                  <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                  <Input
+                    type="email"
+                    placeholder="Enter your email"
+                    value={email}
+                    onChange={(e) => { setEmail(e.target.value); onClearError() }}
+                    className="pl-10 h-12 rounded-xl border-2 border-gray-100 focus:border-amber-300 focus:ring-2 focus:ring-amber-100 text-sm font-medium"
+                  />
+                </div>
+                <div className="relative">
+                  <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                  <Input
+                    type={showPassword ? 'text' : 'password'}
+                    placeholder="Enter your password"
+                    value={password}
+                    onChange={(e) => { setPassword(e.target.value); onClearError() }}
+                    className="pl-10 pr-10 h-12 rounded-xl border-2 border-gray-100 focus:border-amber-300 focus:ring-2 focus:ring-amber-100 text-sm font-medium"
+                    onKeyDown={(e) => e.key === 'Enter' && handleResendVerification()}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                  >
+                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
+              </div>
+
+              <Button
+                onClick={handleResendVerification}
+                disabled={!email || !password || verifyLoading}
+                className="w-full h-12 bg-gradient-to-r from-amber-500 via-orange-500 to-rose-500 hover:from-amber-600 hover:via-orange-600 hover:to-rose-600 text-white rounded-2xl font-bold text-sm shadow-lg shadow-amber-500/25 disabled:opacity-50 transition-all active:scale-[0.98]"
+              >
+                {verifyLoading ? (
+                  <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Sending...</>
+                ) : (
+                  <><RefreshCw className="w-4 h-4 mr-2" /> Resend Verification Email</>
+                )}
+              </Button>
+
+              {/* Helpful tips */}
+              <div className="bg-blue-50 border border-blue-100 rounded-xl px-3 py-2.5">
+                <p className="text-blue-600 text-[11px] leading-relaxed font-medium">
+                  <strong>Tips:</strong> Check your spam/junk folder. The email may take 1-2 minutes to arrive. If you still don&apos;t see it, try resending.
+                </p>
+              </div>
+
+              {/* After verification, go to login */}
+              <Button
+                onClick={() => switchMode('login')}
+                variant="outline"
+                className="w-full h-10 border-2 border-gray-200 text-gray-600 hover:bg-gray-50 rounded-xl font-bold text-xs"
+              >
+                <ArrowLeft className="w-4 h-4 mr-2" /> I verified my email - Login Now
+              </Button>
+
+              {/* Back to Login */}
+              <div className="text-center">
+                <button
+                  onClick={() => switchMode('login')}
+                  className="text-sm text-gray-500 font-medium hover:text-gray-700"
+                >
+                  <ArrowLeft className="w-3 h-3 inline mr-1" /> Back to Login
+                </button>
+              </div>
             </div>
           )}
 
