@@ -21,24 +21,39 @@ export interface LocalExam {
   duration: number
   markingScheme: string
   order: number
+  testCount?: number
 }
 
 export interface LocalTest {
   id: string
   examId: string
   title: string
+  slug?: string
   description: string
   duration: number
+  totalQuestions?: number
   totalMarks: number
   passingMarks: number
   questions: LocalQuestion[]
   createdAt: string
   difficulty?: string
+  // Marking scheme fields (used by Firestore data, accessed by components)
+  correctMarks?: number
+  wrongMarks?: number
+  skipMarks?: number
+  markingCorrect?: number
+  markingWrong?: number
+  markingSkipped?: number
+  // Firestore-specific fields
+  isFree?: boolean
+  isLive?: boolean
+  exam?: { id: string; name: string; slug: string }
 }
 
 export interface LocalQuestion {
   id: string
   questionText: string
+  questionImage?: string | null
   optionA: string
   optionB: string
   optionC: string
@@ -47,12 +62,15 @@ export interface LocalQuestion {
   explanation?: string
   subject?: string
   topic?: string
+  order?: number
+  testId?: string
 }
 
 export interface TestResult {
   id: string
   testId: string
   testName: string
+  examName?: string
   userId: string
   userName: string
   score: number
@@ -61,6 +79,7 @@ export interface TestResult {
   wrongCount: number
   skippedCount: number
   timeTaken: number
+  totalQuestions?: number
   answers: Record<string, string>
   createdAt: string
   mode?: 'real' | 'practice'

@@ -291,6 +291,7 @@ export async function getCategories(): Promise<LocalExamCategory[]> {
             id: e.id,
             name: e.name,
             slug: e.slug,
+            categoryId: e.categoryId,
             description: e.description,
             totalQuestions: e.totalQuestions,
             duration: e.duration,
@@ -364,16 +365,21 @@ export async function deleteCategory(id: string): Promise<void> {
 export async function getExams(categoryId?: string): Promise<LocalExam[]> {
   return firestoreOperation(
     async () => {
-      const constraints: QueryConstraint[] = [orderBy('order')]
-      if (categoryId) constraints.push(where('categoryId', '==', categoryId))
-
-      const snap = await getDocs(query(collection(db, COLLECTIONS.exams), ...constraints))
-      return snap.docs.map((d) => {
+      // Avoid composite index requirement: use only 'where' (no orderBy with where)
+      // Sort client-side after fetching
+      let snap
+      if (categoryId) {
+        snap = await getDocs(query(collection(db, COLLECTIONS.exams), where('categoryId', '==', categoryId)))
+      } else {
+        snap = await getDocs(query(collection(db, COLLECTIONS.exams), orderBy('order')))
+      }
+      const results = snap.docs.map((d) => {
         const e = { id: d.id, ...d.data() } as FirestoreExam
         return {
           id: e.id,
           name: e.name,
           slug: e.slug,
+          categoryId: e.categoryId,
           description: e.description,
           totalQuestions: e.totalQuestions,
           duration: e.duration,
@@ -382,6 +388,9 @@ export async function getExams(categoryId?: string): Promise<LocalExam[]> {
           testCount: e.testCount,
         } as LocalExam
       })
+      // Sort client-side by order
+      results.sort((a, b) => (a.order || 0) - (b.order || 0))
+      return results
     },
     () => {
       const cats = getLocalCategories()
@@ -458,29 +467,43 @@ export async function deleteExam(id: string): Promise<void> {
 export async function getTests(examId?: string): Promise<LocalTest[]> {
   return firestoreOperation(
     async () => {
-      const constraints: QueryConstraint[] = [orderBy('slug')]
-      if (examId) constraints.push(where('examId', '==', examId))
-
-      const snap = await getDocs(query(collection(db, COLLECTIONS.tests), ...constraints))
-      return snap.docs.map((d) => {
+      // Avoid composite index requirement: use only 'where' (no orderBy with where)
+      let snap
+      if (examId) {
+        snap = await getDocs(query(collection(db, COLLECTIONS.tests), where('examId', '==', examId)))
+      } else {
+        snap = await getDocs(query(collection(db, COLLECTIONS.tests), orderBy('slug')))
+      }
+      const results = snap.docs.map((d) => {
         const t = { id: d.id, ...d.data() } as FirestoreTest
         return {
           id: t.id,
+          examId: t.examId,
           title: t.title,
           slug: t.slug,
           description: t.description,
           totalQuestions: t.totalQuestions,
           duration: t.duration,
+          // Field aliases for component compatibility
           markingCorrect: t.markingCorrect,
           markingWrong: t.markingWrong,
           markingSkipped: t.markingSkipped,
+          correctMarks: t.markingCorrect ?? 1,
+          wrongMarks: t.markingWrong ?? 0,
+          skipMarks: t.markingSkipped ?? 0,
+          totalMarks: t.totalQuestions * (t.markingCorrect ?? 1),
+          passingMarks: Math.ceil(t.totalQuestions * (t.markingCorrect ?? 1) * 0.4),
           difficulty: t.difficulty,
           isFree: t.isFree,
           isLive: t.isLive,
           exam: { id: t.examId, name: t.examName, slug: t.examSlug },
           questions: [], // Questions loaded separately via getTestById
+          createdAt: new Date().toISOString(),
         } as LocalTest
       })
+      // Sort client-side by slug
+      results.sort((a, b) => (a.slug || '').localeCompare(b.slug || ''))
+      return results
     },
     () => {
       if (examId) return getLocalTestsByExam(examId)
@@ -491,24 +514,33 @@ export async function getTests(examId?: string): Promise<LocalTest[]> {
 
 /**
  * Get a single test by ID, including its questions.
+ * Questions are fetched separately so that a question-query failure
+ * doesn't prevent the test itself from being returned.
  */
 export async function getTestById(id: string): Promise<LocalTest | null> {
-  return firestoreOperation(
-    async () => {
-      const testDoc = await getDoc(doc(db, COLLECTIONS.tests, id))
-      if (!testDoc.exists()) {
-        console.warn('[Firestore] getTestById: No test document found for id:', id)
-        return null
-      }
+  if (!useFirestore || !isFirebaseReady() || !db) {
+    return getLocalTestById(id) ?? null
+  }
 
-      const t = { id: testDoc.id, ...testDoc.data() } as FirestoreTest
+  try {
+    // 1. Fetch the test document
+    const testDoc = await getDoc(doc(db, COLLECTIONS.tests, id))
+    if (!testDoc.exists()) {
+      console.warn('[Firestore] getTestById: No test document found for id:', id)
+      return getLocalTestById(id) ?? null
+    }
 
-      // Fetch questions for this test
+    const t = { id: testDoc.id, ...testDoc.data() } as FirestoreTest
+
+    // 2. Fetch questions — using only 'where' (no orderBy) to avoid needing composite indexes.
+    //    Sort client-side by 'order' field instead.
+    let questions: LocalQuestion[] = []
+    try {
       const qSnap = await getDocs(
-        query(collection(db, COLLECTIONS.questions), where('testId', '==', id), orderBy('order'))
+        query(collection(db, COLLECTIONS.questions), where('testId', '==', id))
       )
       console.log('[Firestore] getTestById: Found', qSnap.docs.length, 'questions for test:', id, t.title)
-      const questions: LocalQuestion[] = qSnap.docs.map((qd) => {
+      questions = qSnap.docs.map((qd) => {
         const q = { id: qd.id, ...qd.data() } as FirestoreQuestion
         return {
           id: q.id,
@@ -524,26 +556,49 @@ export async function getTestById(id: string): Promise<LocalTest | null> {
           order: q.order,
         }
       })
+      // Sort client-side by order field
+      questions.sort((a, b) => (a.order || 0) - (b.order || 0))
+    } catch (qErr: any) {
+      // If questions fail, still return the test with empty questions
+      console.warn('[Firestore] getTestById: Failed to fetch questions for test:', id, qErr?.message || qErr)
+    }
 
-      return {
-        id: t.id,
-        title: t.title,
-        slug: t.slug,
-        description: t.description,
-        totalQuestions: t.totalQuestions,
-        duration: t.duration,
-        markingCorrect: t.markingCorrect,
-        markingWrong: t.markingWrong,
-        markingSkipped: t.markingSkipped,
-        difficulty: t.difficulty,
-        isFree: t.isFree,
-        isLive: t.isLive,
-        exam: { id: t.examId, name: t.examName, slug: t.examSlug },
-        questions,
-      } as LocalTest
-    },
-    () => getLocalTestById(id) ?? null
-  )
+    // 3. Build the return object with field aliases for component compatibility
+    const correctMarks = t.markingCorrect ?? 1
+    const wrongMarks = Math.abs(t.markingWrong ?? 0)
+    const totalMarks = t.totalQuestions * correctMarks
+    const passingMarks = Math.ceil(totalMarks * 0.4)
+
+    return {
+      id: t.id,
+      title: t.title,
+      slug: t.slug,
+      description: t.description,
+      totalQuestions: t.totalQuestions,
+      duration: t.duration,
+      // Firestore-style field names
+      markingCorrect: t.markingCorrect,
+      markingWrong: t.markingWrong,
+      markingSkipped: t.markingSkipped,
+      // Component-compatible field aliases
+      correctMarks,
+      wrongMarks,
+      skipMarks: t.markingSkipped ?? 0,
+      totalMarks,
+      passingMarks,
+      // Other fields
+      difficulty: t.difficulty,
+      isFree: t.isFree,
+      isLive: t.isLive,
+      exam: { id: t.examId, name: t.examName, slug: t.examSlug },
+      examId: t.examId,
+      questions,
+      createdAt: new Date().toISOString(),
+    } as LocalTest
+  } catch (error: any) {
+    console.warn('[Firestore] getTestById failed, falling back to local data:', error?.message || error)
+    return getLocalTestById(id) ?? null
+  }
 }
 
 /**
@@ -600,6 +655,8 @@ export async function deleteTest(id: string): Promise<void> {
 
 /**
  * Get all questions for a given test.
+ * Uses only 'where' (no orderBy) to avoid needing composite indexes.
+ * Sorts client-side by 'order' field instead.
  */
 export async function getQuestions(testId: string): Promise<LocalQuestion[]> {
   return firestoreOperation(
@@ -607,11 +664,10 @@ export async function getQuestions(testId: string): Promise<LocalQuestion[]> {
       const snap = await getDocs(
         query(
           collection(db, COLLECTIONS.questions),
-          where('testId', '==', testId),
-          orderBy('order')
+          where('testId', '==', testId)
         )
       )
-      return snap.docs.map((d) => {
+      const results = snap.docs.map((d) => {
         const q = { id: d.id, ...d.data() } as FirestoreQuestion
         return {
           id: q.id,
@@ -627,6 +683,9 @@ export async function getQuestions(testId: string): Promise<LocalQuestion[]> {
           order: q.order,
         } as LocalQuestion
       })
+      // Sort client-side by order field
+      results.sort((a, b) => (a.order || 0) - (b.order || 0))
+      return results
     },
     () => {
       const test = getLocalTestById(testId)
@@ -836,12 +895,14 @@ export async function getResults(
 ): Promise<TestResult[]> {
   return firestoreOperation(
     async () => {
-      const constraints: QueryConstraint[] = [orderBy('createdAt', 'desc')]
+      // Avoid composite index: fetch with where only, sort client-side
+      const constraints: QueryConstraint[] = []
       if (testId) constraints.push(where('testId', '==', testId))
       if (userId) constraints.push(where('userId', '==', userId))
+      if (constraints.length === 0) constraints.push(orderBy('createdAt', 'desc'))
 
       const snap = await getDocs(query(collection(db, COLLECTIONS.results), ...constraints))
-      return snap.docs.map((d) => {
+      const results = snap.docs.map((d) => {
         const r = d.data() as FirestoreTestResult
         return {
           id: d.id,
@@ -863,6 +924,11 @@ export async function getResults(
               : String(r.createdAt),
         } as TestResult
       })
+      // Sort client-side by createdAt descending (when we used where-only query)
+      if (testId || userId) {
+        results.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+      }
+      return results
     },
     () => getLocalResults(testId)
   )
@@ -899,11 +965,11 @@ export async function saveResult(
 export async function getLeaderboard(testId: string): Promise<TestResult[]> {
   return firestoreOperation(
     async () => {
+      // Avoid composite index: use only 'where' + limit, sort client-side
       const snap = await getDocs(
         query(
           collection(db, COLLECTIONS.results),
           where('testId', '==', testId),
-          orderBy('score', 'desc'),
           limit(50)
         )
       )
@@ -929,8 +995,9 @@ export async function getLeaderboard(testId: string): Promise<TestResult[]> {
               : String(r.createdAt),
         }
       })
-      // Secondary sort by timeTaken ascending (Firestore only supports one orderBy)
-      return results.sort((a, b) => b.score - a.score || a.timeTaken - b.timeTaken)
+      // Sort client-side by score desc, then timeTaken asc
+      results.sort((a, b) => b.score - a.score || a.timeTaken - b.timeTaken)
+      return results.slice(0, 50)
     },
     () => getLocalLeaderboard(testId)
   )
