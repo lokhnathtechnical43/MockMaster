@@ -713,6 +713,112 @@ export async function addBatchQuestions(
 }
 
 // ============================================================
+// Bulk Delete Operations (Admin only)
+// ============================================================
+
+/**
+ * Delete all questions in a specific test.
+ */
+export async function deleteAllQuestionsInTest(testId: string): Promise<number> {
+  try {
+    const qSnap = await getDocs(
+      query(collection(db, COLLECTIONS.questions), where('testId', '==', testId))
+    )
+    if (qSnap.empty) return 0
+    // Firestore batch limit is 500, so chunk if needed
+    const docs = qSnap.docs
+    let deleted = 0
+    for (let i = 0; i < docs.length; i += 500) {
+      const chunk = docs.slice(i, i + 500)
+      const batch = writeBatch(db)
+      chunk.forEach(d => batch.delete(d.ref))
+      await batch.commit()
+      deleted += chunk.length
+    }
+    return deleted
+  } catch (error) {
+    console.error('[Firestore] deleteAllQuestionsInTest error:', error)
+    throw error
+  }
+}
+
+/**
+ * Delete all tests in a specific exam (including their questions).
+ */
+export async function deleteAllTestsInExam(examId: string): Promise<number> {
+  try {
+    const tSnap = await getDocs(
+      query(collection(db, COLLECTIONS.tests), where('examId', '==', examId))
+    )
+    if (tSnap.empty) return 0
+    let deleted = 0
+    for (const testDoc of tSnap.docs) {
+      // Delete questions for this test
+      await deleteAllQuestionsInTest(testDoc.id)
+      // Delete the test itself
+      await deleteDoc(testDoc.ref)
+      deleted++
+    }
+    return deleted
+  } catch (error) {
+    console.error('[Firestore] deleteAllTestsInExam error:', error)
+    throw error
+  }
+}
+
+/**
+ * Delete all exams in a category (including their tests and questions).
+ */
+export async function deleteAllExamsInCategory(categoryId: string): Promise<number> {
+  try {
+    const eSnap = await getDocs(
+      query(collection(db, COLLECTIONS.exams), where('categoryId', '==', categoryId))
+    )
+    if (eSnap.empty) return 0
+    let deleted = 0
+    for (const examDoc of eSnap.docs) {
+      await deleteAllTestsInExam(examDoc.id)
+      await deleteDoc(examDoc.ref)
+      deleted++
+    }
+    return deleted
+  } catch (error) {
+    console.error('[Firestore] deleteAllExamsInCategory error:', error)
+    throw error
+  }
+}
+
+/**
+ * Delete ALL data from Firestore (categories, exams, tests, questions).
+ * Use with extreme caution!
+ */
+export async function deleteAllExamData(): Promise<void> {
+  try {
+    // Delete questions
+    const qSnap = await getDocs(collection(db, COLLECTIONS.questions))
+    // Delete tests
+    const tSnap = await getDocs(collection(db, COLLECTIONS.tests))
+    // Delete exams
+    const eSnap = await getDocs(collection(db, COLLECTIONS.exams))
+    // Delete categories
+    const cSnap = await getDocs(collection(db, COLLECTIONS.categories))
+
+    const allDocs = [...qSnap.docs, ...tSnap.docs, ...eSnap.docs, ...cSnap.docs]
+    
+    for (let i = 0; i < allDocs.length; i += 500) {
+      const chunk = allDocs.slice(i, i + 500)
+      const batch = writeBatch(db)
+      chunk.forEach(d => batch.delete(d.ref))
+      await batch.commit()
+    }
+    console.log('[Firestore] All exam data deleted successfully')
+  } catch (error) {
+    console.error('[Firestore] deleteAllExamData error:', error)
+    throw error
+  }
+}
+
+// ============================================================
 // Result CRUD
 // ============================================================
 

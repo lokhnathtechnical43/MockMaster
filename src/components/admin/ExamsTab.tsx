@@ -8,7 +8,9 @@ import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import {
   BookOpen, ChevronRight, Plus, Trash2, Edit3, Save,
-  ArrowLeft, RefreshCw, ListChecks, HelpCircle, Database
+  ArrowLeft, RefreshCw, ListChecks, HelpCircle, Database,
+  AlertTriangle, X, CheckSquare, Square, Loader2, Upload,
+  Trash, FileDown
 } from 'lucide-react'
 import {
   getCategories, addCategory, updateCategory, deleteCategory,
@@ -16,6 +18,7 @@ import {
   getTests, addTest, updateTest, deleteTest,
   getQuestions, addQuestion, updateQuestion, deleteQuestion,
   addBatchQuestions, seedFirestoreIfEmpty,
+  deleteAllQuestionsInTest, deleteAllTestsInExam, deleteAllExamsInCategory, deleteAllExamData,
   type FirestoreExamCategory, type FirestoreExam, type FirestoreTest, type FirestoreQuestion
 } from '@/lib/firestore-service'
 import { getCategories as getLocalCategories } from '@/lib/local-data'
@@ -26,6 +29,7 @@ export default function ExamsTab() {
   const [viewLevel, setViewLevel] = useState<ViewLevel>('categories')
   const [loading, setLoading] = useState(true)
   const [seeding, setSeeding] = useState(false)
+  const [bulkDeleting, setBulkDeleting] = useState(false)
 
   // Categories
   const [categories, setCategories] = useState<FirestoreExamCategory[]>([])
@@ -71,6 +75,24 @@ export default function ExamsTab() {
   const [showBatch, setShowBatch] = useState(false)
   const [batchText, setBatchText] = useState('')
 
+  // Multi-select for questions
+  const [selectedQuestionIds, setSelectedQuestionIds] = useState<Set<string>>(new Set())
+  const [selectAll, setSelectAll] = useState(false)
+
+  // Delete confirm modal
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+  const [deleteTarget, setDeleteTarget] = useState<{ type: string; id: string; name: string } | null>(null)
+
+  // Status message
+  const [statusMsg, setStatusMsg] = useState('')
+  const [statusType, setStatusType] = useState<'success' | 'error' | 'info'>('info')
+
+  const showStatus = (msg: string, type: 'success' | 'error' | 'info' = 'info') => {
+    setStatusMsg(msg)
+    setStatusType(type)
+    setTimeout(() => setStatusMsg(''), 4000)
+  }
+
   const loadCategories = useCallback(async () => {
     setLoading(true)
     try {
@@ -80,7 +102,6 @@ export default function ExamsTab() {
         description: c.description, order: c.order
       })))
     } catch {
-      // Fallback to local
       const local = getLocalCategories()
       setCategories(local.map(c => ({
         id: c.id, name: c.name, slug: c.slug, icon: c.icon,
@@ -136,10 +157,12 @@ export default function ExamsTab() {
     setSelectedTestName(test.title)
     loadQuestions(test.id)
     setViewLevel('questions')
+    setSelectedQuestionIds(new Set())
+    setSelectAll(false)
   }
 
   const handleBack = () => {
-    if (viewLevel === 'questions') { setViewLevel('tests'); setQuestions([]) }
+    if (viewLevel === 'questions') { setViewLevel('tests'); setQuestions([]); setSelectedQuestionIds(new Set()); setSelectAll(false) }
     else if (viewLevel === 'tests') { setViewLevel('exams'); setTests([]) }
     else if (viewLevel === 'exams') { setViewLevel('categories'); setExams([]) }
     setShowAdd(false)
@@ -155,8 +178,9 @@ export default function ExamsTab() {
         icon: '📋', description: addDesc, order: categories.length + 1
       })
       setAddName(''); setAddDesc(''); setAddSlug(''); setShowAdd(false)
+      showStatus('Category added successfully!', 'success')
       loadCategories()
-    } catch { alert('Failed to add category') }
+    } catch { showStatus('Failed to add category', 'error') }
   }
 
   const handleAddExam = async () => {
@@ -169,8 +193,9 @@ export default function ExamsTab() {
         testCount: 0, categoryId: selectedCategoryId
       })
       setAddName(''); setAddDesc(''); setAddSlug(''); setShowAdd(false)
+      showStatus('Exam added successfully!', 'success')
       loadExams(selectedCategoryId)
-    } catch { alert('Failed to add exam') }
+    } catch { showStatus('Failed to add exam', 'error') }
   }
 
   const handleAddTest = async () => {
@@ -185,8 +210,9 @@ export default function ExamsTab() {
         examSlug: selectedExamName.toLowerCase().replace(/\s+/g, '-')
       })
       setAddName(''); setAddDesc(''); setAddSlug(''); setShowAdd(false)
+      showStatus('Test added successfully!', 'success')
       loadTests(selectedExamId)
-    } catch { alert('Failed to add test') }
+    } catch { showStatus('Failed to add test', 'error') }
   }
 
   const handleAddQuestion = async () => {
@@ -202,8 +228,9 @@ export default function ExamsTab() {
       setQText(''); setQA(''); setQB(''); setQC(''); setQD('')
       setQAns('A'); setQExplanation(''); setQSubject('')
       setShowAddQuestion(false)
+      showStatus('Question added!', 'success')
       loadQuestions(selectedTestId)
-    } catch { alert('Failed to add question') }
+    } catch { showStatus('Failed to add question', 'error') }
   }
 
   const handleBatchQuestions = async () => {
@@ -221,24 +248,113 @@ export default function ExamsTab() {
           correctAnswer: parts[5]?.trim() || 'A',
           explanation: parts[6]?.trim() || null,
           subject: parts[7]?.trim() || null,
-          order: i + 1,
+          order: questions.length + i + 1,
           testId: selectedTestId
         }
       }).filter(q => q.questionText)
+      
+      if (qs.length === 0) {
+        showStatus('No valid questions found. Check format.', 'error')
+        return
+      }
+      
       await addBatchQuestions(selectedTestId, qs)
       setBatchText(''); setShowBatch(false)
+      showStatus(`${qs.length} questions imported successfully!`, 'success')
       loadQuestions(selectedTestId)
-    } catch { alert('Failed to add batch questions') }
+    } catch { showStatus('Failed to add batch questions', 'error') }
   }
 
   const handleDelete = async (type: string, id: string) => {
-    if (!confirm(`Delete this ${type}?`)) return
+    setDeleteTarget({ type, id, name: '' })
+    setShowDeleteConfirm(true)
+  }
+
+  const confirmDelete = async () => {
+    if (!deleteTarget) return
+    const { type, id } = deleteTarget
+    setBulkDeleting(true)
     try {
       if (type === 'category') { await deleteCategory(id); loadCategories() }
       else if (type === 'exam' && selectedCategoryId) { await deleteExam(id); loadExams(selectedCategoryId) }
       else if (type === 'test' && selectedExamId) { await deleteTest(id); loadTests(selectedExamId) }
       else if (type === 'question' && selectedTestId) { await deleteQuestion(id); loadQuestions(selectedTestId) }
-    } catch { alert(`Failed to delete ${type}`) }
+      showStatus(`${type} deleted successfully!`, 'success')
+    } catch { showStatus(`Failed to delete ${type}`, 'error') }
+    finally {
+      setBulkDeleting(false)
+      setShowDeleteConfirm(false)
+      setDeleteTarget(null)
+    }
+  }
+
+  // --- Bulk Delete Handlers ---
+  const handleDeleteSelectedQuestions = async () => {
+    if (selectedQuestionIds.size === 0 || !selectedTestId) return
+    if (!confirm(`Delete ${selectedQuestionIds.size} selected questions?`)) return
+    setBulkDeleting(true)
+    try {
+      let failed = 0
+      for (const qId of selectedQuestionIds) {
+        try { await deleteQuestion(qId) } catch { failed++ }
+      }
+      setSelectedQuestionIds(new Set())
+      setSelectAll(false)
+      loadQuestions(selectedTestId)
+      showStatus(`Deleted ${selectedQuestionIds.size - failed} questions${failed > 0 ? ` (${failed} failed)` : ''}`, 'success')
+    } catch { showStatus('Failed to delete questions', 'error') }
+    finally { setBulkDeleting(false) }
+  }
+
+  const handleDeleteAllQuestions = async () => {
+    if (!selectedTestId) return
+    if (!confirm(`Delete ALL questions in "${selectedTestName}"? This cannot be undone!`)) return
+    setBulkDeleting(true)
+    try {
+      const count = await deleteAllQuestionsInTest(selectedTestId)
+      setSelectedQuestionIds(new Set())
+      setSelectAll(false)
+      loadQuestions(selectedTestId)
+      showStatus(`Deleted ${count} questions!`, 'success')
+    } catch { showStatus('Failed to delete all questions', 'error') }
+    finally { setBulkDeleting(false) }
+  }
+
+  const handleDeleteAllTests = async () => {
+    if (!selectedExamId) return
+    if (!confirm(`Delete ALL tests in "${selectedExamName}"? This will also delete all questions inside!`)) return
+    setBulkDeleting(true)
+    try {
+      const count = await deleteAllTestsInExam(selectedExamId)
+      loadTests(selectedExamId)
+      showStatus(`Deleted ${count} tests with all questions!`, 'success')
+    } catch { showStatus('Failed to delete all tests', 'error') }
+    finally { setBulkDeleting(false) }
+  }
+
+  const handleDeleteAllExams = async () => {
+    if (!selectedCategoryId) return
+    if (!confirm(`Delete ALL exams in "${selectedCategoryName}"? This will also delete all tests and questions!`)) return
+    setBulkDeleting(true)
+    try {
+      const count = await deleteAllExamsInCategory(selectedCategoryId)
+      loadExams(selectedCategoryId)
+      showStatus(`Deleted ${count} exams with all tests & questions!`, 'success')
+    } catch { showStatus('Failed to delete all exams', 'error') }
+    finally { setBulkDeleting(false) }
+  }
+
+  const handleDeleteAllData = async () => {
+    if (!confirm('⚠️ DELETE ALL DATA? This will remove ALL categories, exams, tests, and questions! This CANNOT be undone!')) return
+    if (!confirm('Are you REALLY sure? Type "yes" mentally and click OK to proceed.')) return
+    setBulkDeleting(true)
+    try {
+      await deleteAllExamData()
+      loadCategories()
+      setViewLevel('categories')
+      showStatus('All exam data deleted!', 'success')
+    } catch { showStatus('Failed to delete all data', 'error') }
+    finally { setBulkDeleting(false) }
   }
 
   const handleSeed = async () => {
@@ -246,9 +362,9 @@ export default function ExamsTab() {
     setSeeding(true)
     try {
       await seedFirestoreIfEmpty()
-      alert('Firestore seeded successfully!')
+      showStatus('Firestore seeded successfully!', 'success')
       loadCategories()
-    } catch { alert('Failed to seed Firestore') }
+    } catch { showStatus('Failed to seed Firestore', 'error') }
     finally { setSeeding(false) }
   }
 
@@ -271,11 +387,106 @@ export default function ExamsTab() {
         if (selectedExamId) loadTests(selectedExamId)
       }
       setEditingId(null)
-    } catch { alert('Failed to update') }
+      showStatus('Updated successfully!', 'success')
+    } catch { showStatus('Failed to update', 'error') }
+  }
+
+  // Multi-select helpers
+  const toggleQuestionSelect = (qId: string) => {
+    const next = new Set(selectedQuestionIds)
+    if (next.has(qId)) next.delete(qId)
+    else next.add(qId)
+    setSelectedQuestionIds(next)
+    setSelectAll(next.size === questions.length)
+  }
+
+  const toggleSelectAll = () => {
+    if (selectAll) {
+      setSelectedQuestionIds(new Set())
+      setSelectAll(false)
+    } else {
+      setSelectedQuestionIds(new Set(questions.map(q => q.id)))
+      setSelectAll(true)
+    }
+  }
+
+  // Export questions as text
+  const handleExportQuestions = () => {
+    if (questions.length === 0) return
+    const text = questions.map(q =>
+      `${q.questionText}|${q.optionA}|${q.optionB}|${q.optionC}|${q.optionD}|${q.correctAnswer}|${q.explanation || ''}|${q.subject || ''}`
+    ).join('\n')
+    navigator.clipboard.writeText(text).then(() => {
+      showStatus('Questions copied to clipboard!', 'success')
+    }).catch(() => {
+      // Fallback
+      const ta = document.createElement('textarea')
+      ta.value = text
+      document.body.appendChild(ta)
+      ta.select()
+      document.execCommand('copy')
+      document.body.removeChild(ta)
+      showStatus('Questions copied to clipboard!', 'success')
+    })
   }
 
   return (
     <div className="space-y-4">
+      {/* Status Message */}
+      {statusMsg && (
+        <div className={`fixed top-4 right-4 z-50 px-4 py-2 rounded-xl text-sm font-medium shadow-lg transition-all ${
+          statusType === 'success' ? 'bg-emerald-500 text-white' :
+          statusType === 'error' ? 'bg-red-500 text-white' :
+          'bg-blue-500 text-white'
+        }`}>
+          {statusMsg}
+        </div>
+      )}
+
+      {/* Delete Confirm Modal */}
+      {showDeleteConfirm && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+          <Card className="border-0 shadow-2xl max-w-sm w-full">
+            <CardContent className="p-6">
+              <div className="w-14 h-14 bg-red-50 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                <AlertTriangle className="w-7 h-7 text-red-500" />
+              </div>
+              <h3 className="font-bold text-lg text-center mb-2">Confirm Delete</h3>
+              <p className="text-gray-500 text-sm text-center mb-4">
+                Are you sure you want to delete this {deleteTarget?.type}? This cannot be undone.
+              </p>
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  className="flex-1 rounded-xl"
+                  onClick={() => { setShowDeleteConfirm(false); setDeleteTarget(null) }}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  className="flex-1 rounded-xl bg-red-500 hover:bg-red-600 text-white"
+                  onClick={confirmDelete}
+                  disabled={bulkDeleting}
+                >
+                  {bulkDeleting ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : <Trash2 className="w-4 h-4 mr-1" />}
+                  Delete
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      {/* Bulk Deleting Overlay */}
+      {bulkDeleting && (
+        <div className="fixed inset-0 bg-black/30 z-40 flex items-center justify-center">
+          <div className="bg-white rounded-2xl px-6 py-4 shadow-2xl flex items-center gap-3">
+            <Loader2 className="w-5 h-5 text-red-500 animate-spin" />
+            <span className="text-sm font-medium">Deleting...</span>
+          </div>
+        </div>
+      )}
+
       {/* Breadcrumb + Actions */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2 text-sm">
@@ -292,6 +503,17 @@ export default function ExamsTab() {
           </span>
         </div>
         <div className="flex items-center gap-2">
+          {viewLevel === 'categories' && (
+            <Button
+              variant="outline"
+              size="sm"
+              className="rounded-xl text-xs text-red-600 hover:bg-red-50"
+              onClick={handleDeleteAllData}
+              disabled={bulkDeleting}
+            >
+              <Trash className="w-3 h-3 mr-1" /> Delete All Data
+            </Button>
+          )}
           <Button
             variant="outline"
             size="sm"
@@ -341,6 +563,7 @@ export default function ExamsTab() {
               <CardContent className="p-8 text-center">
                 <BookOpen className="w-12 h-12 text-gray-300 mx-auto mb-3" />
                 <p className="text-gray-400 text-sm">No categories found</p>
+                <p className="text-gray-300 text-xs mt-1">Add a category or use "Seed Firestore" to load sample data</p>
               </CardContent>
             </Card>
           ) : (
@@ -371,6 +594,9 @@ export default function ExamsTab() {
                         <button onClick={() => handleStartEdit(cat.id, cat.name, cat.description)} className="w-8 h-8 rounded-lg bg-blue-50 hover:bg-blue-100 flex items-center justify-center">
                           <Edit3 className="w-3.5 h-3.5 text-blue-500" />
                         </button>
+                        <button onClick={() => handleDeleteAllExams()} className="w-8 h-8 rounded-lg bg-amber-50 hover:bg-amber-100 flex items-center justify-center" title="Delete all exams in category">
+                          <Trash className="w-3.5 h-3.5 text-amber-500" />
+                        </button>
                         <button onClick={() => handleDelete('category', cat.id)} className="w-8 h-8 rounded-lg bg-red-50 hover:bg-red-100 flex items-center justify-center">
                           <Trash2 className="w-3.5 h-3.5 text-red-400" />
                         </button>
@@ -392,9 +618,16 @@ export default function ExamsTab() {
         <div className="space-y-4">
           <div className="flex items-center justify-between">
             <h3 className="font-bold text-sm">Exams in {selectedCategoryName} ({exams.length})</h3>
-            <Button size="sm" className="rounded-xl text-xs" onClick={() => { setShowAdd(!showAdd); setAddName(''); setAddDesc(''); setAddSlug('') }}>
-              <Plus className="w-3 h-3 mr-1" /> Add Exam
-            </Button>
+            <div className="flex gap-2">
+              {exams.length > 0 && (
+                <Button size="sm" variant="outline" className="rounded-xl text-xs text-red-600 hover:bg-red-50" onClick={handleDeleteAllExams}>
+                  <Trash className="w-3 h-3 mr-1" /> Delete All
+                </Button>
+              )}
+              <Button size="sm" className="rounded-xl text-xs" onClick={() => { setShowAdd(!showAdd); setAddName(''); setAddDesc(''); setAddSlug('') }}>
+                <Plus className="w-3 h-3 mr-1" /> Add Exam
+              </Button>
+            </div>
           </div>
 
           {showAdd && (
@@ -416,6 +649,7 @@ export default function ExamsTab() {
               <CardContent className="p-8 text-center">
                 <BookOpen className="w-12 h-12 text-gray-300 mx-auto mb-3" />
                 <p className="text-gray-400 text-sm">No exams in this category</p>
+                <p className="text-gray-300 text-xs mt-1">Add an exam to start creating tests</p>
               </CardContent>
             </Card>
           ) : (
@@ -465,9 +699,16 @@ export default function ExamsTab() {
         <div className="space-y-4">
           <div className="flex items-center justify-between">
             <h3 className="font-bold text-sm">Tests in {selectedExamName} ({tests.length})</h3>
-            <Button size="sm" className="rounded-xl text-xs" onClick={() => { setShowAdd(!showAdd); setAddName(''); setAddDesc(''); setAddSlug('') }}>
-              <Plus className="w-3 h-3 mr-1" /> Add Test
-            </Button>
+            <div className="flex gap-2">
+              {tests.length > 0 && (
+                <Button size="sm" variant="outline" className="rounded-xl text-xs text-red-600 hover:bg-red-50" onClick={handleDeleteAllTests}>
+                  <Trash className="w-3 h-3 mr-1" /> Delete All
+                </Button>
+              )}
+              <Button size="sm" className="rounded-xl text-xs" onClick={() => { setShowAdd(!showAdd); setAddName(''); setAddDesc(''); setAddSlug('') }}>
+                <Plus className="w-3 h-3 mr-1" /> Add Test
+              </Button>
+            </div>
           </div>
 
           {showAdd && (
@@ -489,6 +730,7 @@ export default function ExamsTab() {
               <CardContent className="p-8 text-center">
                 <ListChecks className="w-12 h-12 text-gray-300 mx-auto mb-3" />
                 <p className="text-gray-400 text-sm">No tests in this exam</p>
+                <p className="text-gray-300 text-xs mt-1">Add a test to start adding questions</p>
               </CardContent>
             </Card>
           ) : (
@@ -539,17 +781,44 @@ export default function ExamsTab() {
       {/* ===== QUESTIONS VIEW ===== */}
       {!loading && viewLevel === 'questions' && (
         <div className="space-y-4">
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between flex-wrap gap-2">
             <h3 className="font-bold text-sm">Questions in {selectedTestName} ({questions.length})</h3>
-            <div className="flex gap-2">
+            <div className="flex gap-2 flex-wrap">
+              {questions.length > 0 && (
+                <>
+                  <Button size="sm" variant="outline" className="rounded-xl text-xs" onClick={handleExportQuestions}>
+                    <FileDown className="w-3 h-3 mr-1" /> Export
+                  </Button>
+                  <Button size="sm" variant="outline" className="rounded-xl text-xs text-red-600 hover:bg-red-50" onClick={handleDeleteAllQuestions}>
+                    <Trash className="w-3 h-3 mr-1" /> Delete All
+                  </Button>
+                </>
+              )}
               <Button size="sm" variant="outline" className="rounded-xl text-xs" onClick={() => { setShowBatch(!showBatch); setBatchText('') }}>
-                <Database className="w-3 h-3 mr-1" /> Batch Import
+                <Upload className="w-3 h-3 mr-1" /> Bulk Import
               </Button>
               <Button size="sm" className="rounded-xl text-xs" onClick={() => { setShowAddQuestion(!showAddQuestion); setQText(''); setQA(''); setQB(''); setQC(''); setQD('') }}>
                 <Plus className="w-3 h-3 mr-1" /> Add Question
               </Button>
             </div>
           </div>
+
+          {/* Multi-select actions bar */}
+          {selectedQuestionIds.size > 0 && (
+            <Card className="border-0 shadow-md bg-red-50/70">
+              <CardContent className="p-3 flex items-center justify-between">
+                <span className="text-sm font-medium text-red-700">{selectedQuestionIds.size} question(s) selected</span>
+                <div className="flex gap-2">
+                  <Button size="sm" variant="outline" className="rounded-xl text-xs" onClick={() => { setSelectedQuestionIds(new Set()); setSelectAll(false) }}>
+                    <X className="w-3 h-3 mr-1" /> Deselect
+                  </Button>
+                  <Button size="sm" className="rounded-xl bg-red-500 hover:bg-red-600 text-white text-xs" onClick={handleDeleteSelectedQuestions}>
+                    <Trash2 className="w-3 h-3 mr-1" /> Delete Selected
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          )}
 
           {/* Add Single Question */}
           {showAddQuestion && (
@@ -588,17 +857,29 @@ export default function ExamsTab() {
           {showBatch && (
             <Card className="border-0 shadow-md bg-purple-50/50">
               <CardContent className="p-4 space-y-2">
-                <p className="text-xs text-gray-500">Format: Question|OptA|OptB|OptC|OptD|Answer|Explanation|Subject (one per line)</p>
+                <div className="bg-white rounded-xl p-3 border border-purple-100">
+                  <p className="text-xs font-semibold text-purple-700 mb-1">Format Guide:</p>
+                  <p className="text-[11px] text-gray-500">Each line = 1 question. Use <code className="bg-gray-100 px-1 rounded">|</code> (pipe) to separate fields:</p>
+                  <p className="text-[11px] text-gray-600 font-mono mt-1">Question|OptionA|OptionB|OptionC|OptionD|Answer|Explanation|Subject</p>
+                  <p className="text-[10px] text-gray-400 mt-1">Answer must be A, B, C, or D. Explanation & Subject are optional.</p>
+                </div>
                 <Textarea
-                  placeholder={"What is 2+2?|4|3|5|6|A|Basic addition|Math\nCapital of India?|Mumbai|Delhi|Kolkata|Chennai|B|India's capital|GK"}
+                  placeholder={"What is 2+2?|4|3|5|6|A|Basic addition|Math\nCapital of India?|Mumbai|Delhi|Kolkata|Chennai|B|India's capital|GK\nWho wrote Ramayana?|Valmiki|Tulsidas|Vyas|Kalidas|A|Ancient literature|GK"}
                   value={batchText}
                   onChange={e => setBatchText(e.target.value)}
                   className="rounded-xl font-mono text-xs"
-                  rows={5}
+                  rows={6}
                 />
-                <div className="flex gap-2">
-                  <Button size="sm" className="rounded-xl" onClick={handleBatchQuestions} disabled={!batchText.trim()}>Import Batch</Button>
-                  <Button size="sm" variant="outline" className="rounded-xl" onClick={() => setShowBatch(false)}>Cancel</Button>
+                <div className="flex items-center justify-between">
+                  <span className="text-xs text-gray-400">
+                    {batchText.trim() ? `${batchText.trim().split('\n').filter(l => l.trim()).length} question(s) detected` : ''}
+                  </span>
+                  <div className="flex gap-2">
+                    <Button size="sm" className="rounded-xl" onClick={handleBatchQuestions} disabled={!batchText.trim()}>
+                      <Upload className="w-3 h-3 mr-1" /> Import Batch
+                    </Button>
+                    <Button size="sm" variant="outline" className="rounded-xl" onClick={() => setShowBatch(false)}>Cancel</Button>
+                  </div>
                 </div>
               </CardContent>
             </Card>
@@ -609,35 +890,53 @@ export default function ExamsTab() {
               <CardContent className="p-8 text-center">
                 <HelpCircle className="w-12 h-12 text-gray-300 mx-auto mb-3" />
                 <p className="text-gray-400 text-sm">No questions in this test</p>
-                <p className="text-gray-300 text-xs mt-1">Add questions individually or use batch import</p>
+                <p className="text-gray-300 text-xs mt-1">Add questions individually or use "Bulk Import"</p>
               </CardContent>
             </Card>
           ) : (
-            <div className="space-y-2 max-h-[60vh] overflow-y-auto">
-              {questions.map((q, i) => (
-                <Card key={q.id} className="border-0 shadow-sm">
-                  <CardContent className="p-3">
-                    <div className="flex items-start gap-2">
-                      <span className="text-xs text-gray-400 mt-0.5 flex-shrink-0">#{i + 1}</span>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium">{q.questionText}</p>
-                        <div className="grid grid-cols-2 gap-1 mt-1.5 text-xs">
-                          <span className={`px-2 py-0.5 rounded ${q.correctAnswer === 'A' ? 'bg-emerald-100 text-emerald-700 font-medium' : 'bg-gray-50 text-gray-500'}`}>A: {q.optionA}</span>
-                          <span className={`px-2 py-0.5 rounded ${q.correctAnswer === 'B' ? 'bg-emerald-100 text-emerald-700 font-medium' : 'bg-gray-50 text-gray-500'}`}>B: {q.optionB}</span>
-                          <span className={`px-2 py-0.5 rounded ${q.correctAnswer === 'C' ? 'bg-emerald-100 text-emerald-700 font-medium' : 'bg-gray-50 text-gray-500'}`}>C: {q.optionC}</span>
-                          <span className={`px-2 py-0.5 rounded ${q.correctAnswer === 'D' ? 'bg-emerald-100 text-emerald-700 font-medium' : 'bg-gray-50 text-gray-500'}`}>D: {q.optionD}</span>
+            <>
+              {/* Select all bar */}
+              <div className="flex items-center gap-2 px-2">
+                <button onClick={toggleSelectAll} className="flex items-center gap-1.5 text-xs text-gray-500 hover:text-gray-700">
+                  {selectAll ? <CheckSquare className="w-4 h-4 text-violet-500" /> : <Square className="w-4 h-4" />}
+                  Select All ({questions.length})
+                </button>
+              </div>
+              <div className="space-y-2 max-h-[60vh] overflow-y-auto">
+                {questions.map((q, i) => (
+                  <Card key={q.id} className={`border-0 shadow-sm transition-all ${selectedQuestionIds.has(q.id) ? 'ring-2 ring-red-300 bg-red-50/30' : 'hover:shadow-md'}`}>
+                    <CardContent className="p-3">
+                      <div className="flex items-start gap-2">
+                        <button
+                          onClick={() => toggleQuestionSelect(q.id)}
+                          className="mt-0.5 flex-shrink-0"
+                        >
+                          {selectedQuestionIds.has(q.id) ?
+                            <CheckSquare className="w-4 h-4 text-red-500" /> :
+                            <Square className="w-4 h-4 text-gray-300" />
+                          }
+                        </button>
+                        <span className="text-xs text-gray-400 mt-0.5 flex-shrink-0">#{i + 1}</span>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium">{q.questionText}</p>
+                          <div className="grid grid-cols-2 gap-1 mt-1.5 text-xs">
+                            <span className={`px-2 py-0.5 rounded ${q.correctAnswer === 'A' ? 'bg-emerald-100 text-emerald-700 font-medium' : 'bg-gray-50 text-gray-500'}`}>A: {q.optionA}</span>
+                            <span className={`px-2 py-0.5 rounded ${q.correctAnswer === 'B' ? 'bg-emerald-100 text-emerald-700 font-medium' : 'bg-gray-50 text-gray-500'}`}>B: {q.optionB}</span>
+                            <span className={`px-2 py-0.5 rounded ${q.correctAnswer === 'C' ? 'bg-emerald-100 text-emerald-700 font-medium' : 'bg-gray-50 text-gray-500'}`}>C: {q.optionC}</span>
+                            <span className={`px-2 py-0.5 rounded ${q.correctAnswer === 'D' ? 'bg-emerald-100 text-emerald-700 font-medium' : 'bg-gray-50 text-gray-500'}`}>D: {q.optionD}</span>
+                          </div>
+                          {q.explanation && <p className="text-gray-400 text-[10px] mt-1">💡 {q.explanation}</p>}
+                          {q.subject && <Badge variant="secondary" className="text-[9px] mt-1">{q.subject}</Badge>}
                         </div>
-                        {q.explanation && <p className="text-gray-400 text-[10px] mt-1">💡 {q.explanation}</p>}
-                        {q.subject && <Badge variant="secondary" className="text-[9px] mt-1">{q.subject}</Badge>}
+                        <button onClick={() => handleDelete('question', q.id)} className="w-7 h-7 rounded-lg bg-red-50 hover:bg-red-100 flex items-center justify-center flex-shrink-0">
+                          <Trash2 className="w-3 h-3 text-red-400" />
+                        </button>
                       </div>
-                      <button onClick={() => handleDelete('question', q.id)} className="w-7 h-7 rounded-lg bg-red-50 hover:bg-red-100 flex items-center justify-center flex-shrink-0">
-                        <Trash2 className="w-3 h-3 text-red-400" />
-                      </button>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            </>
           )}
         </div>
       )}
