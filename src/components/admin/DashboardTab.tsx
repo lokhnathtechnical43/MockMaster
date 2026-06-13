@@ -29,6 +29,7 @@ export default function DashboardTab({ announcements, notifications, allResults,
   const [loadingStats, setLoadingStats] = useState(false)
   const [seeding, setSeeding] = useState(false)
   const [seedResult, setSeedResult] = useState<string | null>(null)
+  const [seedProgress, setSeedProgress] = useState<string | null>(null)
 
   const totalAnnouncements = announcements.length
   const totalNotifications = notifications.length
@@ -38,26 +39,32 @@ export default function DashboardTab({ announcements, notifications, allResults,
     if (!confirm('This will DELETE all existing data and replace it with sample data. Are you sure?')) return
     setSeeding(true)
     setSeedResult(null)
+    setSeedProgress('Checking permissions...')
     try {
       // Step 1: Test write permission first
       const permTest = await testFirestoreWritePermission()
       if (!permTest.ok) {
         setSeedResult(`Permission check failed: ${permTest.error}. ${permTest.details}`)
         setSeeding(false)
+        setSeedProgress(null)
         return
       }
 
       // Step 2: Do the actual seed
+      setSeedProgress('Seeding database...')
       const result = await forceSeedFirestore()
       if (result.success) {
+        setSeedProgress(null)
         setSeedResult('Database seeded successfully! Refreshing...')
         setTimeout(() => window.location.reload(), 1500)
       } else {
+        setSeedProgress(null)
         setSeedResult(`Seed failed at step "${result.step}": ${result.error || 'Unknown error'}. Check browser console (F12) for details.`)
       }
     } catch (e: any) {
       console.error('[Dashboard] Seed error:', e)
       const msg = e?.message || 'Unknown error'
+      setSeedProgress(null)
       setSeedResult(`Seed error: ${msg}`)
     }
     setSeeding(false)
@@ -232,6 +239,11 @@ export default function DashboardTab({ announcements, notifications, allResults,
                 )}
               </Button>
             </div>
+            {seedProgress && (
+              <p className="text-xs mt-2 font-medium text-blue-500 animate-pulse">
+                {seedProgress}
+              </p>
+            )}
             {seedResult && (
               <p className={`text-xs mt-2 font-medium ${seedResult.includes('success') ? 'text-emerald-600' : 'text-red-500'}`}>
                 {seedResult}

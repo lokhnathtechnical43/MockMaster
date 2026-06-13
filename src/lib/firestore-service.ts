@@ -17,6 +17,7 @@ import {
   serverTimestamp,
   Timestamp,
   writeBatch,
+  WriteBatch,
   DocumentData,
   QueryConstraint,
 } from 'firebase/firestore'
@@ -1526,24 +1527,53 @@ export async function testFirestoreWritePermission(): Promise<{ ok: boolean; err
     // Check user role
     const userData = await getUser(currentUser.uid)
     if (!userData) {
-      return { ok: false, error: 'User document not found', details: `No Firestore document found for UID: ${currentUser.uid}. Your account exists in Firebase Auth but has no profile in the users collection.` }
+      return { ok: false, error: 'User document not found', details: `No Firestore document found for UID: ${currentUser.uid}. Your account exists in Firebase Auth but has no profile in the users collection. Go to Firebase Console → Firestore Database → users collection → create a document with your UID and set role to "admin".` }
     }
     if (userData.role !== 'admin') {
       return { ok: false, error: 'Not admin', details: `Your role is "${userData.role}". You need role "admin" to write data. Go to Firebase Console → Firestore Database → users collection → find your UID document → set role field to "admin".` }
     }
 
-    // Test actual write to categories collection
+    // Test 1: Single document write to categories collection
     const testRef = doc(collection(db, COLLECTIONS.categories))
     await setDoc(testRef, { _test: true, _timestamp: new Date().toISOString() })
-    // Immediately delete the test doc
     await deleteDoc(testRef)
+
+    // Test 2: Batch write (this is what seed uses)
+    const batch = writeBatch(db)
+    const batchTestRef1 = doc(collection(db, COLLECTIONS.categories))
+    const batchTestRef2 = doc(collection(db, COLLECTIONS.exams))
+    batch.set(batchTestRef1, { _test: true, _batchTest: true, _timestamp: new Date().toISOString() })
+    batch.set(batchTestRef2, { _test: true, _batchTest: true, _timestamp: new Date().toISOString() })
+    await batch.commit()
+    // Clean up batch test
+    const deleteBatch = writeBatch(db)
+    deleteBatch.delete(batchTestRef1)
+    deleteBatch.delete(batchTestRef2)
+    await deleteBatch.commit()
+
+    // Test 3: Try writing to ALL collections that seed will write to
+    const testCollections = ['categories', 'exams', 'tests', 'questions', 'announcements', 'notifications', 'upcoming_exams', 'daily_tips', 'prev_year_papers', 'sidebar_menu']
+    const testDocs: any[] = []
+    for (const colName of testCollections) {
+      try {
+        const ref = doc(collection(db, colName))
+        await setDoc(ref, { _test: true, _timestamp: new Date().toISOString() })
+        testDocs.push(ref)
+      } catch (colErr: any) {
+        // Clean up any test docs we created
+        for (const d of testDocs) { try { await deleteDoc(d) } catch {} }
+        return { ok: false, error: `Cannot write to "${colName}": ${colErr?.message || colErr}`, details: 'Firestore rules are blocking writes to this collection. You MUST update Firestore rules in Firebase Console. Go to Firebase Console → Firestore Database → Rules tab and publish rules that allow admin writes.' }
+      }
+    }
+    // Clean up all test docs
+    for (const d of testDocs) { try { await deleteDoc(d) } catch {} }
 
     return { ok: true }
   } catch (e: any) {
     const msg = e?.message || String(e)
     let hint = ''
     if (msg.includes('permission') || msg.includes('PERMISSION_DENIED') || msg.includes('denied')) {
-      hint = 'Firestore security rules are blocking writes. Go to Firebase Console → Firestore Database → Rules tab and update rules to allow admin writes. Current rules may not recognize your admin role.'
+      hint = 'Firestore security rules are blocking writes. Go to Firebase Console → Firestore Database → Rules tab. Make sure rules allow admin users to write. Your current rules may not have the isAdmin() function or the rules may not be published yet.'
     } else if (msg.includes('network') || msg.includes('unavailable')) {
       hint = 'Network error. Check your internet connection.'
     } else if (msg.includes('not-found')) {
@@ -1556,6 +1586,52 @@ export async function testFirestoreWritePermission(): Promise<{ ok: boolean; err
 // ============================================================
 // Force Seed — ALWAYS seeds, even if data exists (deletes old first)
 // ============================================================
+
+/**
+ * Helper: Write documents individually as a fallback when batch writes fail.
+ * Each document write is attempted separately so one failure doesn't block others.
+ */
+async function writeDocsIndividually(docs: { ref: any; data: any }[], stepName: string): Promise<{ written: number; failed: number; errors: string[] }> {
+  let written = 0
+  let failed = 0
+  const errors: string[] = []
+  
+  for (const { ref, data } of docs) {
+    try {
+      await setDoc(ref, data)
+      written++
+    } catch (e: any) {
+      failed++
+      const msg = e?.message || String(e)
+      if (errors.length < 3) errors.push(msg) // Keep first 3 errors only
+    }
+  }
+  
+  console.log(`[Firestore] ${stepName}: ${written} written, ${failed} failed`)
+  return { written, failed, errors }
+}
+
+/**
+ * Helper: Commit a batch, with fallback to individual writes if batch fails.
+ * This handles the case where Firestore rules reject batch operations
+ * but might allow individual document writes.
+ */
+async function commitBatchWithFallback(batch: WriteBatch, stepName: string, pendingDocs?: { ref: any; data: any }[]): Promise<void> {
+  try {
+    await batch.commit()
+  } catch (batchErr: any) {
+    console.warn(`[Firestore] Batch commit failed for "${stepName}":`, batchErr?.message)
+    if (pendingDocs && pendingDocs.length > 0) {
+      console.log(`[Firestore] Falling back to individual writes for ${pendingDocs.length} docs...`)
+      const result = await writeDocsIndividually(pendingDocs, stepName)
+      if (result.failed > 0) {
+        throw new Error(`Batch failed and ${result.failed}/${pendingDocs.length} individual writes also failed: ${result.errors.join('; ')}`)
+      }
+    } else {
+      throw batchErr
+    }
+  }
+}
 
 export async function forceSeedFirestore(): Promise<{ success: boolean; error?: string; step?: string }> {
   if (!db || !isFirebaseReady()) {
@@ -1577,8 +1653,26 @@ export async function forceSeedFirestore(): Promise<{ success: boolean; error?: 
     console.log('[Firestore] Force seeding — clearing all collections first...')
 
     // Delete existing data in batches (500 max per batch)
-    // Skip errors on collections that don't exist or can't be accessed
-    const collectionNames = Object.values(COLLECTIONS)
+    // CRITICAL: Skip 'users' and 'results' collections to preserve admin role and user data
+    // Deleting users would break isAdmin() check in Firestore rules!
+    const protectedCollections = ['users', 'results']
+    const collectionNames = Object.values(COLLECTIONS).filter(c => !protectedCollections.includes(c))
+    
+    // Save current admin user data before clearing
+    const adminUid = auth?.currentUser?.uid
+    let adminUserData: any = null
+    if (adminUid) {
+      try {
+        const adminDoc = await getDoc(doc(db, COLLECTIONS.users, adminUid))
+        if (adminDoc.exists()) {
+          adminUserData = { id: adminDoc.id, ...adminDoc.data() }
+          console.log('[Firestore] Saved admin user data before clearing:', adminUid)
+        }
+      } catch (e) {
+        console.warn('[Firestore] Could not read admin user data:', e)
+      }
+    }
+
     for (const colName of collectionNames) {
       try {
         const snap = await getDocs(collection(db, colName))
@@ -1595,9 +1689,10 @@ export async function forceSeedFirestore(): Promise<{ success: boolean; error?: 
         // Continue even if delete fails (e.g., collection doesn't exist yet)
       }
     }
-    console.log('[Firestore] All collections cleared (or skipped).')
+    console.log('[Firestore] All content collections cleared (users & results preserved).')
 
     // ---- Categories + Exams ----
+    try {
     const catData = [
       { name: 'SSC', slug: 'ssc', icon: 'book', description: 'Staff Selection Commission exams including CGL, CHSL, MTS, and more', order: 1 },
       { name: 'Banking', slug: 'banking', icon: 'building', description: 'IBPS, SBI, RBI and other banking sector exams', order: 2 },
@@ -1670,8 +1765,13 @@ export async function forceSeedFirestore(): Promise<{ success: boolean; error?: 
     }
     if (opCount > 0) await batch.commit()
     console.log('[Firestore] Categories + Exams seeded.')
+    } catch (catErr: any) {
+      console.error('[Firestore] Failed to seed Categories + Exams:', catErr?.message)
+      throw new Error('Failed to write categories/exams: ' + (catErr?.message || catErr))
+    }
 
     // ---- Tests + Questions ----
+    try {
     const testData: { title: string; examSlug: string; difficulty: string; questions: { q: string; a: string; b: string; c: string; d: string; ans: string; exp: string; sub: string }[] }[] = [
       {
         title: 'SSC CGL Tier-I Mock Test 1 (General Awareness)',
@@ -1898,8 +1998,13 @@ export async function forceSeedFirestore(): Promise<{ success: boolean; error?: 
     }
     if (opCount > 0) await batch.commit()
     console.log('[Firestore] Tests + Questions seeded.')
+    } catch (testErr: any) {
+      console.error('[Firestore] Failed to seed Tests + Questions:', testErr?.message)
+      throw new Error('Failed to write tests/questions: ' + (testErr?.message || testErr))
+    }
 
     // ---- Announcements ----
+    try {
     batch = writeBatch(db)
     const annData = [
       { image: 'ssc', title: 'SSC CGL 2025', subtitle: 'New Mock Tests Added!', action: 'exams', gradient: 'from-orange-500 to-red-500' },
@@ -1986,6 +2091,10 @@ export async function forceSeedFirestore(): Promise<{ success: boolean; error?: 
 
     await batch.commit()
     console.log('[Firestore] Announcements, Notifications, Upcoming Exams, Tips, Papers, Sidebar seeded.')
+    } catch (annErr: any) {
+      console.error('[Firestore] Failed to seed announcements/notifications/etc:', annErr?.message)
+      throw new Error('Failed to write announcements/notifications: ' + (annErr?.message || annErr))
+    }
 
     // Mark all collections as initialized
     if (typeof window !== 'undefined') {
@@ -2000,12 +2109,40 @@ export async function forceSeedFirestore(): Promise<{ success: boolean; error?: 
       } catch {}
     }
 
+    // Safety: Ensure admin user document still exists after seeding
+    if (adminUid) {
+      try {
+        const adminDoc = await getDoc(doc(db, COLLECTIONS.users, adminUid))
+        if (!adminDoc.exists() && adminUserData) {
+          // Admin document was somehow deleted — recreate it
+          await setDoc(doc(db, COLLECTIONS.users, adminUid), adminUserData)
+          console.log('[Firestore] Restored admin user document after seed')
+        } else if (adminDoc.exists()) {
+          // Ensure role is still admin
+          const data = adminDoc.data()
+          if (data.role !== 'admin') {
+            await setDoc(doc(db, COLLECTIONS.users, adminUid), { role: 'admin' }, { merge: true })
+            console.log('[Firestore] Ensured admin role after seed')
+          }
+        }
+      } catch (e) {
+        console.warn('[Firestore] Could not verify admin user after seed:', e)
+      }
+    }
+
     console.log('[Firestore] Force seed completed successfully!')
     return { success: true }
   } catch (error: any) {
     console.error('[Firestore] Force seed error:', error)
     const msg = error?.message || String(error)
-    return { success: false, error: msg, step: 'seed' }
+    // Determine which step failed based on the error message
+    let step = 'unknown'
+    if (msg.includes('categories/exams')) step = 'categories-exams'
+    else if (msg.includes('tests/questions')) step = 'tests-questions'
+    else if (msg.includes('announcements/notifications')) step = 'announcements'
+    else if (msg.includes('admin')) step = 'admin-check'
+    else if (msg.includes('clear')) step = 'clear-collections'
+    return { success: false, error: msg, step }
   }
 }
 
