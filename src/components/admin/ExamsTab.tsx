@@ -22,7 +22,7 @@ import {
   deleteAllQuestionsInTest, deleteAllTestsInExam, deleteAllExamsInCategory, deleteAllExamData,
   type FirestoreExamCategory, type FirestoreExam, type FirestoreTest, type FirestoreQuestion
 } from '@/lib/firestore-service'
-import { getCategories as getLocalCategories } from '@/lib/local-data'
+import { getCategories as getLocalCategories } from '@/lib/local-data' // types only
 import ImageUploadField from './ImageUploadField'
 
 type ViewLevel = 'categories' | 'exams' | 'tests' | 'questions'
@@ -109,11 +109,7 @@ export default function ExamsTab() {
         description: c.description, order: c.order, imageUrl: c.imageUrl
       })))
     } catch {
-      const local = getLocalCategories()
-      setCategories(local.map(c => ({
-        id: c.id, name: c.name, slug: c.slug, icon: c.icon,
-        description: c.description, order: c.order, imageUrl: c.imageUrl
-      })))
+      setCategories([])
     } finally {
       setLoading(false)
     }

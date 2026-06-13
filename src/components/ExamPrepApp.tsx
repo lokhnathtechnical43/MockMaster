@@ -22,15 +22,12 @@ import {
   ExternalLink, FileText, Lock, UserPlus
 } from 'lucide-react'
 import {
-  getCategories as getLocalCategories, getTestsByExam as getLocalTestsByExam,
-  getTestById as getLocalTestById, saveResult as saveLocalResult,
-  getLeaderboard as getLocalLeaderboard, seedLocalData,
   type LocalExamCategory, type LocalExam, type LocalTest, type LocalQuestion, type TestResult
 } from '@/lib/local-data'
 import {
   getCategories as getFsCategories, getTests as getFsTests,
   getTestById as getFsTestById, saveResult as saveFsResult,
-  getLeaderboard as getFsLeaderboard, getUseFirestore,
+  getLeaderboard as getFsLeaderboard,
   getAnnouncements as getFsAnnouncements, getNotifications as getFsNotifications,
   getUpcomingExams as getFsUpcomingExams, getDailyTips as getFsDailyTips,
   getPrevYearPapers as getFsPrevYearPapers, getSidebarMenu as getFsSidebarMenu,
@@ -43,34 +40,28 @@ import { App } from '@capacitor/app'
 import { Share } from '@capacitor/share'
 import { Filesystem, Directory } from '@capacitor/filesystem'
 import jsPDF from 'jspdf'
-import { getAnnouncements as getLocalAnnouncements, getNotifications as getLocalNotifications, getUpcomingExams as getLocalUpcomingExams, getDailyTips as getLocalDailyTips, getPrevYearPapers as getLocalPrevYearPapers, getSidebarMenu as getLocalSidebarMenu, getReadNotifIds, markNotifAsRead, markAllNotifsAsRead, type UpcomingExam, type DailyTip, type PrevYearPaper, type PaperQuestion, type SidebarMenuItem } from '@/lib/admin-data'
+import { getReadNotifIds, markNotifAsRead, markAllNotifsAsRead, type UpcomingExam, type DailyTip, type PrevYearPaper, type PaperQuestion, type SidebarMenuItem } from '@/lib/admin-data'
 import { t, type Lang } from '@/lib/i18n'
 
 // ===== Types =====
 type Page = 'home' | 'exams' | 'tests' | 'test-info' | 'test-taking' | 'results' | 'leaderboard' | 'profile' | 'practice' | 'bookmarks' | 'perf-report' | 'daily-routine' | 'prev-papers' | 'your-exam' | 'upcoming-exam-detail' | 'daily-tip-detail' | 'announcement-detail' | 'notification-detail'
 
-// ===== Unified Data Access (Firestore or Local) =====
-const isFirestore = () => getUseFirestore()
+// ===== Data Access (Firestore only) =====
 
 async function fetchCategories(): Promise<LocalExamCategory[]> {
-  if (isFirestore()) return getFsCategories()
-  return getLocalCategories()
+  return getFsCategories()
 }
 async function fetchTestsByExam(examId: string): Promise<LocalTest[]> {
-  if (isFirestore()) return getFsTests(examId)
-  return getLocalTestsByExam(examId)
+  return getFsTests(examId)
 }
 async function fetchTestById(testId: string): Promise<LocalTest | undefined> {
-  if (isFirestore()) return getFsTestById(testId) as Promise<LocalTest | undefined>
-  return getLocalTestById(testId)
+  return getFsTestById(testId) as Promise<LocalTest | undefined>
 }
 async function fetchLeaderboard(testId: string): Promise<TestResult[]> {
-  if (isFirestore()) return getFsLeaderboard(testId) as Promise<TestResult[]>
-  return getLocalLeaderboard(testId)
+  return getFsLeaderboard(testId) as Promise<TestResult[]>
 }
 async function storeResult(data: Omit<TestResult, 'id' | 'createdAt'>): Promise<TestResult> {
-  if (isFirestore()) return saveFsResult(data) as Promise<TestResult>
-  return saveLocalResult(data)
+  return saveFsResult(data) as Promise<TestResult>
 }
 
 interface CategoryColor {
@@ -165,6 +156,7 @@ export default function ExamPrepApp() {
   const [selectedExam, setSelectedExam] = useState<LocalExam | null>(null)
   const [examTests, setExamTests] = useState<LocalTest[]>([])
   const [selectedTest, setSelectedTest] = useState<LocalTest | null>(null)
+  const [testsByExamCache, setTestsByExamCache] = useState<Record<string, LocalTest[]>>({})
 
   // --- Test Taking ---
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0)
@@ -322,129 +314,66 @@ export default function ExamPrepApp() {
   // --- Load categories + data on mount ---
   useEffect(() => {
     const loadData = async () => {
-      // Seed local data on first load (if localStorage is empty)
-      seedLocalData()
-
-      // Always load categories from local (which merges localStorage + defaults)
-      const cats = getLocalCategories()
-      setCategories(cats)
-
-      // Also try Firestore if available, but local is the primary source
+      // Load all data from Firestore only (no local fallback)
       try {
-        if (isFirestore()) {
-          const fsCats = await fetchCategories()
-          if (fsCats.length > 0) setCategories(fsCats)
+        const fsCats = await fetchCategories()
+        if (fsCats.length > 0) {
+          setCategories(fsCats)
+          // Preload tests for all exams into cache
+          const cache: Record<string, LocalTest[]> = {}
+          const allExams = fsCats.flatMap(c => c.exams)
+          for (const exam of allExams) {
+            try {
+              cache[exam.id] = await fetchTestsByExam(exam.id)
+            } catch {}
+          }
+          setTestsByExamCache(cache)
         }
       } catch (e) {
-        console.warn('Firestore categories load failed, using local:', e)
+        console.warn('Firestore categories load failed:', e)
       }
 
       const readIds = getReadNotifIds()
 
-      // Load admin data - always from local first, then Firestore if available
-      setAnnouncements(getLocalAnnouncements().map(a => ({ ...a, action: a.action as Page })))
-      setNotifications(getLocalNotifications().map(n => ({ ...n, read: n.read || readIds.has(n.id) })))
-      setUpcomingExams(getLocalUpcomingExams())
-      setDailyTips(getLocalDailyTips())
-      const localPapers = getLocalPrevYearPapers()
-      setPrevPapers(localPapers)
-      if (localPapers.length > 0) {
-        const paperYears = [...new Set(localPapers.map(p => p.year))].sort((a, b) => Number(b) - Number(a))
-        setSelectedPaperYear(paperYears[0] || '')
-      }
-      setSidebarMenu(getLocalSidebarMenu().filter(i => i.visible))
+      // Load admin data from Firestore
+      getFsAnnouncements()
+        .then(anns => setAnnouncements(anns.map(a => ({ ...a, action: a.action as Page }))))
+        .catch(() => {})
 
-      // If Firestore is available, also load from there (overrides local)
-      if (isFirestore()) {
-        getFsAnnouncements()
-          .then(anns => setAnnouncements(anns.map(a => ({ ...a, action: a.action as Page }))))
-          .catch(() => {})
+      getFsNotifications()
+        .then(notifs => setNotifications(notifs.map(n => ({ ...n, read: n.read || readIds.has(n.id) }))))
+        .catch(() => {})
 
-        getFsNotifications()
-          .then(notifs => setNotifications(notifs.map(n => ({ ...n, read: n.read || readIds.has(n.id) }))))
-          .catch(() => {})
+      getFsUpcomingExams()
+        .then(upcoming => setUpcomingExams(upcoming))
+        .catch(() => {})
 
-        getFsUpcomingExams()
-          .then(upcoming => setUpcomingExams(upcoming))
-          .catch(() => {})
+      getFsDailyTips()
+        .then(tips => setDailyTips(tips))
+        .catch(() => {})
 
-        getFsDailyTips()
-          .then(tips => setDailyTips(tips))
-          .catch(() => {})
+      getFsPrevYearPapers()
+        .then(papers => {
+          setPrevPapers(papers)
+          if (papers.length > 0) {
+            const years = [...new Set(papers.map(p => p.year))].sort((a, b) => Number(b) - Number(a))
+            setSelectedPaperYear(years[0] || '')
+          }
+        })
+        .catch(() => {})
 
-        getFsPrevYearPapers()
-          .then(papers => {
-            setPrevPapers(papers)
-            if (papers.length > 0) {
-              const years = [...new Set(papers.map(p => p.year))].sort((a, b) => Number(b) - Number(a))
-              setSelectedPaperYear(years[0] || '')
-            }
-          })
-          .catch(() => {})
-
-        getFsSidebarMenu()
-          .then(items => setSidebarMenu(items.filter(i => i.visible)))
-          .catch(() => {})
-      }
+      getFsSidebarMenu()
+        .then(items => setSidebarMenu(items.filter(i => i.visible)))
+        .catch(() => {})
     }
     loadData()
   }, [])
 
-  // --- Listen for data changes (localStorage updates + Firestore refresh) ---
+  // --- Real-time Firestore listeners (instant updates) ---
   useEffect(() => {
-    const handleDataRefresh = async () => {
-      const readIds = getReadNotifIds()
-
-      // Always refresh from local first (immediate, always works)
-      setCategories(getLocalCategories())
-      setAnnouncements(getLocalAnnouncements().map(a => ({ ...a, action: a.action as Page })))
-      setNotifications(getLocalNotifications().map(n => ({ ...n, read: n.read || readIds.has(n.id) })))
-      setUpcomingExams(getLocalUpcomingExams())
-      setDailyTips(getLocalDailyTips())
-      const localPapers = getLocalPrevYearPapers()
-      setPrevPapers(localPapers)
-      if (localPapers.length > 0) {
-        const years = [...new Set(localPapers.map(p => p.year))].sort((a, b) => Number(b) - Number(a))
-        setSelectedPaperYear(years[0] || '')
-      }
-      setSidebarMenu(getLocalSidebarMenu().filter(i => i.visible))
-
-      // If Firestore is available, also refresh from there
-      if (isFirestore()) {
-        getFsAnnouncements()
-          .then(anns => setAnnouncements(anns.map(a => ({ ...a, action: a.action as Page }))))
-          .catch(() => {})
-
-        getFsNotifications()
-          .then(notifs => setNotifications(notifs.map(n => ({ ...n, read: n.read || readIds.has(n.id) }))))
-          .catch(() => {})
-
-        getFsUpcomingExams()
-          .then(upcoming => setUpcomingExams(upcoming))
-          .catch(() => {})
-
-        getFsDailyTips()
-          .then(tips => setDailyTips(tips))
-          .catch(() => {})
-
-        getFsPrevYearPapers()
-          .then(papers => {
-            setPrevPapers(papers)
-            if (papers.length > 0) {
-              const years = [...new Set(papers.map(p => p.year))].sort((a, b) => Number(b) - Number(a))
-              setSelectedPaperYear(years[0] || '')
-            }
-          })
-          .catch(() => {})
-
-        getFsSidebarMenu()
-          .then(items => setSidebarMenu(items.filter(i => i.visible)))
-          .catch(() => {})
-      }
-    }
-
-    // --- Real-time Firestore listeners (instant updates) ---
     const readIds = getReadNotifIds()
+
+    // Real-time Firestore listeners
     const unsubscribeRealTime = subscribeToAllRealTime({
       onCategories: (cats) => setCategories(cats),
       onAnnouncements: (anns) => setAnnouncements(anns.map(a => ({ ...a, action: a.action as Page }))),
@@ -461,10 +390,15 @@ export default function ExamPrepApp() {
       onSidebarMenu: (items) => setSidebarMenu(items.filter(i => i.visible)),
     })
 
-    window.addEventListener('storage', handleDataRefresh)
-    const interval = setInterval(handleDataRefresh, 10000) // Refresh every 10 seconds (was 30)
+    // Periodic refresh from Firestore
+    const interval = setInterval(async () => {
+      try {
+        const cats = await fetchCategories()
+        if (cats.length > 0) setCategories(cats)
+      } catch {}
+    }, 30000)
+
     return () => {
-      window.removeEventListener('storage', handleDataRefresh)
       clearInterval(interval)
       if (unsubscribeRealTime) unsubscribeRealTime()
     }
@@ -848,7 +782,7 @@ export default function ExamPrepApp() {
       // Use categories state (which has correct data from Firestore or local)
       // instead of getLocalCategories() which only returns local data
       // and causes exam ID mismatch in Firestore mode
-      const freshCats = categories.length > 0 ? categories : getLocalCategories()
+      const freshCats = categories
       const allExams = freshCats.flatMap(c => c.exams)
       if (allExams.length === 0) {
         alert(_t('home.noTestsAvailable') || 'No tests available right now. Please try again later.')
@@ -942,27 +876,8 @@ export default function ExamPrepApp() {
 
     setLastResult(result)
 
-    // Save to localStorage for local stats/leaderboard (only if not already saved by storeResult)
-    if (!isFirestore()) {
-      // In local mode, storeResult already saves to localStorage, so skip duplicate
-    } else {
-      // In Firestore mode, also save to localStorage for offline access and leaderboard
-      try {
-        const perfData = localStorage.getItem('examprep_results')
-        const perfResults: any[] = perfData ? JSON.parse(perfData) : []
-        perfResults.push({
-          ...result,
-          testName: test.title,
-          examName: selectedExam?.name || '',
-          totalQuestions,
-          mode: currentTestMode,
-        })
-        localStorage.setItem('examprep_results', JSON.stringify(perfResults))
-      } catch (e) {}
-    }
-
     // Update Firestore user test stats
-    if (isFirestore() && auth.getUserId()) {
+    if (auth.getUserId()) {
       updateUserTestStats(auth.getUserId()!, score).catch(e =>
         console.warn('[Test] updateUserTestStats failed:', e)
       )
@@ -998,8 +913,8 @@ export default function ExamPrepApp() {
       let results: TestResult[] = []
       const userId = auth.getUserId()
 
-      // Try Firestore first when enabled
-      if (isFirestore() && userId) {
+      // Load from Firestore only
+      if (userId) {
         try {
           const fsResults = await getFsResults(undefined, userId)
           if (fsResults && fsResults.length > 0) {
@@ -1010,18 +925,7 @@ export default function ExamPrepApp() {
             }))
           }
         } catch (e) {
-          console.warn('[Stats] Firestore fetch failed, falling back to local:', e)
-        }
-      }
-
-      // Fallback to localStorage
-      if (results.length === 0) {
-        const data = localStorage.getItem('examprep_results')
-        if (data) {
-          results = JSON.parse(data)
-          if (userId) {
-            results = results.filter((r: TestResult) => r.userId === userId)
-          }
+          console.warn('[Stats] Firestore fetch failed:', e)
         }
       }
 
@@ -1033,18 +937,11 @@ export default function ExamPrepApp() {
       // Calculate best rank from leaderboard data across all REAL tests the user has taken
       let bestRank = 0
       if (userId && testsTaken > 0) {
-        // For rank calculation, we need all results (not just user's)
         let allResults: TestResult[] = []
-        if (isFirestore()) {
-          try {
-            allResults = await getFsResults() as TestResult[]
-          } catch (e) {
-            const data = localStorage.getItem('examprep_results')
-            if (data) allResults = JSON.parse(data)
-          }
-        } else {
-          const data = localStorage.getItem('examprep_results')
-          if (data) allResults = JSON.parse(data)
+        try {
+          allResults = await getFsResults() as TestResult[]
+        } catch (e) {
+          console.warn('[Stats] Firestore all results fetch failed:', e)
         }
         const userTestIds = [...new Set(realExamResults.map((r: TestResult) => r.testId))]
         let bestFound = Infinity
@@ -2012,7 +1909,7 @@ export default function ExamPrepApp() {
             <p className="text-xs text-gray-400 mb-4">
               Test: {selectedTest.title} (ID: {selectedTest.id?.substring(0, 8)}...)
             </p>
-            {isFirestore() ? (
+            {(true) ? (
               <p className="text-xs text-amber-600 font-medium">
                 Go to Admin Panel → Dashboard → Click &quot;Seed Now&quot; to load sample questions.
               </p>
@@ -2762,7 +2659,7 @@ export default function ExamPrepApp() {
     // Calculate weak areas from recent results
     const getWeakAreas = () => {
       try {
-        const storedResults = localStorage.getItem('mockmaster_results')
+        const storedResults = null // Firestore only
         const allResults: TestResult[] = storedResults ? JSON.parse(storedResults) : []
         if (allResults.length === 0) return []
         // Analyze last 10 results for weak categories
@@ -2955,7 +2852,7 @@ export default function ExamPrepApp() {
             {auth.isLoggedIn ? (
               (() => {
                 try {
-                  const storedResults = localStorage.getItem('mockmaster_results')
+                  const storedResults = null // Firestore only
                   const allResults: TestResult[] = storedResults ? JSON.parse(storedResults) : []
                   const userId = auth.getUserId()
                   const userResults = userId ? allResults.filter((r: TestResult) => r.userId === userId).slice(-5).reverse() : []
@@ -3025,7 +2922,7 @@ export default function ExamPrepApp() {
     categories.forEach(cat => {
       cat.exams.forEach(exam => {
         // We need to get tests for each exam - use local data
-        const tests = getLocalTestsByExam(exam.id)
+        const tests = testsByExamCache[exam.id] || []
         tests.forEach(test => {
           test.questions.forEach(q => {
             if (bookmarkedQs.includes(q.id)) {
@@ -3111,7 +3008,7 @@ export default function ExamPrepApp() {
     const stats = userStats
     let results: TestResult[] = []
     try {
-      const stored = localStorage.getItem('examprep_results')
+      const stored = null // Firestore only
       if (stored) results = JSON.parse(stored)
       const userId = auth.getUserId()
       if (userId) results = results.filter((r: TestResult) => r.userId === userId)
@@ -3260,7 +3157,7 @@ export default function ExamPrepApp() {
     const today = new Date().toDateString()
     let todayResults: TestResult[] = []
     try {
-      const stored = localStorage.getItem('mockmaster_results')
+      const stored = null // Firestore only
       if (stored) {
         const all: TestResult[] = JSON.parse(stored)
         const userId = auth.getUserId()
@@ -3384,7 +3281,7 @@ export default function ExamPrepApp() {
     const allTestsByExam: Record<string, { exam: LocalExam; cat: LocalExamCategory; tests: LocalTest[] }> = {}
     categories.forEach(cat => {
       cat.exams.forEach(exam => {
-        const tests = getLocalTestsByExam(exam.id)
+        const tests = testsByExamCache[exam.id] || []
         if (tests.length > 0) {
           allTestsByExam[exam.id] = { exam, cat, tests }
         }
@@ -3397,7 +3294,7 @@ export default function ExamPrepApp() {
       if (paper.testId) {
         for (const cat of categories) {
           for (const exam of cat.exams) {
-            const tests = getLocalTestsByExam(exam.id)
+            const tests = testsByExamCache[exam.id] || []
             const found = tests.find(t => t.id === paper.testId)
             if (found) return { test: found, exam, cat }
           }
@@ -3407,7 +3304,7 @@ export default function ExamPrepApp() {
       const cat = categories.find(c => c.slug === paper.examCategory)
       if (cat && cat.exams.length > 0) {
         const exam = cat.exams[0]
-        const tests = getLocalTestsByExam(exam.id)
+        const tests = testsByExamCache[exam.id] || []
         if (tests.length > 0) return { test: tests[0], exam, cat }
       }
       return null
@@ -3583,11 +3480,11 @@ export default function ExamPrepApp() {
     // Get user's results for this exam
     let examResults: TestResult[] = []
     try {
-      const stored = localStorage.getItem('mockmaster_results')
+      const stored = null // Firestore only
       if (stored && userExamId) {
         const all: TestResult[] = JSON.parse(stored)
         const userId = auth.getUserId()
-        const tests = getLocalTestsByExam(userExamId)
+        const tests = testsByExamCache[exam.id] || []
         const testIds = tests.map(t => t.id)
         examResults = all.filter((r: TestResult) => testIds.includes(r.testId) && (!userId || r.userId === userId))
       }
@@ -3670,7 +3567,7 @@ export default function ExamPrepApp() {
                 <CardContent className="p-4">
                   <h3 className="font-semibold text-sm mb-3">{_t('yourExam.availableTests')}</h3>
                   <div className="space-y-2">
-                    {getLocalTestsByExam(userExamId).map(test => (
+                    {(testsByExamCache[exam.id] || []).map(test => (
                       <button key={test.id} onClick={() => { setSelectedTest(test); setSelectedCategory(selectedCatData); setSelectedExam(selectedExamData); navigateTo('test-info') }}
                         className="w-full flex items-center gap-3 p-3 bg-gray-50 rounded-xl hover:bg-gray-100 active:bg-gray-200 transition-colors"
                         style={{ touchAction: 'manipulation', WebkitTapHighlightColor: 'transparent' }}

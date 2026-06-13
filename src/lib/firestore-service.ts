@@ -1,5 +1,5 @@
 // Firestore Service Layer for MockMaster
-// Provides full CRUD operations with offline fallback to local-data.ts
+// All data is stored in Firestore — no local-storage fallback
 
 import {
   collection,
@@ -30,33 +30,7 @@ import {
   LocalTest,
   LocalQuestion,
   TestResult,
-  getCategories as getLocalCategories,
-  getTestsByExam as getLocalTestsByExam,
-  getTestById as getLocalTestById,
-  saveResult as saveLocalResult,
-  getResults as getLocalResults,
-  getLeaderboard as getLocalLeaderboard,
-  ALL_TESTS,
-  addCategory as localAddCategory,
-  updateCategory as localUpdateCategory,
-  deleteCategory as localDeleteCategory,
-  getExams as localGetExams,
-  addExam as localAddExam,
-  updateExam as localUpdateExam,
-  deleteExam as localDeleteExam,
-  deleteAllExamsInCategory as localDeleteAllExamsInCategory,
-  getQuestions as localGetQuestions,
-  addTest as localAddTest,
-  updateTest as localUpdateTest,
-  deleteTest as localDeleteTest,
-  deleteAllTestsInExam as localDeleteAllTestsInExam,
-  addQuestion as localAddQuestion,
-  addBatchQuestions as localAddBatchQuestions,
-  updateQuestion as localUpdateQuestion,
-  deleteQuestion as localDeleteQuestion,
-  deleteAllQuestionsInTest as localDeleteAllQuestionsInTest,
-  deleteAllExamData as localDeleteAllExamData,
-  seedLocalData as localSeedData,
+  ALL_TESTS, // Only used for one-time Firestore seeding
 } from '@/lib/local-data'
 import {
   Announcement,
@@ -65,18 +39,6 @@ import {
   DailyTip,
   PrevYearPaper,
   SidebarMenuItem,
-  getAnnouncements as getLocalAnnouncements,
-  getNotifications as getLocalNotifications,
-  getUpcomingExams as getLocalUpcomingExams,
-  getDailyTips as getLocalDailyTips,
-  getPrevYearPapers as getLocalPrevYearPapers,
-  getSidebarMenu as getLocalSidebarMenu,
-  saveAnnouncements as saveLocalAnnouncements,
-  saveNotifications as saveLocalNotifications,
-  saveUpcomingExams as saveLocalUpcomingExams,
-  saveDailyTips as saveLocalDailyTips,
-  savePrevYearPapers as saveLocalPrevYearPapers,
-  saveSidebarMenu as saveLocalSidebarMenu,
   DEFAULT_ANNOUNCEMENTS,
   DEFAULT_NOTIFICATIONS,
   DEFAULT_UPCOMING_EXAMS,
@@ -89,8 +51,8 @@ import {
 // Configuration
 // ============================================================
 
-/** Global flag to toggle Firestore vs local fallback */
-let useFirestore = isFirebaseReady() // Auto-enable when Firebase is configured
+/** Global flag — always use Firestore (no local fallback) */
+let useFirestore = true
 
 export function setUseFirestore(value: boolean) {
   useFirestore = value
@@ -255,23 +217,18 @@ export interface DailyStats {
 
 async function firestoreOperation<T>(
   firestoreFn: () => Promise<T>,
-  fallbackFn: () => T
+  emptyFallback: () => T
 ): Promise<T> {
-  if (!useFirestore || !isFirebaseReady() || !db) {
-    return fallbackFn()
+  if (!db) {
+    console.warn('[Firestore] DB not initialized')
+    return emptyFallback()
   }
   try {
     return await firestoreFn()
   } catch (error: any) {
-    // Silently fall back to local data for permission/collection-not-found errors
-    // These are expected when Firestore rules aren't deployed yet or collections don't exist
     const code = error?.code || ''
-    if (code === 'permission-denied' || code === 'PERMISSION_DENIED') {
-      console.warn('[Firestore] Permission denied - falling back to local data. Deploy firestore.rules to fix.')
-    } else {
-      console.warn('[Firestore] Operation failed, falling back to local data:', error?.message || error)
-    }
-    return fallbackFn()
+    console.warn('[Firestore] Operation failed:', code, error?.message || error)
+    return emptyFallback()
   }
 }
 
@@ -328,7 +285,7 @@ export async function getCategories(): Promise<LocalExamCategory[]> {
         } as LocalExamCategory
       })
     },
-    () => getLocalCategories()
+    () => []
   )
 }
 
@@ -339,9 +296,8 @@ export async function addCategory(
   data: Omit<FirestoreExamCategory, 'id'>
 ): Promise<FirestoreExamCategory> {
   // Always save to local
-  const localCat = localAddCategory(data)
   // Try Firestore if available
-  if (useFirestore && isFirebaseReady() && db) {
+  if (db) {
     try {
       const docRef = await addDoc(collection(db, COLLECTIONS.categories), data)
       return { id: docRef.id, ...data }
@@ -360,9 +316,8 @@ export async function updateCategory(
   data: Partial<FirestoreExamCategory>
 ): Promise<void> {
   // Always update local
-  localUpdateCategory(id, data)
   // Try Firestore if available
-  if (useFirestore && isFirebaseReady() && db) {
+  if (db) {
     try {
       await updateDoc(doc(db, COLLECTIONS.categories, id), data)
     } catch (error) {
@@ -376,9 +331,8 @@ export async function updateCategory(
  */
 export async function deleteCategory(id: string): Promise<void> {
   // Always delete from local
-  localDeleteCategory(id)
   // Try Firestore if available
-  if (useFirestore && isFirebaseReady() && db) {
+  if (db) {
     try {
       const examSnap = await getDocs(
         query(collection(db, COLLECTIONS.exams), where('categoryId', '==', id))
@@ -431,7 +385,7 @@ export async function getExams(categoryId?: string): Promise<LocalExam[]> {
       return results
     },
     () => {
-      const cats = getLocalCategories()
+      const cats: LocalExamCategory[] = []
       const allExams = cats.flatMap((c) => c.exams)
       if (categoryId) return allExams // Local data has exams nested; filter is approximate
       return allExams
@@ -446,9 +400,8 @@ export async function addExam(
   data: Omit<FirestoreExam, 'id'>
 ): Promise<FirestoreExam> {
   // Always save to local
-  const localExam = localAddExam(data)
   // Try Firestore if available
-  if (useFirestore && isFirebaseReady() && db) {
+  if (db) {
     try {
       const docRef = await addDoc(collection(db, COLLECTIONS.exams), data)
       return { id: docRef.id, ...data }
@@ -467,9 +420,8 @@ export async function updateExam(
   data: Partial<FirestoreExam>
 ): Promise<void> {
   // Always update local
-  localUpdateExam(id, data)
   // Try Firestore if available
-  if (useFirestore && isFirebaseReady() && db) {
+  if (db) {
     try {
       await updateDoc(doc(db, COLLECTIONS.exams, id), data)
     } catch (error) {
@@ -483,9 +435,8 @@ export async function updateExam(
  */
 export async function deleteExam(id: string): Promise<void> {
   // Always delete from local
-  localDeleteExam(id)
   // Try Firestore if available
-  if (useFirestore && isFirebaseReady() && db) {
+  if (db) {
     try {
       const testSnap = await getDocs(
         query(collection(db, COLLECTIONS.tests), where('examId', '==', id))
@@ -555,8 +506,8 @@ export async function getTests(examId?: string): Promise<LocalTest[]> {
       return results
     },
     () => {
-      if (examId) return getLocalTestsByExam(examId)
-      return ALL_TESTS.map((t) => ({ ...t, questions: [] }))
+      if (examId) return []
+      return []
     }
   )
 }
@@ -567,8 +518,8 @@ export async function getTests(examId?: string): Promise<LocalTest[]> {
  * doesn't prevent the test itself from being returned.
  */
 export async function getTestById(id: string): Promise<LocalTest | null> {
-  if (!useFirestore || !isFirebaseReady() || !db) {
-    return getLocalTestById(id) ?? null
+  if (!db) {
+    return null
   }
 
   try {
@@ -576,7 +527,7 @@ export async function getTestById(id: string): Promise<LocalTest | null> {
     const testDoc = await getDoc(doc(db, COLLECTIONS.tests, id))
     if (!testDoc.exists()) {
       console.warn('[Firestore] getTestById: No test document found for id:', id)
-      return getLocalTestById(id) ?? null
+      return null
     }
 
     const t = { id: testDoc.id, ...testDoc.data() } as FirestoreTest
@@ -646,7 +597,7 @@ export async function getTestById(id: string): Promise<LocalTest | null> {
     } as LocalTest
   } catch (error: any) {
     console.warn('[Firestore] getTestById failed, falling back to local data:', error?.message || error)
-    return getLocalTestById(id) ?? null
+    return null
   }
 }
 
@@ -657,9 +608,8 @@ export async function addTest(
   data: Omit<FirestoreTest, 'id'>
 ): Promise<FirestoreTest> {
   // Always save to local
-  const localTest = localAddTest(data)
   // Try Firestore if available
-  if (useFirestore && isFirebaseReady() && db) {
+  if (db) {
     try {
       const docRef = await addDoc(collection(db, COLLECTIONS.tests), data)
       return { id: docRef.id, ...data }
@@ -678,9 +628,8 @@ export async function updateTest(
   data: Partial<FirestoreTest>
 ): Promise<void> {
   // Always update local
-  localUpdateTest(id, data)
   // Try Firestore if available
-  if (useFirestore && isFirebaseReady() && db) {
+  if (db) {
     try {
       await updateDoc(doc(db, COLLECTIONS.tests, id), data)
     } catch (error) {
@@ -694,9 +643,8 @@ export async function updateTest(
  */
 export async function deleteTest(id: string): Promise<void> {
   // Always delete from local
-  localDeleteTest(id)
   // Try Firestore if available
-  if (useFirestore && isFirebaseReady() && db) {
+  if (db) {
     try {
       const qSnap = await getDocs(
         query(collection(db, COLLECTIONS.questions), where('testId', '==', id))
@@ -750,7 +698,7 @@ export async function getQuestions(testId: string): Promise<LocalQuestion[]> {
       return results
     },
     () => {
-      const test = getLocalTestById(testId)
+      // No local fallback
       return test?.questions ?? []
     }
   )
@@ -763,9 +711,8 @@ export async function addQuestion(
   data: Omit<FirestoreQuestion, 'id'>
 ): Promise<FirestoreQuestion> {
   // Always save to local
-  const localQ = localAddQuestion(data)
   // Try Firestore if available
-  if (useFirestore && isFirebaseReady() && db) {
+  if (db) {
     try {
       const docRef = await addDoc(collection(db, COLLECTIONS.questions), data)
       return { id: docRef.id, ...data }
@@ -784,9 +731,8 @@ export async function updateQuestion(
   data: Partial<FirestoreQuestion>
 ): Promise<void> {
   // Always update local
-  localUpdateQuestion(id, data)
   // Try Firestore if available
-  if (useFirestore && isFirebaseReady() && db) {
+  if (db) {
     try {
       await updateDoc(doc(db, COLLECTIONS.questions, id), data)
     } catch (error) {
@@ -800,9 +746,8 @@ export async function updateQuestion(
  */
 export async function deleteQuestion(id: string): Promise<void> {
   // Always delete from local
-  localDeleteQuestion(id)
   // Try Firestore if available
-  if (useFirestore && isFirebaseReady() && db) {
+  if (db) {
     try {
       await deleteDoc(doc(db, COLLECTIONS.questions, id))
     } catch (error) {
@@ -819,9 +764,8 @@ export async function addBatchQuestions(
   questions: Omit<LocalQuestion, 'id'>[]
 ): Promise<LocalQuestion[]> {
   // Always save to local
-  const localQs = localAddBatchQuestions(testId, questions)
   // Try Firestore if available
-  if (useFirestore && isFirebaseReady() && db) {
+  if (db) {
     try {
       const batch = writeBatch(db)
       const created: LocalQuestion[] = []
@@ -862,9 +806,8 @@ export async function addBatchQuestions(
  */
 export async function deleteAllQuestionsInTest(testId: string): Promise<number> {
   // Always delete from local
-  const localCount = localDeleteAllQuestionsInTest(testId)
   // Try Firestore if available
-  if (useFirestore && isFirebaseReady() && db) {
+  if (db) {
     try {
       const qSnap = await getDocs(
         query(collection(db, COLLECTIONS.questions), where('testId', '==', testId))
@@ -890,9 +833,8 @@ export async function deleteAllQuestionsInTest(testId: string): Promise<number> 
  */
 export async function deleteAllTestsInExam(examId: string): Promise<number> {
   // Always delete from local
-  const localCount = localDeleteAllTestsInExam(examId)
   // Try Firestore if available
-  if (useFirestore && isFirebaseReady() && db) {
+  if (db) {
     try {
       const tSnap = await getDocs(
         query(collection(db, COLLECTIONS.tests), where('examId', '==', examId))
@@ -915,9 +857,8 @@ export async function deleteAllTestsInExam(examId: string): Promise<number> {
  */
 export async function deleteAllExamsInCategory(categoryId: string): Promise<number> {
   // Always delete from local
-  const localCount = localDeleteAllExamsInCategory(categoryId)
   // Try Firestore if available
-  if (useFirestore && isFirebaseReady() && db) {
+  if (db) {
     try {
       const eSnap = await getDocs(
         query(collection(db, COLLECTIONS.exams), where('categoryId', '==', categoryId))
@@ -940,9 +881,8 @@ export async function deleteAllExamsInCategory(categoryId: string): Promise<numb
  */
 export async function deleteAllExamData(): Promise<void> {
   // Always delete from local
-  localDeleteAllExamData()
   // Try Firestore if available
-  if (useFirestore && isFirebaseReady() && db) {
+  if (db) {
     try {
       const qSnap = await getDocs(collection(db, COLLECTIONS.questions))
       const tSnap = await getDocs(collection(db, COLLECTIONS.tests))
@@ -1009,7 +949,7 @@ export async function getResults(
       }
       return results
     },
-    () => getLocalResults(testId)
+    () => []
   )
 }
 
@@ -1020,7 +960,7 @@ export async function saveResult(
   data: Omit<TestResult, 'id' | 'createdAt'>
 ): Promise<TestResult> {
   if (!useFirestore) {
-    return saveLocalResult(data)
+    return data as unknown as TestResult
   }
   try {
     const docRef = await addDoc(collection(db, COLLECTIONS.results), {
@@ -1034,7 +974,7 @@ export async function saveResult(
     }
   } catch (error) {
     console.error('[Firestore] saveResult error, falling back to local:', error)
-    return saveLocalResult(data)
+    return data as unknown as TestResult
   }
 }
 
@@ -1078,7 +1018,7 @@ export async function getLeaderboard(testId: string): Promise<TestResult[]> {
       results.sort((a, b) => b.score - a.score || a.timeTaken - b.timeTaken)
       return results.slice(0, 50)
     },
-    () => getLocalLeaderboard(testId)
+    () => []
   )
 }
 
@@ -1330,7 +1270,6 @@ export async function saveAnnouncements(
   data: Announcement[]
 ): Promise<void> {
   if (!useFirestore) {
-    saveLocalAnnouncements(data)
     return
   }
   try {
@@ -1344,11 +1283,8 @@ export async function saveAnnouncements(
       batch.set(docRef, { ...item, id: docRef.id })
     }
     await batch.commit()
-    // Also persist locally for offline access
-    saveLocalAnnouncements(data)
   } catch (error) {
     console.error('[Firestore] saveAnnouncements error, saving locally:', error)
-    saveLocalAnnouncements(data)
   }
 }
 
@@ -1378,7 +1314,6 @@ export async function saveNotifications(
   data: Notification[]
 ): Promise<void> {
   if (!useFirestore) {
-    saveLocalNotifications(data)
     return
   }
   try {
@@ -1392,11 +1327,8 @@ export async function saveNotifications(
       batch.set(docRef, { ...item, id: docRef.id })
     }
     await batch.commit()
-    // Also persist locally for offline access
-    saveLocalNotifications(data)
   } catch (error) {
     console.error('[Firestore] saveNotifications error, saving locally:', error)
-    saveLocalNotifications(data)
   }
 }
 
@@ -1449,7 +1381,7 @@ export async function getDashboardStats(): Promise<DashboardStats> {
     console.error('[Firestore] getDashboardStats error, returning defaults:', error)
     return {
       totalUsers: 0,
-      totalTests: ALL_TESTS.length,
+      totalTests: 0,
       totalExams: 0,
       totalResults: 0,
       avgScore: 0,
@@ -1538,7 +1470,6 @@ export async function getDailyStats(days: number = 7): Promise<DailyStats[]> {
  */
 export async function seedFirestoreIfEmpty(): Promise<boolean> {
   // Always seed local first
-  localSeedData()
   
   if (!db || !isFirebaseReady()) {
     console.log('[Firestore] Firebase not configured, local data seeded')
@@ -1549,7 +1480,7 @@ export async function seedFirestoreIfEmpty(): Promise<boolean> {
     if (catSnap.size > 0) return false // Already seeded in Firestore
 
     const batch = writeBatch(db)
-    const localCategories = getLocalCategories()
+    // Use default data for seeding
 
     for (const cat of localCategories) {
       // Add category document
@@ -2314,7 +2245,12 @@ export async function forceSeedFirestore(): Promise<{ success: boolean; error?: 
         const allCols = Object.values(COLLECTIONS)
         const initialized: Record<string, boolean> = {}
         allCols.forEach(c => initialized[c] = true)
-        localStorage.setItem(STORAGE_KEYS_LOCAL.fsInitialized, JSON.stringify(initialized))
+        // Store init flag in Firestore, not localStorage
+        try {
+          if (db) {
+            await setDoc(doc(db, '_meta', 'init'), { initialized, updatedAt: serverTimestamp() })
+          }
+        } catch {}
       } catch {}
     }
 
@@ -2381,7 +2317,6 @@ export async function saveUpcomingExams(
   data: UpcomingExam[]
 ): Promise<void> {
   if (!useFirestore) {
-    saveLocalUpcomingExams(data)
     return
   }
   try {
@@ -2395,11 +2330,8 @@ export async function saveUpcomingExams(
       batch.set(docRef, { ...item, id: docRef.id })
     }
     await batch.commit()
-    // Also persist locally for offline access
-    saveLocalUpcomingExams(data)
   } catch (error) {
     console.error('[Firestore] saveUpcomingExams error, saving locally:', error)
-    saveLocalUpcomingExams(data)
   }
 }
 
@@ -2429,7 +2361,6 @@ export async function saveDailyTips(
   data: DailyTip[]
 ): Promise<void> {
   if (!useFirestore) {
-    saveLocalDailyTips(data)
     return
   }
   try {
@@ -2443,11 +2374,8 @@ export async function saveDailyTips(
       batch.set(docRef, { ...item, id: docRef.id })
     }
     await batch.commit()
-    // Also persist locally for offline access
-    saveLocalDailyTips(data)
   } catch (error) {
     console.error('[Firestore] saveDailyTips error, saving locally:', error)
-    saveLocalDailyTips(data)
   }
 }
 
@@ -2476,7 +2404,6 @@ export async function savePrevYearPapers(
   data: PrevYearPaper[]
 ): Promise<void> {
   if (!useFirestore) {
-    saveLocalPrevYearPapers(data)
     return
   }
   try {
@@ -2488,10 +2415,8 @@ export async function savePrevYearPapers(
       batch.set(docRef, { ...item, id: docRef.id })
     }
     await batch.commit()
-    saveLocalPrevYearPapers(data)
   } catch (error) {
     console.error('[Firestore] savePrevYearPapers error, saving locally:', error)
-    saveLocalPrevYearPapers(data)
   }
 }
 
@@ -2520,7 +2445,6 @@ export async function saveSidebarMenu(
   data: SidebarMenuItem[]
 ): Promise<void> {
   if (!useFirestore) {
-    saveLocalSidebarMenu(data)
     return
   }
   try {
@@ -2532,10 +2456,8 @@ export async function saveSidebarMenu(
       batch.set(docRef, { ...item, id: docRef.id })
     }
     await batch.commit()
-    saveLocalSidebarMenu(data)
   } catch (error) {
     console.error('[Firestore] saveSidebarMenu error, saving locally:', error)
-    saveLocalSidebarMenu(data)
   }
 }
 
@@ -2552,18 +2474,36 @@ export async function saveSidebarMenu(
 export function onCategoriesChange(
   callback: (cats: LocalExamCategory[]) => void
 ): Unsubscribe | null {
-  if (!useFirestore || !isFirebaseReady()) return null
+  if (!db) return null
   try {
-    return onSnapshot(collection(db, COLLECTIONS.categories), (snap) => {
+    return onSnapshot(collection(db, COLLECTIONS.categories), async (snap) => {
       if (snap.empty) return
       const cats = snap.docs.map(d => ({ id: d.id, ...d.data() } as FirestoreExamCategory))
-      // Merge with exams from local or Firestore
-      const exams = lsGetExamsFromLocal()
-      const merged: LocalExamCategory[] = cats.map(c => ({
-        ...c,
-        exams: exams.filter(e => e.categoryId === c.id)
-      }))
-      callback(merged)
+      // Fetch exams from Firestore (not localStorage)
+      try {
+        const examSnap = await getDocs(query(collection(db, COLLECTIONS.exams), orderBy('order')))
+        const exams = examSnap.docs.map(d => ({ id: d.id, ...d.data() } as FirestoreExam))
+        const merged: LocalExamCategory[] = cats.map(c => ({
+          ...c,
+          exams: exams.filter(e => e.categoryId === c.id).map(e => ({
+            id: e.id,
+            name: e.name,
+            slug: e.slug,
+            categoryId: e.categoryId,
+            description: e.description,
+            totalQuestions: e.totalQuestions,
+            duration: e.duration,
+            markingScheme: e.markingScheme,
+            order: e.order,
+            testCount: e.testCount,
+          })),
+        }))
+        callback(merged)
+      } catch (e) {
+        // If exams fetch fails, still return categories without exams
+        const merged: LocalExamCategory[] = cats.map(c => ({ ...c, exams: [] }))
+        callback(merged)
+      }
     }, (err) => {
       console.warn('[Firestore] onCategoriesChange error:', err)
     })
@@ -2579,13 +2519,11 @@ export function onCategoriesChange(
 export function onAnnouncementsChange(
   callback: (data: Announcement[]) => void
 ): Unsubscribe | null {
-  if (!useFirestore || !isFirebaseReady()) return null
+  if (!db) return null
   try {
     return onSnapshot(collection(db, COLLECTIONS.announcements), (snap) => {
       const data = snap.empty ? [] : snap.docs.map(d => ({ id: d.id, ...d.data() } as Announcement))
       callback(data)
-      // Also persist locally for offline
-      if (data.length > 0) saveLocalAnnouncements(data)
     }, (err) => {
       console.warn('[Firestore] onAnnouncementsChange error:', err)
     })
@@ -2601,12 +2539,11 @@ export function onAnnouncementsChange(
 export function onNotificationsChange(
   callback: (data: Notification[]) => void
 ): Unsubscribe | null {
-  if (!useFirestore || !isFirebaseReady()) return null
+  if (!db) return null
   try {
     return onSnapshot(collection(db, COLLECTIONS.notifications), (snap) => {
       const data = snap.empty ? [] : snap.docs.map(d => ({ id: d.id, ...d.data() } as Notification))
       callback(data)
-      if (data.length > 0) saveLocalNotifications(data)
     }, (err) => {
       console.warn('[Firestore] onNotificationsChange error:', err)
     })
@@ -2622,12 +2559,11 @@ export function onNotificationsChange(
 export function onUpcomingExamsChange(
   callback: (data: UpcomingExam[]) => void
 ): Unsubscribe | null {
-  if (!useFirestore || !isFirebaseReady()) return null
+  if (!db) return null
   try {
     return onSnapshot(collection(db, COLLECTIONS.upcoming_exams), (snap) => {
       const data = snap.empty ? [] : snap.docs.map(d => ({ id: d.id, ...d.data() } as UpcomingExam))
       callback(data)
-      if (data.length > 0) saveLocalUpcomingExams(data)
     }, (err) => {
       console.warn('[Firestore] onUpcomingExamsChange error:', err)
     })
@@ -2643,12 +2579,11 @@ export function onUpcomingExamsChange(
 export function onDailyTipsChange(
   callback: (data: DailyTip[]) => void
 ): Unsubscribe | null {
-  if (!useFirestore || !isFirebaseReady()) return null
+  if (!db) return null
   try {
     return onSnapshot(collection(db, COLLECTIONS.daily_tips), (snap) => {
       const data = snap.empty ? [] : snap.docs.map(d => ({ id: d.id, ...d.data() } as DailyTip))
       callback(data)
-      if (data.length > 0) saveLocalDailyTips(data)
     }, (err) => {
       console.warn('[Firestore] onDailyTipsChange error:', err)
     })
@@ -2664,12 +2599,11 @@ export function onDailyTipsChange(
 export function onPrevYearPapersChange(
   callback: (data: PrevYearPaper[]) => void
 ): Unsubscribe | null {
-  if (!useFirestore || !isFirebaseReady()) return null
+  if (!db) return null
   try {
     return onSnapshot(collection(db, COLLECTIONS.prev_year_papers), (snap) => {
       const data = snap.empty ? [] : snap.docs.map(d => ({ id: d.id, ...d.data() } as PrevYearPaper))
       callback(data)
-      if (data.length > 0) saveLocalPrevYearPapers(data)
     }, (err) => {
       console.warn('[Firestore] onPrevYearPapersChange error:', err)
     })
@@ -2685,12 +2619,11 @@ export function onPrevYearPapersChange(
 export function onSidebarMenuChange(
   callback: (data: SidebarMenuItem[]) => void
 ): Unsubscribe | null {
-  if (!useFirestore || !isFirebaseReady()) return null
+  if (!db) return null
   try {
     return onSnapshot(collection(db, COLLECTIONS.sidebar_menu), (snap) => {
       const data = snap.empty ? [] : snap.docs.map(d => ({ id: d.id, ...d.data() } as SidebarMenuItem))
       callback(data)
-      if (data.length > 0) saveLocalSidebarMenu(data)
     }, (err) => {
       console.warn('[Firestore] onSidebarMenuChange error:', err)
     })
@@ -2698,17 +2631,6 @@ export function onSidebarMenuChange(
     console.warn('[Firestore] onSidebarMenuChange setup failed:', e)
     return null
   }
-}
-
-/** Helper: read exams from localStorage (used by onCategoriesChange) */
-function lsGetExamsFromLocal(): LocalExam[] {
-  if (typeof window === 'undefined') return []
-  try {
-    const stored = localStorage.getItem('examprep_local_exams')
-    if (!stored) return []
-    const parsed = JSON.parse(stored)
-    return Array.isArray(parsed) ? parsed : []
-  } catch { return [] }
 }
 
 /**

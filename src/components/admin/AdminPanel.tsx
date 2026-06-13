@@ -18,7 +18,7 @@ import {
   DEFAULT_UPCOMING_EXAMS, DEFAULT_DAILY_TIPS, DEFAULT_PREV_YEAR_PAPERS, DEFAULT_SIDEBAR_MENU,
   isFsCollectionInitialized, markFsCollectionInitialized,
 } from '@/lib/admin-data'
-import { getResults, type TestResult } from '@/lib/local-data'
+import { type TestResult } from '@/lib/local-data'
 import {
   getAnnouncements as getFsAnnouncements,
   getNotifications as getFsNotifications,
@@ -33,7 +33,6 @@ import {
   savePrevYearPapers as saveFsPrevYearPapers,
   saveSidebarMenu as saveFsSidebarMenu,
   getResults as getFsResults,
-  getUseFirestore,
   getUser,
   ensureFirstUserAsAdmin,
   setUserRole,
@@ -161,7 +160,7 @@ export default function AdminPanel() {
     if (authStatus !== 'authorized') return
 
     async function loadData() {
-      if (getUseFirestore()) {
+      if (true) {
         try {
           // Load announcements - use Firestore data, even if empty
           // Only fall back to defaults if Firestore collection was never initialized
@@ -239,16 +238,9 @@ export default function AdminPanel() {
           setSidebarMenuLoaded(true)
 
           const fsResults = await getFsResults()
-          setAllResults(fsResults as TestResult[] || getResults())
+          setAllResults(fsResults as TestResult[])
         } catch (e) {
-          console.warn('[Admin] Firestore load failed, using local:', e)
-          setAnnouncements(getAnnouncements())
-          setNotifications(getNotifications())
-          setAllResults(getResults())
-          setUpcomingExams(getUpcomingExams())
-          setDailyTips(getDailyTips())
-          setPrevPapers(getPrevYearPapers())
-          setSidebarMenu(getSidebarMenu())
+          console.warn('[Admin] Firestore load failed:', e)
           setAnnouncementsLoaded(true)
           setNotificationsLoaded(true)
           setUpcomingExamsLoaded(true)
@@ -256,20 +248,6 @@ export default function AdminPanel() {
           setPrevPapersLoaded(true)
           setSidebarMenuLoaded(true)
         }
-      } else {
-        setAnnouncements(getAnnouncements())
-        setNotifications(getNotifications())
-        setAllResults(getResults())
-        setUpcomingExams(getUpcomingExams())
-        setDailyTips(getDailyTips())
-        setPrevPapers(getPrevYearPapers())
-        setSidebarMenu(getSidebarMenu())
-        setAnnouncementsLoaded(true)
-        setNotificationsLoaded(true)
-        setUpcomingExamsLoaded(true)
-        setDailyTipsLoaded(true)
-        setPrevPapersLoaded(true)
-        setSidebarMenuLoaded(true)
       }
     }
     loadData()
@@ -278,8 +256,7 @@ export default function AdminPanel() {
   // --- Auto-save to Firestore when data changes ---
   useEffect(() => {
     if (!announcementsLoaded) return
-    saveAnnouncements(announcements)
-    if (getUseFirestore()) {
+      if (true) {
       saveFsAnnouncements(announcements)
         .then(() => {
           console.log('[Admin] Announcements saved to Firestore:', announcements.length)
@@ -291,8 +268,7 @@ export default function AdminPanel() {
 
   useEffect(() => {
     if (!notificationsLoaded) return
-    saveNotifications(notifications)
-    if (getUseFirestore()) {
+      if (true) {
       saveFsNotifications(notifications)
         .then(() => {
           console.log('[Admin] Notifications saved to Firestore:', notifications.length)
@@ -304,8 +280,7 @@ export default function AdminPanel() {
 
   useEffect(() => {
     if (!upcomingExamsLoaded) return
-    saveUpcomingExams(upcomingExams)
-    if (getUseFirestore()) {
+      if (true) {
       saveFsUpcomingExams(upcomingExams)
         .then(() => {
           console.log('[Admin] Upcoming exams saved to Firestore:', upcomingExams.length)
@@ -317,8 +292,7 @@ export default function AdminPanel() {
 
   useEffect(() => {
     if (!dailyTipsLoaded) return
-    saveDailyTips(dailyTips)
-    if (getUseFirestore()) {
+      if (true) {
       saveFsDailyTips(dailyTips)
         .then(() => {
           console.log('[Admin] Daily tips saved to Firestore:', dailyTips.length)
@@ -330,8 +304,7 @@ export default function AdminPanel() {
 
   useEffect(() => {
     if (!prevPapersLoaded) return
-    savePrevYearPapers(prevPapers)
-    if (getUseFirestore()) {
+    if (true) {
       saveFsPrevYearPapers(prevPapers)
         .then(() => {
           console.log('[Admin] Prev year papers saved to Firestore:', prevPapers.length)
@@ -343,8 +316,7 @@ export default function AdminPanel() {
 
   useEffect(() => {
     if (!sidebarMenuLoaded) return
-    saveSidebarMenu(sidebarMenu)
-    if (getUseFirestore()) {
+      if (true) {
       saveFsSidebarMenu(sidebarMenu)
         .then(() => {
           console.log('[Admin] Sidebar menu saved to Firestore:', sidebarMenu.length)
@@ -426,7 +398,7 @@ export default function AdminPanel() {
     setAuthStatus('not_logged_in')
   }
 
-  const handleRefreshResults = () => setAllResults(getResults())
+  const handleRefreshResults = () => setAllResults([] as TestResult[])
 
   const handleTabChange = (tab: AdminTab) => {
     setAdminTab(tab)

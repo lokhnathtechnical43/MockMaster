@@ -10,7 +10,7 @@ import {
   CheckCircle2, ChevronRight, XCircle, AlertTriangle,
   Trash2, Download, ShieldBan, ShieldCheck
 } from 'lucide-react'
-import { type TestResult, getResults } from '@/lib/local-data'
+import { type TestResult } from '@/lib/local-data'
 import {
   getAllUsers, deleteUser as fsDeleteUser, updateUser as fsUpdateUser,
   type FirestoreUser

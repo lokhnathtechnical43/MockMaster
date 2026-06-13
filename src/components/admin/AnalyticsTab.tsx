@@ -11,7 +11,7 @@ import {
   getDashboardStats, getDailyStats, getResults, getCategories,
   type DashboardStats, type DailyStats, type FirestoreTestResult
 } from '@/lib/firestore-service'
-import { type TestResult, getResults as getLocalResults, getCategories as getLocalCategories } from '@/lib/local-data'
+import { type TestResult } from '@/lib/local-data'
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   PieChart, Pie, Cell, LineChart, Line
