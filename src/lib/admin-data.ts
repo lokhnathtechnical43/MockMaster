@@ -25,6 +25,19 @@ export interface UpcomingExam {
   date: string
   status: string
   statusType: 'open' | 'coming' | 'admit' | 'closed'
+  // Detail fields (shown when user taps on an upcoming exam)
+  description?: string           // Brief description of the exam
+  conductingBody?: string        // e.g. "SSC", "IBPS", "UPSC"
+  eligibility?: string           // e.g. "Graduate in any discipline"
+  examDate?: string              // Exact exam date, e.g. "15 Jul 2025"
+  applicationDeadline?: string   // Last date to apply, e.g. "30 Jun 2025"
+  applicationLink?: string       // URL to apply, e.g. "https://ssc.nic.in"
+  examMode?: string              // e.g. "Online (CBT)", "Offline (OMR)"
+  totalPosts?: string            // e.g. "5000 vacancies"
+  salary?: string                // e.g. "Rs. 25,500 - 81,100"
+  examPattern?: string           // e.g. "100 questions, 60 min, -0.25 negative"
+  importantDates?: string        // Multi-line important dates, e.g. "Reg Start: 1 Jun\nReg End: 30 Jun\nExam: 15 Jul"
+  officialWebsite?: string       // URL to official website
 }
 
 export interface DailyTip {
@@ -93,9 +106,51 @@ export const DEFAULT_NOTIFICATIONS: Notification[] = [
 ]
 
 export const DEFAULT_UPCOMING_EXAMS: UpcomingExam[] = [
-  { id: '1', name: 'SSC CGL 2025 Tier-I', date: 'Jul 2025', status: 'Registration Open', statusType: 'open' },
-  { id: '2', name: 'IBPS PO 2025 Prelims', date: 'Aug 2025', status: 'Coming Soon', statusType: 'coming' },
-  { id: '3', name: 'RRB NTPC CBT-2', date: 'Sep 2025', status: 'Admit Card Soon', statusType: 'admit' },
+  {
+    id: '1', name: 'SSC CGL 2025 Tier-I', date: 'Jul 2025', status: 'Registration Open', statusType: 'open',
+    description: 'Staff Selection Commission - Combined Graduate Level Examination 2025 for Group B & C posts in Government of India.',
+    conductingBody: 'SSC (Staff Selection Commission)',
+    eligibility: 'Bachelor\'s degree from a recognized university',
+    examDate: 'Jul-Aug 2025 (Tentative)',
+    applicationDeadline: '30 Jun 2025',
+    applicationLink: 'https://ssc.nic.in',
+    examMode: 'Online (CBT)',
+    totalPosts: '15,000+ vacancies',
+    salary: 'Rs. 25,500 - 81,100 (Level 4-7)',
+    examPattern: '100 questions, 60 min, +2 marks, -0.5 negative marking',
+    importantDates: 'Reg Start: 1 May 2025\nReg End: 30 Jun 2025\nTier-I Exam: Jul-Aug 2025\nTier-II Exam: Oct 2025',
+    officialWebsite: 'https://ssc.nic.in',
+  },
+  {
+    id: '2', name: 'IBPS PO 2025 Prelims', date: 'Aug 2025', status: 'Coming Soon', statusType: 'coming',
+    description: 'Institute of Banking Personnel Selection - Probationary Officer exam for recruitment in public sector banks.',
+    conductingBody: 'IBPS (Institute of Banking Personnel Selection)',
+    eligibility: 'Graduate in any discipline from a recognized university',
+    examDate: 'Aug-Sep 2025 (Tentative)',
+    applicationDeadline: 'To be announced',
+    applicationLink: 'https://ibps.in',
+    examMode: 'Online (CBT)',
+    totalPosts: '4,000+ vacancies',
+    salary: 'Rs. 36,000 - 63,840 (Basic + DA + HRA)',
+    examPattern: 'Prelims: 100 Qs, 60 min | Mains: 155 Qs, 180 min',
+    importantDates: 'Notification: Jun 2025\nReg Start: To be announced\nPrelims: Aug 2025\nMains: Nov 2025',
+    officialWebsite: 'https://ibps.in',
+  },
+  {
+    id: '3', name: 'RRB NTPC CBT-2', date: 'Sep 2025', status: 'Admit Card Soon', statusType: 'admit',
+    description: 'Railway Recruitment Board - Non-Technical Popular Categories CBT-2 for graduate & undergraduate posts in Indian Railways.',
+    conductingBody: 'RRB (Railway Recruitment Board)',
+    eligibility: '12th pass or Graduate (varies by post)',
+    examDate: 'Sep 2025',
+    applicationDeadline: 'Application closed',
+    applicationLink: 'https://rrbcdg.gov.in',
+    examMode: 'Online (CBT)',
+    totalPosts: '35,000+ vacancies',
+    salary: 'Rs. 19,900 - 63,200 (Level 2-5)',
+    examPattern: '120 questions, 90 min, +1 mark, -0.33 negative marking',
+    importantDates: 'CBT-1 Completed\nCBT-2: Sep 2025\nSkill Test: Nov 2025\nFinal Result: Jan 2026',
+    officialWebsite: 'https://rrbcdg.gov.in',
+  },
 ]
 
 export const DEFAULT_DAILY_TIPS: DailyTip[] = [

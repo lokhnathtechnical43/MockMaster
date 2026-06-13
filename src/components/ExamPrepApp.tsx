@@ -12,13 +12,14 @@ import {
   BookOpen, Trophy, Clock, CheckCircle2, XCircle, SkipForward,
   ChevronRight, ChevronLeft, Home, User, ArrowLeft, X,
   Play, Zap, Target, Award, Timer, RefreshCw, BookMarked,
-  GraduationCap, Shield, Building, Train, ShieldCheck, Swords,
+  GraduationCap, Shield, Building, Building2, Train, ShieldCheck, Swords,
   LogOut, Loader2, Mail, AlertTriangle, Settings, Bell,
   ChevronDown, Star, Flame, TrendingUp, Calendar, Gift,
   HelpCircle, Share2, MessageCircle, Crown,
   Menu, BookmarkPlus, Download, BarChart3, Wifi,
   ClipboardList, PenTool, Calculator, Camera, MapPin, Phone,
-  Edit3, Save, ChevronUp
+  Edit3, Save, ChevronUp, Monitor, Users, IndianRupee, Globe,
+  ExternalLink, FileText
 } from 'lucide-react'
 import {
   getCategories as getLocalCategories, getTestsByExam as getLocalTestsByExam,
@@ -45,7 +46,7 @@ import { getAnnouncements as getLocalAnnouncements, getNotifications as getLocal
 import { t, type Lang } from '@/lib/i18n'
 
 // ===== Types =====
-type Page = 'home' | 'exams' | 'tests' | 'test-info' | 'test-taking' | 'results' | 'leaderboard' | 'profile' | 'practice' | 'bookmarks' | 'perf-report' | 'daily-routine' | 'prev-papers' | 'your-exam'
+type Page = 'home' | 'exams' | 'tests' | 'test-info' | 'test-taking' | 'results' | 'leaderboard' | 'profile' | 'practice' | 'bookmarks' | 'perf-report' | 'daily-routine' | 'prev-papers' | 'your-exam' | 'upcoming-exam-detail'
 
 // ===== Unified Data Access (Firestore or Local) =====
 const isFirestore = () => getUseFirestore()
@@ -301,6 +302,7 @@ export default function ExamPrepApp() {
   >([])
   const [activeAnnouncement, setActiveAnnouncement] = useState(0)
   const [upcomingExams, setUpcomingExams] = useState<UpcomingExam[]>([])
+  const [selectedUpcomingExam, setSelectedUpcomingExam] = useState<UpcomingExam | null>(null)
   const [dailyTips, setDailyTips] = useState<DailyTip[]>([])
   const [prevPapers, setPrevPapers] = useState<PrevYearPaper[]>([])
   const [sidebarMenu, setSidebarMenu] = useState<SidebarMenuItem[]>([])
@@ -1209,7 +1211,7 @@ export default function ExamPrepApp() {
             </div>
             <div className="space-y-2">
               {upcomingExams.map((exam, i) => (
-                <Card key={i} className="border-0 shadow-sm overflow-hidden">
+                <Card key={i} className="border-0 shadow-sm overflow-hidden cursor-pointer active:scale-[0.98] transition-transform" onClick={() => { setSelectedUpcomingExam(exam); navigateTo('upcoming-exam-detail') }}>
                   <CardContent className="p-0">
                     <div className="flex items-center gap-3 p-3">
                       <div className="w-11 h-11 rounded-2xl bg-blue-50 flex items-center justify-center">
@@ -3579,6 +3581,181 @@ export default function ExamPrepApp() {
     )
   }
 
+  // ===== RENDER: Upcoming Exam Detail =====
+  function renderUpcomingExamDetail() {
+    const exam = selectedUpcomingExam
+    if (!exam) return null
+
+    const detailItems: { icon: React.ReactNode; label: string; value: string; isLink?: boolean }[] = []
+    if (exam.conductingBody) detailItems.push({ icon: <Building2 className="w-4 h-4" />, label: 'Conducting Body', value: exam.conductingBody })
+    if (exam.eligibility) detailItems.push({ icon: <GraduationCap className="w-4 h-4" />, label: 'Eligibility', value: exam.eligibility })
+    if (exam.examDate) detailItems.push({ icon: <Calendar className="w-4 h-4" />, label: 'Exam Date', value: exam.examDate })
+    if (exam.applicationDeadline) detailItems.push({ icon: <Clock className="w-4 h-4" />, label: 'Application Deadline', value: exam.applicationDeadline })
+    if (exam.examMode) detailItems.push({ icon: <Monitor className="w-4 h-4" />, label: 'Exam Mode', value: exam.examMode })
+    if (exam.totalPosts) detailItems.push({ icon: <Users className="w-4 h-4" />, label: 'Total Posts', value: exam.totalPosts })
+    if (exam.salary) detailItems.push({ icon: <IndianRupee className="w-4 h-4" />, label: 'Salary / Pay Scale', value: exam.salary })
+    if (exam.examPattern) detailItems.push({ icon: <FileText className="w-4 h-4" />, label: 'Exam Pattern', value: exam.examPattern })
+    if (exam.officialWebsite) detailItems.push({ icon: <Globe className="w-4 h-4" />, label: 'Official Website', value: exam.officialWebsite, isLink: true })
+    if (exam.applicationLink) detailItems.push({ icon: <ExternalLink className="w-4 h-4" />, label: 'Apply Now', value: exam.applicationLink, isLink: true })
+
+    return (
+      <div className="min-h-screen min-h-dvh bg-slate-50">
+        {/* Header */}
+        <div className="bg-gradient-to-br from-blue-600 via-indigo-600 to-blue-700 text-white">
+          <div className="px-3 pt-[calc(env(safe-area-inset-top,0px)+0.75rem)] pb-5">
+            <div className="flex items-center gap-3 mb-3">
+              <button
+                onClick={goBack}
+                className="w-9 h-9 rounded-lg bg-white/15 hover:bg-white/25 flex items-center justify-center transition-colors flex-shrink-0"
+              >
+                <ArrowLeft className="w-4 h-4" />
+              </button>
+              <div className="flex-1 min-w-0">
+                <p className="text-white/60 text-[10px] uppercase tracking-wider font-medium">Upcoming Exam</p>
+              </div>
+              <Badge className={`text-[10px] font-bold border-0 ${
+                exam.statusType === 'open' ? 'bg-emerald-400/30 text-emerald-100' :
+                exam.statusType === 'admit' ? 'bg-amber-400/30 text-amber-100' :
+                exam.statusType === 'closed' ? 'bg-gray-400/30 text-gray-200' :
+                'bg-blue-400/30 text-blue-100'
+              }`}>
+                {exam.status}
+              </Badge>
+            </div>
+            <h1 className="text-xl font-bold leading-tight">{exam.name}</h1>
+            {exam.description && (
+              <p className="text-white/70 text-sm mt-2 leading-relaxed">{exam.description}</p>
+            )}
+            <div className="flex items-center gap-2 mt-3">
+              <div className="flex items-center gap-1.5 text-white/80 text-xs">
+                <Calendar className="w-3.5 h-3.5" />
+                <span>{exam.date}</span>
+              </div>
+              {exam.conductingBody && (
+                <>
+                  <span className="text-white/40">|</span>
+                  <div className="flex items-center gap-1.5 text-white/80 text-xs">
+                    <Building2 className="w-3.5 h-3.5" />
+                    <span>{exam.conductingBody}</span>
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+
+        <div className="px-3 -mt-3 pb-6 space-y-3">
+          {/* Important Dates Card */}
+          {exam.importantDates && (
+            <Card className="border-0 shadow-md overflow-hidden">
+              <div className="bg-gradient-to-r from-amber-500 to-orange-500 px-4 py-2.5">
+                <h3 className="text-white font-bold text-sm flex items-center gap-2">
+                  <Calendar className="w-4 h-4" /> Important Dates
+                </h3>
+              </div>
+              <CardContent className="p-3">
+                <div className="space-y-1.5">
+                  {exam.importantDates.split('\n').filter(Boolean).map((line, idx) => {
+                    const colonIdx = line.indexOf(':')
+                    const label = colonIdx > 0 ? line.substring(0, colonIdx + 1) : ''
+                    const value = colonIdx > 0 ? line.substring(colonIdx + 1) : line
+                    return (
+                      <div key={idx} className="flex items-start gap-2 text-sm">
+                        <div className="w-2 h-2 rounded-full bg-amber-400 mt-1.5 flex-shrink-0" />
+                        {label ? (
+                          <p className="text-gray-700">
+                            <span className="font-medium text-gray-900">{label}</span>{value}
+                          </p>
+                        ) : (
+                          <p className="text-gray-700">{line}</p>
+                        )}
+                      </div>
+                    )
+                  })}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Detail Info Cards */}
+          {detailItems.length > 0 && (
+            <Card className="border-0 shadow-md overflow-hidden">
+              <div className="bg-gradient-to-r from-blue-500 to-indigo-500 px-4 py-2.5">
+                <h3 className="text-white font-bold text-sm flex items-center gap-2">
+                  <FileText className="w-4 h-4" /> Exam Details
+                </h3>
+              </div>
+              <CardContent className="p-0">
+                {detailItems.map((item, idx) => (
+                  <div key={idx} className={`flex items-start gap-3 px-4 py-3 ${idx < detailItems.length - 1 ? 'border-b border-gray-50' : ''}`}>
+                    <div className="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center flex-shrink-0 text-blue-500">
+                      {item.icon}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-[10px] text-gray-400 uppercase tracking-wider font-medium">{item.label}</p>
+                      {item.isLink ? (
+                        <a
+                          href={item.value}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-blue-600 text-sm font-medium hover:underline break-all"
+                          onClick={e => e.stopPropagation()}
+                        >
+                          {item.label === 'Apply Now' ? 'Click here to apply →' : item.value}
+                        </a>
+                      ) : (
+                        <p className="text-gray-800 text-sm font-medium">{item.value}</p>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Quick Action Buttons */}
+          <div className="flex gap-2">
+            {exam.applicationLink && (
+              <a
+                href={exam.applicationLink}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex-1"
+              >
+                <Button className="w-full h-12 bg-gradient-to-r from-emerald-500 to-teal-500 text-white rounded-2xl text-sm font-bold shadow-lg shadow-emerald-200 hover:shadow-xl transition-all">
+                  <ExternalLink className="w-4 h-4 mr-2" /> Apply Now
+                </Button>
+              </a>
+            )}
+            {exam.officialWebsite && (
+              <a
+                href={exam.officialWebsite}
+                target="_blank"
+                rel="noopener noreferrer"
+                className={exam.applicationLink ? '' : 'flex-1'}
+              >
+                <Button className={`h-12 bg-gradient-to-r from-blue-500 to-indigo-500 text-white rounded-2xl text-sm font-bold shadow-lg shadow-blue-200 hover:shadow-xl transition-all ${exam.applicationLink ? 'px-4' : 'w-full'}`}>
+                  <Globe className="w-4 h-4 mr-2" /> Official Website
+                </Button>
+              </a>
+            )}
+          </div>
+
+          {/* No details message */}
+          {detailItems.length === 0 && !exam.importantDates && (
+            <Card className="border-0 shadow-sm">
+              <CardContent className="p-6 text-center">
+                <Calendar className="w-10 h-10 text-gray-300 mx-auto mb-2" />
+                <p className="text-gray-400 text-sm">No detailed information available yet</p>
+                <p className="text-gray-300 text-xs mt-1">Admin can add details from the admin panel</p>
+              </CardContent>
+            </Card>
+          )}
+        </div>
+      </div>
+    )
+  }
+
   // ===== RENDER: Bottom Navigation =====
   function renderBottomNav() {
     const pages: Page[] = ['home', 'practice', 'tests', 'leaderboard']
@@ -3641,6 +3818,7 @@ export default function ExamPrepApp() {
       case 'daily-routine': return renderDailyRoutine()
       case 'prev-papers': return renderPrevPapers()
       case 'your-exam': return renderYourExam()
+      case 'upcoming-exam-detail': return renderUpcomingExamDetail()
       default: return renderHome()
     }
   }
@@ -4157,18 +4335,5 @@ export default function ExamPrepApp() {
         />
       )}
     </div>
-  )
-}
-
-// Missing icon helper
-function FileText(props: React.SVGProps<SVGSVGElement>) {
-  return (
-    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
-      <path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z" />
-      <path d="M14 2v4a2 2 0 0 0 2 2h4" />
-      <path d="M10 9H8" />
-      <path d="M16 13H8" />
-      <path d="M16 17H8" />
-    </svg>
   )
 }

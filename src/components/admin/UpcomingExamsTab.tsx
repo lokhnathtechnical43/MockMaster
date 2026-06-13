@@ -6,7 +6,7 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import {
   Calendar, Plus, Trash2, RefreshCw, Edit3, X, Check,
-  ArrowUp, ArrowDown
+  ArrowUp, ArrowDown, ChevronDown, ChevronUp
 } from 'lucide-react'
 import {
   type UpcomingExam,
@@ -18,16 +18,47 @@ interface UpcomingExamsTabProps {
   onUpdate: (exams: UpcomingExam[]) => void
 }
 
+// Detail field definitions for the form
+const DETAIL_FIELDS: { key: keyof UpcomingExam; label: string; placeholder: string; multiline?: boolean }[] = [
+  { key: 'description', label: 'Description', placeholder: 'Brief description of the exam', multiline: true },
+  { key: 'conductingBody', label: 'Conducting Body', placeholder: 'e.g. SSC, IBPS, UPSC' },
+  { key: 'eligibility', label: 'Eligibility', placeholder: 'e.g. Graduate in any discipline' },
+  { key: 'examDate', label: 'Exam Date', placeholder: 'e.g. 15 Jul 2025' },
+  { key: 'applicationDeadline', label: 'Application Deadline', placeholder: 'e.g. 30 Jun 2025' },
+  { key: 'applicationLink', label: 'Application Link', placeholder: 'e.g. https://ssc.nic.in' },
+  { key: 'examMode', label: 'Exam Mode', placeholder: 'e.g. Online (CBT), Offline (OMR)' },
+  { key: 'totalPosts', label: 'Total Posts / Vacancies', placeholder: 'e.g. 5000 vacancies' },
+  { key: 'salary', label: 'Salary / Pay Scale', placeholder: 'e.g. Rs. 25,500 - 81,100' },
+  { key: 'examPattern', label: 'Exam Pattern', placeholder: 'e.g. 100 questions, 60 min, -0.25 negative' },
+  { key: 'importantDates', label: 'Important Dates', placeholder: 'One per line: Reg Start: 1 Jun\nReg End: 30 Jun', multiline: true },
+  { key: 'officialWebsite', label: 'Official Website', placeholder: 'e.g. https://ssc.nic.in' },
+]
+
+// Create an empty detail fields object
+function emptyDetailFields(): Record<string, string> {
+  const fields: Record<string, string> = {}
+  DETAIL_FIELDS.forEach(f => { fields[f.key] = '' })
+  return fields
+}
+
 export default function UpcomingExamsTab({ exams, onUpdate }: UpcomingExamsTabProps) {
   const [newName, setNewName] = useState('')
   const [newDate, setNewDate] = useState('')
   const [newStatus, setNewStatus] = useState('')
   const [newStatusType, setNewStatusType] = useState<UpcomingExam['statusType']>('coming')
+  const [newDetails, setNewDetails] = useState<Record<string, string>>(emptyDetailFields())
+  const [showNewDetails, setShowNewDetails] = useState(false)
+
   const [editingIndex, setEditingIndex] = useState<number | null>(null)
   const [editName, setEditName] = useState('')
   const [editDate, setEditDate] = useState('')
   const [editStatus, setEditStatus] = useState('')
   const [editStatusType, setEditStatusType] = useState<UpcomingExam['statusType']>('coming')
+  const [editDetails, setEditDetails] = useState<Record<string, string>>(emptyDetailFields())
+  const [showEditDetails, setShowEditDetails] = useState(false)
+
+  // Track which exam cards are expanded (showing detail preview)
+  const [expandedCard, setExpandedCard] = useState<number | null>(null)
 
   const statusTypes = [
     { label: 'Registration Open', value: 'open' as const, color: 'bg-emerald-100 text-emerald-700' },
@@ -43,15 +74,19 @@ export default function UpcomingExamsTab({ exams, onUpdate }: UpcomingExamsTabPr
       date: newDate,
       status: newStatus,
       statusType: newStatusType,
+      ...Object.fromEntries(Object.entries(newDetails).filter(([_, v]) => v.trim() !== '')),
     }
     onUpdate([...exams, newExam])
     setNewName('')
     setNewDate('')
     setNewStatus('')
+    setNewDetails(emptyDetailFields())
+    setShowNewDetails(false)
   }
 
   const handleDelete = (index: number) => {
     if (editingIndex === index) setEditingIndex(null)
+    if (expandedCard === index) setExpandedCard(null)
     onUpdate(exams.filter((_, i) => i !== index))
   }
 
@@ -62,6 +97,13 @@ export default function UpcomingExamsTab({ exams, onUpdate }: UpcomingExamsTabPr
     setEditDate(e.date)
     setEditStatus(e.status)
     setEditStatusType(e.statusType)
+    // Load existing detail fields
+    const details: Record<string, string> = {}
+    DETAIL_FIELDS.forEach(f => {
+      details[f.key] = (e as any)[f.key] || ''
+    })
+    setEditDetails(details)
+    setShowEditDetails(false)
   }
 
   const handleCancelEdit = () => {
@@ -77,7 +119,15 @@ export default function UpcomingExamsTab({ exams, onUpdate }: UpcomingExamsTabPr
       date: editDate,
       status: editStatus,
       statusType: editStatusType,
+      // Only include non-empty detail fields
+      ...Object.fromEntries(Object.entries(editDetails).filter(([_, v]) => v.trim() !== '')),
     }
+    // Remove detail fields that were cleared
+    DETAIL_FIELDS.forEach(f => {
+      if (!editDetails[f.key]?.trim()) {
+        delete (updated[editingIndex] as any)[f.key]
+      }
+    })
     onUpdate(updated)
     setEditingIndex(null)
   }
@@ -100,6 +150,16 @@ export default function UpcomingExamsTab({ exams, onUpdate }: UpcomingExamsTabPr
     onUpdate(updated)
   }
 
+  // Check if an exam has any detail fields filled
+  const hasDetails = (exam: UpcomingExam): boolean => {
+    return DETAIL_FIELDS.some(f => (exam as any)[f.key]?.trim())
+  }
+
+  // Count how many detail fields are filled
+  const countDetails = (exam: UpcomingExam): number => {
+    return DETAIL_FIELDS.filter(f => (exam as any)[f.key]?.trim()).length
+  }
+
   return (
     <div className="space-y-4">
       {/* Add New Upcoming Exam */}
@@ -113,21 +173,21 @@ export default function UpcomingExamsTab({ exams, onUpdate }: UpcomingExamsTabPr
               type="text"
               value={newName}
               onChange={e => setNewName(e.target.value)}
-              placeholder="Exam name (e.g. SSC CGL 2025 Tier-I)"
+              placeholder="Exam name (e.g. SSC CGL 2025 Tier-I) *"
               className="w-full px-3 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300"
             />
             <input
               type="text"
               value={newDate}
               onChange={e => setNewDate(e.target.value)}
-              placeholder="Date (e.g. Jul 2025)"
+              placeholder="Date (e.g. Jul 2025) *"
               className="w-full px-3 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300"
             />
             <input
               type="text"
               value={newStatus}
               onChange={e => setNewStatus(e.target.value)}
-              placeholder="Status text (e.g. Registration Open)"
+              placeholder="Status text (e.g. Registration Open) *"
               className="w-full px-3 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300"
             />
             <div>
@@ -146,6 +206,48 @@ export default function UpcomingExamsTab({ exams, onUpdate }: UpcomingExamsTabPr
                 ))}
               </div>
             </div>
+
+            {/* Detail Fields Toggle */}
+            <button
+              type="button"
+              onClick={() => setShowNewDetails(!showNewDetails)}
+              className="w-full flex items-center justify-between px-3 py-2 rounded-lg bg-gray-50 hover:bg-gray-100 text-xs text-gray-600 transition-colors"
+            >
+              <span className="font-medium flex items-center gap-1.5">
+                <Calendar className="w-3.5 h-3.5" />
+                Detailed Info (shown when user taps on exam)
+              </span>
+              {showNewDetails ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+            </button>
+
+            {showNewDetails && (
+              <div className="space-y-2.5 p-3 bg-blue-50/50 rounded-xl border border-blue-100">
+                <p className="text-[10px] text-blue-500 font-medium uppercase tracking-wider">Exam Details</p>
+                {DETAIL_FIELDS.map(f => (
+                  <div key={f.key}>
+                    <label className="text-[11px] text-gray-500 font-medium block mb-1">{f.label}</label>
+                    {f.multiline ? (
+                      <textarea
+                        value={newDetails[f.key] || ''}
+                        onChange={e => setNewDetails(prev => ({ ...prev, [f.key]: e.target.value }))}
+                        placeholder={f.placeholder}
+                        rows={3}
+                        className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300 resize-y"
+                      />
+                    ) : (
+                      <input
+                        type={f.key.toLowerCase().includes('link') || f.key.toLowerCase().includes('website') ? 'url' : 'text'}
+                        value={newDetails[f.key] || ''}
+                        onChange={e => setNewDetails(prev => ({ ...prev, [f.key]: e.target.value }))}
+                        placeholder={f.placeholder}
+                        className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300"
+                      />
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+
             <Button
               className="w-full bg-gradient-to-r from-blue-500 to-indigo-500 hover:from-blue-600 hover:to-indigo-600 text-white rounded-xl h-11 font-semibold"
               disabled={!newName || !newDate || !newStatus}
@@ -248,6 +350,47 @@ export default function UpcomingExamsTab({ exams, onUpdate }: UpcomingExamsTabPr
                         ))}
                       </div>
                     </div>
+
+                    {/* Detail Fields Toggle for Edit */}
+                    <button
+                      type="button"
+                      onClick={() => setShowEditDetails(!showEditDetails)}
+                      className="w-full flex items-center justify-between px-3 py-2 rounded-lg bg-gray-50 hover:bg-gray-100 text-xs text-gray-600 transition-colors"
+                    >
+                      <span className="font-medium flex items-center gap-1.5">
+                        <Calendar className="w-3.5 h-3.5" />
+                        Detailed Info ({DETAIL_FIELDS.filter(f => editDetails[f.key]?.trim()).length} filled)
+                      </span>
+                      {showEditDetails ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+                    </button>
+
+                    {showEditDetails && (
+                      <div className="space-y-2.5 p-3 bg-blue-50/50 rounded-xl border border-blue-100">
+                        <p className="text-[10px] text-blue-500 font-medium uppercase tracking-wider">Exam Details</p>
+                        {DETAIL_FIELDS.map(f => (
+                          <div key={f.key}>
+                            <label className="text-[11px] text-gray-500 font-medium block mb-1">{f.label}</label>
+                            {f.multiline ? (
+                              <textarea
+                                value={editDetails[f.key] || ''}
+                                onChange={e => setEditDetails(prev => ({ ...prev, [f.key]: e.target.value }))}
+                                placeholder={f.placeholder}
+                                rows={3}
+                                className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300 resize-y"
+                              />
+                            ) : (
+                              <input
+                                type={f.key.toLowerCase().includes('link') || f.key.toLowerCase().includes('website') ? 'url' : 'text'}
+                                value={editDetails[f.key] || ''}
+                                onChange={e => setEditDetails(prev => ({ ...prev, [f.key]: e.target.value }))}
+                                placeholder={f.placeholder}
+                                className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300"
+                              />
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </CardContent>
                 ) : (
                   /* View Mode */
@@ -268,9 +411,21 @@ export default function UpcomingExamsTab({ exams, onUpdate }: UpcomingExamsTabPr
                           }`}>
                             {exam.status}
                           </Badge>
+                          {hasDetails(exam) && (
+                            <Badge className="text-[9px] font-bold border-0 bg-purple-100 text-purple-700">
+                              {countDetails(exam)} details
+                            </Badge>
+                          )}
                         </div>
                       </div>
                       <div className="flex items-center gap-1 flex-shrink-0">
+                        <button
+                          onClick={() => setExpandedCard(expandedCard === i ? null : i)}
+                          className="w-7 h-7 rounded-lg bg-purple-50 hover:bg-purple-100 flex items-center justify-center transition-colors"
+                          title="Preview details"
+                        >
+                          {expandedCard === i ? <ChevronUp className="w-3.5 h-3.5 text-purple-500" /> : <ChevronDown className="w-3.5 h-3.5 text-purple-500" />}
+                        </button>
                         <button
                           onClick={() => handleMoveUp(i)}
                           disabled={i === 0}
@@ -303,6 +458,25 @@ export default function UpcomingExamsTab({ exams, onUpdate }: UpcomingExamsTabPr
                         </button>
                       </div>
                     </div>
+
+                    {/* Expanded detail preview */}
+                    {expandedCard === i && hasDetails(exam) && (
+                      <div className="mt-2 pt-2 border-t border-gray-100">
+                        <div className="grid grid-cols-2 gap-1.5 text-[11px]">
+                          {DETAIL_FIELDS.map(f => (exam as any)[f.key]?.trim() ? (
+                            <div key={f.key} className="bg-gray-50 rounded-lg px-2 py-1.5">
+                              <span className="text-gray-400 font-medium">{f.label}:</span>{' '}
+                              <span className="text-gray-700">
+                                {f.multiline
+                                  ? (exam as any)[f.key].split('\n')[0] + ((exam as any)[f.key].split('\n').length > 1 ? '...' : '')
+                                  : (exam as any)[f.key]
+                                }
+                              </span>
+                            </div>
+                          ) : null)}
+                        </div>
+                      </div>
+                    )}
                   </CardContent>
                 )}
               </Card>
