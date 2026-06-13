@@ -196,6 +196,7 @@ export default function ExamPrepApp() {
   const [showExitConfirm, setShowExitConfirm] = useState(false)
   const [showGuestAuthModal, setShowGuestAuthModal] = useState(false)
   const [guestAuthMode, setGuestAuthMode] = useState<'qp-limit' | 'login-required'>('login-required')
+  const [quickPracticeLoading, setQuickPracticeLoading] = useState(false)
   const [currentTestMode, setCurrentTestMode] = useState<'real' | 'practice'>('real') // Track if current test is real or practice
   const [showAnswerKey, setShowAnswerKey] = useState(false)
   const [pdfSharing, setPdfSharing] = useState(false)
@@ -839,45 +840,60 @@ export default function ExamPrepApp() {
       setShowGuestAuthModal(true)
       return
     }
-    // Get fresh categories directly from local data (not stale state)
-    const freshCats = getLocalCategories()
-    const allExams = freshCats.flatMap(c => c.exams)
-    if (allExams.length === 0) return
-    // Try to find an exam with tests that have questions
-    // Shuffle exams for randomness, try all of them
-    const shuffledExams = [...allExams].sort(() => Math.random() - 0.5)
-    for (const randomExam of shuffledExams) {
-      const randomCat = freshCats.find(c => c.exams.some(e => e.id === randomExam.id))
-      if (!randomCat) continue
-      try {
-        const tests = await fetchTestsByExam(randomExam.id)
-        if (tests.length > 0) {
-          // Find a test with questions
-          for (const test of tests) {
-            const fullTest = await fetchTestById(test.id)
-            if (fullTest && fullTest.questions && fullTest.questions.length > 0) {
-              setSelectedExam(randomExam)
-              setSelectedCategory(randomCat)
-              setExamTests(tests)
-              setCurrentTestMode('practice')
-              setSelectedTest(fullTest)
-              setAnswers({})
-              setMarkedForReview(new Set())
-              setCurrentQuestionIndex(0)
-              setTimeLeft(fullTest.duration * 60)
-              setTestActive(true)
-              navigateTo('test-taking')
-              if (auth.needsRealAccount) {
-                auth.markGuestQuickPracticeUsed()
+    // Prevent double-tap
+    if (quickPracticeLoading) return
+    setQuickPracticeLoading(true)
+
+    try {
+      // Use categories state (which has correct data from Firestore or local)
+      // instead of getLocalCategories() which only returns local data
+      // and causes exam ID mismatch in Firestore mode
+      const freshCats = categories.length > 0 ? categories : getLocalCategories()
+      const allExams = freshCats.flatMap(c => c.exams)
+      if (allExams.length === 0) {
+        alert(_t('home.noTestsAvailable') || 'No tests available right now. Please try again later.')
+        return
+      }
+      // Try to find an exam with tests that have questions
+      // Shuffle exams for randomness, try all of them
+      const shuffledExams = [...allExams].sort(() => Math.random() - 0.5)
+      for (const randomExam of shuffledExams) {
+        const randomCat = freshCats.find(c => c.exams.some(e => e.id === randomExam.id))
+        if (!randomCat) continue
+        try {
+          const tests = await fetchTestsByExam(randomExam.id)
+          if (tests.length > 0) {
+            // Find a test with questions
+            for (const test of tests) {
+              const fullTest = await fetchTestById(test.id)
+              if (fullTest && fullTest.questions && fullTest.questions.length > 0) {
+                setSelectedExam(randomExam)
+                setSelectedCategory(randomCat)
+                setExamTests(tests)
+                setCurrentTestMode('practice')
+                setSelectedTest(fullTest)
+                setAnswers({})
+                setMarkedForReview(new Set())
+                setCurrentQuestionIndex(0)
+                setTimeLeft(fullTest.duration * 60)
+                setTestActive(true)
+                navigateTo('test-taking')
+                if (auth.needsRealAccount) {
+                  auth.markGuestQuickPracticeUsed()
+                }
+                return
               }
-              return
             }
           }
+        } catch (e) {
+          console.warn('Quick Practice: failed for exam', randomExam.id, e)
+          continue
         }
-      } catch (e) {
-        console.warn('Quick Practice: failed for exam', randomExam.id, e)
-        continue
       }
+      // If we get here, no test with questions was found
+      alert(_t('home.noTestsAvailable') || 'No tests available right now. Please try again later.')
+    } finally {
+      setQuickPracticeLoading(false)
     }
   }
 
@@ -1397,11 +1413,16 @@ export default function ExamPrepApp() {
                   className={`rounded-xl font-bold shadow-md active:scale-95 transition-all ${
                     auth.needsRealAccount && !auth.canGuestUseQuickPractice
                       ? 'bg-white/30 text-white cursor-not-allowed'
+                      : quickPracticeLoading
+                      ? 'bg-white text-orange-600 opacity-70 cursor-wait'
                       : 'bg-white text-orange-600 hover:bg-white/90'
                   }`}
                   onClick={handleQuickPractice}
+                  disabled={quickPracticeLoading}
                 >
-                  {auth.needsRealAccount && !auth.canGuestUseQuickPractice ? (
+                  {quickPracticeLoading ? (
+                    <><Loader2 className="w-4 h-4 mr-1 animate-spin" /> {_t('home.loading') || 'Loading...'}</>
+                  ) : auth.needsRealAccount && !auth.canGuestUseQuickPractice ? (
                     <><Lock className="w-4 h-4 mr-1" /> {_t('guest.alreadyUsed')}</>
                   ) : (
                     <><Play className="w-4 h-4 mr-1" /> {_t('home.start')}</>
@@ -2784,16 +2805,18 @@ export default function ExamPrepApp() {
             <h2 className="font-bold text-lg mb-3">{_t('practice.chooseMode')}</h2>
             <div className="grid grid-cols-2 gap-3">
               {/* Quick Practice - Pick a random test and start */}
-              <Card className={`border-0 shadow-sm cursor-pointer hover:shadow-md transition-shadow active:scale-[0.97] ${auth.needsRealAccount && !auth.canGuestUseQuickPractice ? 'opacity-60' : ''}`} onClick={handleQuickPractice}>
+              <Card className={`border-0 shadow-sm cursor-pointer hover:shadow-md transition-shadow active:scale-[0.97] ${auth.needsRealAccount && !auth.canGuestUseQuickPractice ? 'opacity-60' : ''} ${quickPracticeLoading ? 'opacity-70' : ''}`} onClick={quickPracticeLoading ? undefined : handleQuickPractice}>
                 <CardContent className="p-4 text-center">
-                  <div className={`w-12 h-12 rounded-2xl flex items-center justify-center mx-auto mb-2 ${auth.needsRealAccount && !auth.canGuestUseQuickPractice ? 'bg-gray-100' : 'bg-orange-50'}`}>
-                    {auth.needsRealAccount && !auth.canGuestUseQuickPractice ? (
+                  <div className={`w-12 h-12 rounded-2xl flex items-center justify-center mx-auto mb-2 ${quickPracticeLoading ? 'bg-orange-50' : auth.needsRealAccount && !auth.canGuestUseQuickPractice ? 'bg-gray-100' : 'bg-orange-50'}`}>
+                    {quickPracticeLoading ? (
+                      <Loader2 className="w-6 h-6 text-orange-500 animate-spin" />
+                    ) : auth.needsRealAccount && !auth.canGuestUseQuickPractice ? (
                       <Lock className="w-6 h-6 text-gray-400" />
                     ) : (
                       <Zap className="w-6 h-6 text-orange-500" />
                     )}
                   </div>
-                  <p className="font-semibold text-sm">{_t('practice.quick')}</p>
+                  <p className="font-semibold text-sm">{quickPracticeLoading ? (_t('home.loading') || 'Loading...') : _t('practice.quick')}</p>
                   <p className="text-gray-400 text-[11px] mt-1">
                     {auth.needsRealAccount && !auth.canGuestUseQuickPractice
                       ? _t('guest.alreadyUsed')
