@@ -130,12 +130,16 @@ export default function AdminPanel() {
           } else {
             setAnnouncements(getAnnouncements())
           }
+          setAnnouncementsLoaded(true)
+
           const fsNotif = await getFsNotifications()
           if (fsNotif && fsNotif.length > 0) {
             setNotifications(fsNotif)
           } else {
             setNotifications(getNotifications())
           }
+          setNotificationsLoaded(true)
+
           const fsResults = await getFsResults()
           setAllResults(fsResults as TestResult[] || getResults())
         } catch (e) {
@@ -143,11 +147,15 @@ export default function AdminPanel() {
           setAnnouncements(getAnnouncements())
           setNotifications(getNotifications())
           setAllResults(getResults())
+          setAnnouncementsLoaded(true)
+          setNotificationsLoaded(true)
         }
       } else {
         setAnnouncements(getAnnouncements())
         setNotifications(getNotifications())
         setAllResults(getResults())
+        setAnnouncementsLoaded(true)
+        setNotificationsLoaded(true)
       }
     }
     loadData()
@@ -171,27 +179,29 @@ export default function AdminPanel() {
   }, [authStatus])
 
   // Save data when it changes (both local + Firestore)
-  useEffect(() => {
-    if (announcements.length > 0) {
-      saveAnnouncements(announcements)
-      if (getUseFirestore()) {
-        saveFsAnnouncements(announcements).catch(e =>
-          console.warn('[Admin] Firestore save announcements failed:', e)
-        )
-      }
-    }
-  }, [announcements])
+  // Always save - even empty lists (so deletes persist)
+  const [announcementsLoaded, setAnnouncementsLoaded] = useState(false)
+  const [notificationsLoaded, setNotificationsLoaded] = useState(false)
 
   useEffect(() => {
-    if (notifications.length > 0) {
-      saveNotifications(notifications)
-      if (getUseFirestore()) {
-        saveFsNotifications(notifications).catch(e =>
-          console.warn('[Admin] Firestore save notifications failed:', e)
-        )
-      }
+    if (!announcementsLoaded) return
+    saveAnnouncements(announcements)
+    if (getUseFirestore()) {
+      saveFsAnnouncements(announcements)
+        .then(() => console.log('[Admin] Announcements saved to Firestore:', announcements.length))
+        .catch(e => console.warn('[Admin] Firestore save announcements failed:', e))
     }
-  }, [notifications])
+  }, [announcements, announcementsLoaded])
+
+  useEffect(() => {
+    if (!notificationsLoaded) return
+    saveNotifications(notifications)
+    if (getUseFirestore()) {
+      saveFsNotifications(notifications)
+        .then(() => console.log('[Admin] Notifications saved to Firestore:', notifications.length))
+        .catch(e => console.warn('[Admin] Firestore save notifications failed:', e))
+    }
+  }, [notifications, notificationsLoaded])
 
   // --- Firebase Auth Login ---
   const handleLogin = async () => {
