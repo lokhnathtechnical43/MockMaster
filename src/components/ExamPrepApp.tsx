@@ -551,8 +551,8 @@ export default function ExamPrepApp() {
   const [secureBlurActive, setSecureBlurActive] = useState(false)
 
   useEffect(() => {
-    // Only protect when test is active or on results page
-    const isSecurePage = testActive || currentPage === 'test-taking' || currentPage === 'results'
+    // Protect all pages where questions/answers are displayed
+    const isSecurePage = testActive || currentPage === 'test-taking' || currentPage === 'results' || currentPage === 'bookmarks' || currentPage === 'practice'
     if (!isSecurePage) return
 
     // Block keyboard shortcuts: Ctrl+C, Ctrl+P, Ctrl+S, Ctrl+A, PrintScreen, F12
@@ -628,6 +628,20 @@ export default function ExamPrepApp() {
       return false
     }
 
+    // Block drag events (prevent dragging text/images)
+    const handleDragStart = (e: DragEvent) => {
+      e.preventDefault()
+      return false
+    }
+
+    // Detect text selection and clear it immediately
+    const handleSelectionChange = () => {
+      const selection = window.getSelection()
+      if (selection && selection.toString().length > 0) {
+        selection.removeAllRanges()
+      }
+    }
+
     // Blur on visibility change (anti-screenshot when switching apps)
     const handleVisibilityChange = () => {
       if (document.hidden) {
@@ -657,6 +671,8 @@ export default function ExamPrepApp() {
     document.addEventListener('copy', handleCopy)
     document.addEventListener('cut', handleCut)
     document.addEventListener('contextmenu', handleContextMenu)
+    document.addEventListener('dragstart', handleDragStart)
+    document.addEventListener('selectionchange', handleSelectionChange)
     document.addEventListener('visibilitychange', handleVisibilityChange)
     window.addEventListener('blur', handleWindowBlur)
     window.addEventListener('focus', handleWindowFocus)
@@ -666,6 +682,8 @@ export default function ExamPrepApp() {
       document.removeEventListener('copy', handleCopy)
       document.removeEventListener('cut', handleCut)
       document.removeEventListener('contextmenu', handleContextMenu)
+      document.removeEventListener('dragstart', handleDragStart)
+      document.removeEventListener('selectionchange', handleSelectionChange)
       document.removeEventListener('visibilitychange', handleVisibilityChange)
       window.removeEventListener('blur', handleWindowBlur)
       window.removeEventListener('focus', handleWindowFocus)
@@ -2614,7 +2632,7 @@ export default function ExamPrepApp() {
     const weakAreas = getWeakAreas()
 
     return (
-      <div className="pb-20">
+      <div className="pb-20 secure-content" style={{ userSelect: 'none', WebkitUserSelect: 'none' }} onContextMenu={e => e.preventDefault()}>
         <div className="bg-gradient-to-r from-orange-500 to-red-500 px-4 pt-[calc(env(safe-area-inset-top,0px)+3rem)] pb-6 rounded-b-3xl">
           <div className="flex items-center gap-3 mb-2">
             <button onClick={goBack} className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center">
@@ -2863,7 +2881,7 @@ export default function ExamPrepApp() {
     })
 
     return (
-      <div className="min-h-screen bg-gray-50">
+      <div className="min-h-screen bg-gray-50 secure-content" style={{ userSelect: 'none', WebkitUserSelect: 'none' }} onContextMenu={e => e.preventDefault()}>
         {/* Header */}
         <div className="bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 px-4 pt-[calc(env(safe-area-inset-top,0px)+1rem)] pb-5">
           <div className="flex items-center gap-3 mb-3">
@@ -2890,8 +2908,10 @@ export default function ExamPrepApp() {
             </Card>
           ) : (
             allBookmarkedQuestions.map((item, i) => (
-              <Card key={item.question.id} className="border-0 shadow-sm">
-                <CardContent className="p-4">
+              <Card key={item.question.id} className="border-0 shadow-sm relative overflow-hidden secure-content" onContextMenu={e => e.preventDefault()}>
+                {/* Watermark for copy protection */}
+                <div className="watermark-overlay" />
+                <CardContent className="p-4 relative z-10">
                   <div className="flex items-start gap-3">
                     <div className="w-8 h-8 rounded-lg bg-orange-50 flex items-center justify-center shrink-0">
                       <span className="text-orange-600 font-bold text-sm">{i + 1}</span>
