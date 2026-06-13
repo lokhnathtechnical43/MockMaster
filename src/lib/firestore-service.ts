@@ -211,6 +211,7 @@ export interface FirestoreNotification {
 export interface DashboardStats {
   totalUsers: number
   totalTests: number
+  totalExams: number
   totalResults: number
   avgScore: number
   recentActivity: FirestoreTestResult[]
@@ -1082,9 +1083,11 @@ export async function getDashboardStats(): Promise<DashboardStats> {
     const usersSnap = await getDocs(collection(db, COLLECTIONS.users))
     const totalUsers = usersSnap.size
 
-    // Total tests
+    // Total tests + exams
     const testsSnap = await getDocs(collection(db, COLLECTIONS.tests))
     const totalTests = testsSnap.size
+    const examsSnap = await getDocs(collection(db, COLLECTIONS.exams))
+    const totalExams = examsSnap.size
 
     // Total results + avg score + recent activity
     const resultsSnap = await getDocs(
@@ -1111,12 +1114,13 @@ export async function getDashboardStats(): Promise<DashboardStats> {
 
     const avgScore = totalResults > 0 ? Math.round(totalScore / totalResults) : 0
 
-    return { totalUsers, totalTests, totalResults, avgScore, recentActivity }
+    return { totalUsers, totalTests, totalExams, totalResults, avgScore, recentActivity }
   } catch (error) {
     console.error('[Firestore] getDashboardStats error, returning defaults:', error)
     return {
       totalUsers: 0,
       totalTests: ALL_TESTS.length,
+      totalExams: 0,
       totalResults: 0,
       avgScore: 0,
       recentActivity: [],

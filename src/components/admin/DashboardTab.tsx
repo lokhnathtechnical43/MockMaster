@@ -42,6 +42,7 @@ export default function DashboardTab({ announcements, notifications, allResults,
 
   const totalUsers = stats?.totalUsers ?? new Set(allResults.map(r => r.userId)).size
   const totalTestsTaken = stats?.totalResults ?? allResults.length
+  const totalExams = stats?.totalExams ?? 0
   const avgScore = stats?.avgScore ?? (allResults.length > 0
     ? Math.round(allResults.reduce((sum, r) => sum + (r.score / r.maxScore) * 100, 0) / allResults.length)
     : 0)
@@ -85,7 +86,7 @@ export default function DashboardTab({ announcements, notifications, allResults,
                 <BookOpen className="w-5 h-5 text-white" />
               </div>
               <div>
-                <p className="text-2xl font-bold text-emerald-600">21+</p>
+                <p className="text-2xl font-bold text-emerald-600">{totalExams}</p>
                 <p className="text-emerald-500/70 text-xs">Exams</p>
               </div>
             </div>
