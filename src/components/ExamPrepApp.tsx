@@ -41,7 +41,7 @@ import { App } from '@capacitor/app'
 import { Share } from '@capacitor/share'
 import { Filesystem, Directory } from '@capacitor/filesystem'
 import jsPDF from 'jspdf'
-import { getAnnouncements as getLocalAnnouncements, getNotifications as getLocalNotifications, getUpcomingExams as getLocalUpcomingExams, getDailyTips as getLocalDailyTips, getPrevYearPapers as getLocalPrevYearPapers, getSidebarMenu as getLocalSidebarMenu, getReadNotifIds, markNotifAsRead, markAllNotifsAsRead, type UpcomingExam, type DailyTip, type PrevYearPaper, type SidebarMenuItem } from '@/lib/admin-data'
+import { getAnnouncements as getLocalAnnouncements, getNotifications as getLocalNotifications, getUpcomingExams as getLocalUpcomingExams, getDailyTips as getLocalDailyTips, getPrevYearPapers as getLocalPrevYearPapers, getSidebarMenu as getLocalSidebarMenu, getReadNotifIds, markNotifAsRead, markAllNotifsAsRead, type UpcomingExam, type DailyTip, type PrevYearPaper, type PaperQuestion, type SidebarMenuItem } from '@/lib/admin-data'
 import { t, type Lang } from '@/lib/i18n'
 
 // ===== Types =====
@@ -2850,6 +2850,46 @@ export default function ExamPrepApp() {
       return null
     }
 
+    // Start paper test from its questions
+    const startPaperTest = (paper: PrevYearPaper) => {
+      const questions = paper.questions || []
+      if (questions.length === 0) {
+        // No questions, go to practice page
+        navigateTo('practice')
+        return
+      }
+      // Convert PaperQuestion[] to LocalQuestion[]
+      const localQuestions: LocalQuestion[] = questions.map(q => ({
+        id: q.id,
+        questionText: q.questionText,
+        optionA: q.optionA,
+        optionB: q.optionB,
+        optionC: q.optionC,
+        optionD: q.optionD,
+        correctAnswer: q.correctAnswer,
+        explanation: q.explanation,
+      }))
+      // Create a temporary LocalTest from the paper
+      const paperTest: LocalTest = {
+        id: `paper-${paper.id}`,
+        examId: '',
+        title: paper.name,
+        description: `Previous Year Paper - ${paper.year}`,
+        duration: paper.duration,
+        totalMarks: questions.length,
+        passingMarks: Math.round(questions.length * 0.4),
+        questions: localQuestions,
+        createdAt: new Date().toISOString(),
+      }
+      // Find category for styling
+      const cat = categories.find(c => c.slug === paper.examCategory) || categories[0]
+      const exam = cat.exams[0] || { id: '', name: paper.name, icon: '📝', slug: paper.examCategory, tests: [] }
+      setSelectedTest(paperTest)
+      setSelectedCategory(cat)
+      setSelectedExam(exam as LocalExam)
+      navigateTo('test-info')
+    }
+
     return (
       <div className="min-h-screen bg-gray-50">
         <div className="bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 px-4 pt-[calc(env(safe-area-inset-top,0px)+1rem)] pb-5">
@@ -2885,8 +2925,11 @@ export default function ExamPrepApp() {
 
           {/* Papers for selected year */}
           {filteredPapers.length > 0 ? filteredPapers.map(paper => {
+            const paperQuestions = paper.questions || []
+            const hasQuestions = paperQuestions.length > 0
             const match = findTestForPaper(paper)
             const cat = categories.find(c => c.slug === paper.examCategory)
+            const canPlay = hasQuestions || match
             return (
               <Card key={paper.id} className="border-0 shadow-sm overflow-hidden">
                 <CardContent className="p-0">
@@ -2897,7 +2940,7 @@ export default function ExamPrepApp() {
                     <div className="flex-1 min-w-0">
                       <p className="font-semibold text-sm truncate">{paper.name}</p>
                       <div className="flex items-center gap-2 mt-0.5">
-                        <span className="text-gray-400 text-xs">{paper.totalQuestions} Qs · {paper.duration}m</span>
+                        <span className="text-gray-400 text-xs">{hasQuestions ? `${paperQuestions.length} Qs` : `${paper.totalQuestions} Qs`} · {paper.duration}m</span>
                         <Badge className={`text-[9px] border-0 ${
                           paper.difficulty === 'Easy' ? 'bg-emerald-100 text-emerald-700' :
                           paper.difficulty === 'Hard' ? 'bg-red-100 text-red-700' :
@@ -2905,25 +2948,27 @@ export default function ExamPrepApp() {
                         }`}>
                           {paper.difficulty}
                         </Badge>
+                        {hasQuestions && (
+                          <Badge className="text-[9px] border-0 bg-blue-100 text-blue-700">{paperQuestions.length} questions ready</Badge>
+                        )}
                       </div>
                     </div>
-                    {match ? (
+                    {canPlay ? (
                       <button
-                        onClick={() => { setSelectedTest(match.test); setSelectedCategory(match.cat); setSelectedExam(match.exam); navigateTo('test-info') }}
+                        onClick={() => {
+                          if (hasQuestions) {
+                            startPaperTest(paper)
+                          } else if (match) {
+                            setSelectedTest(match.test); setSelectedCategory(match.cat); setSelectedExam(match.exam); navigateTo('test-info')
+                          }
+                        }}
                         className="w-9 h-9 rounded-xl bg-gradient-to-br from-orange-400 to-red-400 flex items-center justify-center shadow-sm"
                         style={{ touchAction: 'manipulation', WebkitTapHighlightColor: 'transparent' }}
                       >
                         <Play className="w-4 h-4 text-white" />
                       </button>
                     ) : (
-                      <button
-                        onClick={() => { navigateTo('practice'); setShowSideMenu(false) }}
-                        className="w-9 h-9 rounded-xl bg-gradient-to-br from-blue-400 to-indigo-500 flex items-center justify-center shadow-sm"
-                        style={{ touchAction: 'manipulation', WebkitTapHighlightColor: 'transparent' }}
-                        title="Practice this paper"
-                      >
-                        <Play className="w-4 h-4 text-white" />
-                      </button>
+                      <Badge className="text-[9px] border-0 bg-gray-100 text-gray-500">No Questions</Badge>
                     )}
                   </div>
                 </CardContent>

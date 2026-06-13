@@ -32,16 +32,29 @@ export interface DailyTip {
   text: string
 }
 
-// Previous Year Paper: grouped by year, each paper has name + link to a test
+// Question inside a Previous Year Paper
+export interface PaperQuestion {
+  id: string
+  questionText: string
+  optionA: string
+  optionB: string
+  optionC: string
+  optionD: string
+  correctAnswer: string  // "A" | "B" | "C" | "D"
+  explanation?: string
+}
+
+// Previous Year Paper: grouped by year, each paper has questions + optional link to a test
 export interface PrevYearPaper {
   id: string
   year: string          // e.g. "2026", "2025"
   name: string          // e.g. "SSC CGL Tier-I 2026"
   examCategory: string  // e.g. "ssc", "banking" - links to category slug
-  testId: string        // links to an existing test in the system
+  testId: string        // links to an existing test in the system (optional)
   totalQuestions: number
   duration: number      // minutes
   difficulty: string    // e.g. "Easy", "Medium", "Hard"
+  questions: PaperQuestion[]  // questions directly in this paper
 }
 
 // Sidebar Menu Item - admin can control which items appear
@@ -94,13 +107,13 @@ export const DEFAULT_DAILY_TIPS: DailyTip[] = [
 ]
 
 export const DEFAULT_PREV_YEAR_PAPERS: PrevYearPaper[] = [
-  { id: '1', year: '2026', name: 'SSC CGL Tier-I 2026', examCategory: 'ssc', testId: '', totalQuestions: 100, duration: 60, difficulty: 'Medium' },
-  { id: '2', year: '2026', name: 'IBPS PO Prelims 2026', examCategory: 'banking', testId: '', totalQuestions: 100, duration: 60, difficulty: 'Hard' },
-  { id: '3', year: '2025', name: 'SSC CGL Tier-I 2025', examCategory: 'ssc', testId: '', totalQuestions: 100, duration: 60, difficulty: 'Medium' },
-  { id: '4', year: '2025', name: 'IBPS PO Prelims 2025', examCategory: 'banking', testId: '', totalQuestions: 100, duration: 60, difficulty: 'Hard' },
-  { id: '5', year: '2025', name: 'RRB NTPC CBT-2 2025', examCategory: 'railways', testId: '', totalQuestions: 120, duration: 90, difficulty: 'Medium' },
-  { id: '6', year: '2024', name: 'SSC CGL Tier-I 2024', examCategory: 'ssc', testId: '', totalQuestions: 100, duration: 60, difficulty: 'Easy' },
-  { id: '7', year: '2024', name: 'IBPS PO Prelims 2024', examCategory: 'banking', testId: '', totalQuestions: 100, duration: 60, difficulty: 'Medium' },
+  { id: '1', year: '2026', name: 'SSC CGL Tier-I 2026', examCategory: 'ssc', testId: '', totalQuestions: 100, duration: 60, difficulty: 'Medium', questions: [] },
+  { id: '2', year: '2026', name: 'IBPS PO Prelims 2026', examCategory: 'banking', testId: '', totalQuestions: 100, duration: 60, difficulty: 'Hard', questions: [] },
+  { id: '3', year: '2025', name: 'SSC CGL Tier-I 2025', examCategory: 'ssc', testId: '', totalQuestions: 100, duration: 60, difficulty: 'Medium', questions: [] },
+  { id: '4', year: '2025', name: 'IBPS PO Prelims 2025', examCategory: 'banking', testId: '', totalQuestions: 100, duration: 60, difficulty: 'Hard', questions: [] },
+  { id: '5', year: '2025', name: 'RRB NTPC CBT-2 2025', examCategory: 'railways', testId: '', totalQuestions: 120, duration: 90, difficulty: 'Medium', questions: [] },
+  { id: '6', year: '2024', name: 'SSC CGL Tier-I 2024', examCategory: 'ssc', testId: '', totalQuestions: 100, duration: 60, difficulty: 'Easy', questions: [] },
+  { id: '7', year: '2024', name: 'IBPS PO Prelims 2024', examCategory: 'banking', testId: '', totalQuestions: 100, duration: 60, difficulty: 'Medium', questions: [] },
 ]
 
 export const DEFAULT_SIDEBAR_MENU: SidebarMenuItem[] = [
