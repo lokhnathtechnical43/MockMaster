@@ -105,6 +105,19 @@ const SIDEBAR_ICON_MAP: Record<string, React.ElementType> = {
   Home, BookOpen, Trophy, Zap, BookmarkPlus, BarChart3, FileText, Target, Clock,
 }
 
+// Default sidebar menu items (used when sidebarMenu is empty)
+const DEFAULT_SIDEBAR_MENU_ITEMS = [
+  { id: '1', icon: 'Home', label: 'Home', page: 'home', gradient: 'from-orange-500 to-amber-500', visible: true, order: 1 },
+  { id: '2', icon: 'BookOpen', label: 'All Exams', page: 'exams', gradient: 'from-blue-500 to-indigo-500', visible: true, order: 2 },
+  { id: '3', icon: 'Trophy', label: 'Leaderboard', page: 'leaderboard', gradient: 'from-yellow-500 to-orange-500', visible: true, order: 3 },
+  { id: '4', icon: 'Zap', label: 'Quick Practice', page: 'practice', gradient: 'from-amber-400 to-orange-500', visible: true, order: 4 },
+  { id: '5', icon: 'BookmarkPlus', label: 'Bookmarks', page: 'bookmarks', gradient: 'from-rose-400 to-pink-500', visible: true, order: 5 },
+  { id: '6', icon: 'BarChart3', label: 'Performance', page: 'perf-report', gradient: 'from-emerald-400 to-teal-500', visible: true, order: 6 },
+  { id: '7', icon: 'FileText', label: 'Prev. Papers', page: 'prev-papers', gradient: 'from-blue-400 to-cyan-500', visible: true, order: 7 },
+  { id: '8', icon: 'Target', label: 'Your Exam', page: 'your-exam', gradient: 'from-violet-400 to-purple-500', visible: true, order: 8 },
+  { id: '9', icon: 'Clock', label: 'Daily Routine', page: 'daily-routine', gradient: 'from-sky-400 to-blue-500', visible: true, order: 9 },
+]
+
 // Map page names to light bg and text colors
 const SIDEBAR_PAGE_COLORS: Record<string, { lightBg: string; textColor: string }> = {
   home: { lightBg: 'bg-orange-50', textColor: 'text-orange-700' },
@@ -2903,7 +2916,14 @@ export default function ExamPrepApp() {
                         <Play className="w-4 h-4 text-white" />
                       </button>
                     ) : (
-                      <Badge className="text-[9px] border-0 bg-gray-100 text-gray-500">Coming Soon</Badge>
+                      <button
+                        onClick={() => { navigateTo('practice'); setShowSideMenu(false) }}
+                        className="w-9 h-9 rounded-xl bg-gradient-to-br from-blue-400 to-indigo-500 flex items-center justify-center shadow-sm"
+                        style={{ touchAction: 'manipulation', WebkitTapHighlightColor: 'transparent' }}
+                        title="Practice this paper"
+                      >
+                        <Play className="w-4 h-4 text-white" />
+                      </button>
                     )}
                   </div>
                 </CardContent>
@@ -3824,63 +3844,19 @@ export default function ExamPrepApp() {
               </button>
             </div>
 
-            {/* Menu Items */}
+            {/* Menu Items - All Admin Managed */}
             <div className="flex-1 overflow-y-auto py-3 px-3" onTouchStart={(e) => { sideMenuScrollRef.current = { y: e.touches[0].clientY, x: e.touches[0].clientX, t: Date.now() } }} onTouchMove={(e) => { if (sideMenuScrollRef.current) { const dy = Math.abs(e.touches[0].clientY - sideMenuScrollRef.current.y); const dx = Math.abs(e.touches[0].clientX - sideMenuScrollRef.current.x); if (dy > 8 || dx > 8) sideMenuScrollRef.current.scrolled = true } }} onTouchEnd={() => { setTimeout(() => { if (sideMenuScrollRef.current) sideMenuScrollRef.current.scrolled = false }, 50) }}>
-              {/* Main Navigation */}
+              {/* All menu items from admin (sidebarMenu) */}
               <div className="mb-2">
-                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest px-3 mb-2">{_t('menu.navigation')}</p>
-                {[
-                  { icon: Home, label: _t('menu.home'), page: 'home' as Page, active: currentPage === 'home', color: 'from-orange-500 to-amber-500', lightBg: 'bg-orange-50', activeText: 'text-orange-700', activeBg: 'bg-gradient-to-r from-orange-50 to-amber-50', iconLight: 'text-orange-500' },
-                  { icon: BookOpen, label: _t('menu.allExams'), page: 'exams' as Page, active: currentPage === 'exams', color: 'from-blue-500 to-indigo-500', lightBg: 'bg-blue-50', activeText: 'text-blue-700', activeBg: 'bg-gradient-to-r from-blue-50 to-indigo-50', iconLight: 'text-blue-500' },
-                  { icon: Trophy, label: _t('menu.leaderboard'), page: 'leaderboard' as Page, active: currentPage === 'leaderboard', color: 'from-yellow-500 to-orange-500', lightBg: 'bg-yellow-50', activeText: 'text-yellow-700', activeBg: 'bg-gradient-to-r from-yellow-50 to-orange-50', iconLight: 'text-yellow-600' },
-                ].map(item => (
-                  <button
-                    key={item.page}
-                    onClick={() => { if (!sideMenuScrollRef.current?.scrolled) { handleBottomNav(item.page); setShowSideMenu(false) } }}
-                    className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200 mb-0.5 ${
-                      item.active
-                        ? `${item.activeBg} ${item.activeText} shadow-sm border border-white/60`
-                        : 'text-gray-600 hover:bg-gray-50 active:bg-gray-100'
-                    }`}
-                    style={{ touchAction: 'pan-y', WebkitTapHighlightColor: 'transparent' }}
-                  >
-                    <div className={`w-8 h-8 rounded-lg flex items-center justify-center transition-all ${
-                      item.active
-                        ? `bg-gradient-to-br ${item.color} shadow-sm`
-                        : 'bg-gray-100'
-                    }`}>
-                      <item.icon className={`w-4 h-4 ${item.active ? 'text-white' : 'text-gray-400'}`} />
-                    </div>
-                    <span className={`font-medium text-[13px] flex-1 text-left ${item.active ? 'font-bold' : ''}`}>{item.label}</span>
-                    {item.active && (
-                      <div className={`w-6 h-1.5 rounded-full bg-gradient-to-r ${item.color}`} />
-                    )}
-                  </button>
-                ))}
-              </div>
-
-              <div className="flex items-center gap-2 px-3 my-2">
-                <div className="flex-1 h-px bg-gradient-to-r from-transparent via-gray-200 to-transparent" />
-              </div>
-
-              {/* Quick Actions - Admin Managed */}
-              <div className="mb-2">
-                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest px-3 mb-2">{_t('menu.quickActions')}</p>
-                {(sidebarMenu.length > 0 ? sidebarMenu : [
-                  { icon: 'Zap', label: _t('menu.quickPractice'), page: 'practice', gradient: 'from-amber-400 to-orange-500', visible: true, order: 1, id: '1' },
-                  { icon: 'BookmarkPlus', label: _t('menu.bookmarkedQ'), page: 'bookmarks', gradient: 'from-rose-400 to-pink-500', visible: true, order: 2, id: '2' },
-                  { icon: 'BarChart3', label: _t('menu.perfReport'), page: 'perf-report', gradient: 'from-emerald-400 to-teal-500', visible: true, order: 3, id: '3' },
-                  { icon: 'FileText', label: _t('menu.prevPapers'), page: 'prev-papers', gradient: 'from-blue-400 to-cyan-500', visible: true, order: 4, id: '4' },
-                  { icon: 'Target', label: _t('menu.yourExam'), page: 'your-exam', gradient: 'from-violet-400 to-purple-500', visible: true, order: 5, id: '5' },
-                  { icon: 'Clock', label: _t('menu.dailyRoutine'), page: 'daily-routine', gradient: 'from-sky-400 to-blue-500', visible: true, order: 6, id: '6' },
-                ]).filter(i => i.visible).sort((a, b) => a.order - b.order).map((item, i) => {
+                {(sidebarMenu.length > 0 ? sidebarMenu : DEFAULT_SIDEBAR_MENU_ITEMS).filter(i => i.visible).sort((a, b) => a.order - b.order).map((item, i) => {
                   const IconComp = SIDEBAR_ICON_MAP[item.icon] || Zap
                   const pageColors = SIDEBAR_PAGE_COLORS[item.page] || { lightBg: 'bg-gray-50', textColor: 'text-gray-700' }
                   const isActive = currentPage === item.page
+                  const isNavPage = ['home', 'exams', 'leaderboard'].includes(item.page)
                   return (
                     <button
                       key={item.id || i}
-                      onClick={() => { if (!sideMenuScrollRef.current?.scrolled) { navigateTo(item.page as Page); setShowSideMenu(false) } }}
+                      onClick={() => { if (!sideMenuScrollRef.current?.scrolled) { isNavPage ? handleBottomNav(item.page as Page) : navigateTo(item.page as Page); setShowSideMenu(false) } }}
                       className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200 mb-0.5 ${
                         isActive
                           ? `${pageColors.lightBg} ${pageColors.textColor} shadow-sm border border-white/60`
