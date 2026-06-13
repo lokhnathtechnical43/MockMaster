@@ -19,6 +19,7 @@ export interface Notification {
   read: boolean
   type: 'update' | 'alert' | 'info'
   imageUrl?: string    // optional uploaded image URL
+  actionUrl?: string   // optional URL to open when notification is tapped (external link or app page)
 }
 
 export interface UpcomingExam {

@@ -46,7 +46,7 @@ import { getAnnouncements as getLocalAnnouncements, getNotifications as getLocal
 import { t, type Lang } from '@/lib/i18n'
 
 // ===== Types =====
-type Page = 'home' | 'exams' | 'tests' | 'test-info' | 'test-taking' | 'results' | 'leaderboard' | 'profile' | 'practice' | 'bookmarks' | 'perf-report' | 'daily-routine' | 'prev-papers' | 'your-exam' | 'upcoming-exam-detail' | 'daily-tip-detail' | 'announcement-detail'
+type Page = 'home' | 'exams' | 'tests' | 'test-info' | 'test-taking' | 'results' | 'leaderboard' | 'profile' | 'practice' | 'bookmarks' | 'perf-report' | 'daily-routine' | 'prev-papers' | 'your-exam' | 'upcoming-exam-detail' | 'daily-tip-detail' | 'announcement-detail' | 'notification-detail'
 
 // ===== Unified Data Access (Firestore or Local) =====
 const isFirestore = () => getUseFirestore()
@@ -296,8 +296,9 @@ export default function ExamPrepApp() {
 
   // --- Notifications ---
   const [notifications, setNotifications] = useState<
-    { id: string; title: string; message: string; time: string; read: boolean; type: 'update' | 'alert' | 'info' }[]
+    { id: string; title: string; message: string; time: string; read: boolean; type: 'update' | 'alert' | 'info'; imageUrl?: string; actionUrl?: string }[]
   >([])
+  const [selectedNotification, setSelectedNotification] = useState<{ id: string; title: string; message: string; time: string; read: boolean; type: 'update' | 'alert' | 'info'; imageUrl?: string; actionUrl?: string } | null>(null)
   const unreadCount = notifications.filter(n => !n.read).length
 
   // --- Announcements ---
@@ -1159,7 +1160,13 @@ export default function ExamPrepApp() {
                   notifications.map(notification => (
                     <div
                       key={notification.id}
-                      onClick={() => { setNotifications(prev => prev.map(n => n.id === notification.id ? { ...n, read: true } : n)); markNotifAsRead(notification.id) }}
+                      onClick={() => { 
+                        setNotifications(prev => prev.map(n => n.id === notification.id ? { ...n, read: true } : n)); 
+                        markNotifAsRead(notification.id);
+                        setSelectedNotification(notification);
+                        setShowNotificationPanel(false);
+                        navigateTo('notification-detail');
+                      }}
                       className={`px-4 py-3 border-b border-gray-50 last:border-b-0 active:bg-gray-50 transition-colors cursor-pointer ${!notification.read ? 'bg-orange-50/50' : ''}`}
                     >
                       <div className="flex items-start gap-3">
@@ -1175,9 +1182,13 @@ export default function ExamPrepApp() {
                             <p className={`text-sm ${!notification.read ? 'font-bold text-gray-900' : 'font-medium text-gray-700'}`}>{notification.title}</p>
                             {!notification.read && <div className="w-2 h-2 rounded-full bg-orange-500 flex-shrink-0" />}
                           </div>
-                          <p className="text-xs text-gray-500 mt-0.5 line-clamp-2">{notification.message}</p>
-                          <p className="text-[10px] text-gray-400 mt-1">{notification.time}</p>
+                          <p className="text-xs text-gray-500 mt-0.5 line-clamp-1">{notification.message}</p>
+                          <div className="flex items-center gap-2 mt-0.5">
+                            <p className="text-[10px] text-gray-400">{notification.time}</p>
+                            {notification.actionUrl && <span className="text-[9px] text-orange-500 font-medium">Tap to open</span>}
+                          </div>
                         </div>
+                        <ChevronRight className="w-4 h-4 text-gray-300 flex-shrink-0 mt-2" />
                       </div>
                     </div>
                   ))
@@ -1246,7 +1257,7 @@ export default function ExamPrepApp() {
               {announcements.map((a, index) => (
                 <button key={a.id} onClick={() => { setSelectedAnnouncement(a); navigateTo('announcement-detail') }} className="flex-shrink-0 w-full snap-center px-1">
                   <div className={`bg-gradient-to-br ${a.gradient} rounded-2xl overflow-hidden shadow-md active:scale-[0.98] transition-transform`}>
-                    <div className="h-32 relative flex items-center justify-center overflow-hidden">
+                    <div className="h-44 relative flex items-center justify-center overflow-hidden">
                       {a.imageUrl ? (
                         /* Full-width image mode */
                         <>
@@ -1254,8 +1265,8 @@ export default function ExamPrepApp() {
                           <div className="absolute inset-0 bg-gradient-to-r from-black/60 via-black/30 to-transparent" />
                           <div className="relative z-10 flex items-center gap-3 px-4 w-full">
                             <div className="flex-1 min-w-0">
-                              <p className="text-white font-bold text-base leading-tight drop-shadow-lg">{a.title}</p>
-                              <p className="text-white/90 text-xs mt-1 drop-shadow-md">{a.subtitle}</p>
+                              <p className="text-white font-bold text-lg leading-tight drop-shadow-lg">{a.title}</p>
+                              <p className="text-white/90 text-sm mt-1 drop-shadow-md">{a.subtitle}</p>
                               <div className="flex items-center gap-1 mt-2">
                                 <span className="text-white/60 text-[10px]">{_t('home.tapExplore')}</span>
                                 <ChevronRight className="w-3 h-3 text-white/60" />
@@ -1273,15 +1284,15 @@ export default function ExamPrepApp() {
                             <div className="absolute bottom-4 left-20 w-6 h-6 rounded-full bg-white" />
                           </div>
                           <div className="relative z-10 flex items-center gap-4 px-4">
-                            <div className="w-16 h-16 bg-white/20 backdrop-blur rounded-2xl flex items-center justify-center flex-shrink-0">
-                              {a.image === 'ssc' && <BookOpen className="w-8 h-8 text-white" />}
-                              {a.image === 'banking' && <Building className="w-8 h-8 text-white" />}
-                              {a.image === 'leaderboard' && <Trophy className="w-8 h-8 text-white" />}
-                              {a.image === 'practice' && <Zap className="w-8 h-8 text-white" />}
+                            <div className="w-20 h-20 bg-white/20 backdrop-blur rounded-2xl flex items-center justify-center flex-shrink-0">
+                              {a.image === 'ssc' && <BookOpen className="w-10 h-10 text-white" />}
+                              {a.image === 'banking' && <Building className="w-10 h-10 text-white" />}
+                              {a.image === 'leaderboard' && <Trophy className="w-10 h-10 text-white" />}
+                              {a.image === 'practice' && <Zap className="w-10 h-10 text-white" />}
                             </div>
                             <div className="flex-1 min-w-0">
-                              <p className="text-white font-bold text-base leading-tight">{a.title}</p>
-                              <p className="text-white/80 text-xs mt-1">{a.subtitle}</p>
+                              <p className="text-white font-bold text-lg leading-tight">{a.title}</p>
+                              <p className="text-white/80 text-sm mt-1">{a.subtitle}</p>
                               <div className="flex items-center gap-1 mt-2">
                                 <span className="text-white/50 text-[10px]">{_t('home.tapExplore')}</span>
                                 <ChevronRight className="w-3 h-3 text-white/50" />
@@ -4238,6 +4249,160 @@ export default function ExamPrepApp() {
     )
   }
 
+  // ===== NOTIFICATION DETAIL PAGE =====
+  function renderNotificationDetail() {
+    const notif = selectedNotification
+    if (!notif) return null
+
+    const handleAction = () => {
+      if (notif.actionUrl) {
+        window.open(notif.actionUrl, '_blank', 'noopener,noreferrer')
+      }
+    }
+
+    return (
+      <div className="min-h-screen min-h-dvh bg-slate-50">
+        {/* Header */}
+        <div className={`relative text-white overflow-hidden ${
+          notif.type === 'update' ? 'bg-gradient-to-br from-blue-500 via-indigo-500 to-blue-600' :
+          notif.type === 'alert' ? 'bg-gradient-to-br from-amber-500 via-orange-500 to-red-500' :
+          'bg-gradient-to-br from-emerald-500 via-teal-500 to-green-600'
+        }`}>
+          {notif.imageUrl && (
+            <>
+              <img src={notif.imageUrl} alt="" className="absolute inset-0 w-full h-full object-cover opacity-30" />
+              <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-black/20 to-black/60" />
+            </>
+          )}
+          <div className="absolute inset-0 opacity-10">
+            <div className="absolute top-4 left-8 w-24 h-24 rounded-full border-4 border-white" />
+            <div className="absolute bottom-3 right-10 w-16 h-16 rounded-full border-4 border-white" />
+          </div>
+          <div className="relative z-10 px-3 pt-[calc(env(safe-area-inset-top,0px)+0.75rem)] pb-6">
+            <div className="flex items-center gap-3 mb-4">
+              <button
+                onClick={goBack}
+                className="w-9 h-9 rounded-lg bg-white/15 hover:bg-white/25 flex items-center justify-center transition-colors flex-shrink-0"
+              >
+                <ArrowLeft className="w-4 h-4" />
+              </button>
+              <div className="flex-1 min-w-0">
+                <p className="text-white/60 text-[10px] uppercase tracking-wider font-medium">Notification</p>
+              </div>
+              <div className={`w-9 h-9 rounded-lg flex items-center justify-center ${
+                notif.type === 'update' ? 'bg-blue-400/30' : notif.type === 'alert' ? 'bg-amber-400/30' : 'bg-emerald-400/30'
+              }`}>
+                {notif.type === 'update' ? <Zap className="w-5 h-5 text-white" /> : notif.type === 'alert' ? <AlertTriangle className="w-5 h-5 text-white" /> : <Gift className="w-5 h-5 text-white" />}
+              </div>
+            </div>
+            <h1 className="text-xl font-bold leading-tight drop-shadow-lg">{notif.title}</h1>
+            <div className="flex items-center gap-2 mt-2">
+              <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${
+                notif.type === 'update' ? 'bg-blue-400/30 text-blue-100' :
+                notif.type === 'alert' ? 'bg-amber-400/30 text-amber-100' :
+                'bg-emerald-400/30 text-emerald-100'
+              }`}>
+                {notif.type === 'update' ? 'Update' : notif.type === 'alert' ? 'Alert' : 'Info'}
+              </span>
+              <span className="text-white/60 text-xs">{notif.time}</span>
+            </div>
+          </div>
+        </div>
+
+        <div className="px-3 -mt-3 pb-6 space-y-3">
+          {/* Image Card */}
+          {notif.imageUrl && (
+            <Card className="border-0 shadow-lg overflow-hidden">
+              <div className="relative">
+                <img src={notif.imageUrl} alt="" className="w-full max-h-80 object-cover" />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent" />
+              </div>
+            </Card>
+          )}
+
+          {/* Message Content Card */}
+          <Card className="border-0 shadow-md">
+            <CardContent className="p-5">
+              <div className="flex items-start gap-4">
+                <div className={`w-12 h-12 rounded-2xl flex items-center justify-center flex-shrink-0 shadow-md overflow-hidden ${
+                  notif.type === 'update' ? 'bg-gradient-to-br from-blue-400 to-indigo-500' :
+                  notif.type === 'alert' ? 'bg-gradient-to-br from-amber-400 to-orange-500' :
+                  'bg-gradient-to-br from-emerald-400 to-teal-500'
+                }`}>
+                  {notif.imageUrl ? (
+                    <img src={notif.imageUrl} alt="" className="w-12 h-12 object-cover rounded-2xl" />
+                  ) : (
+                    notif.type === 'update' ? <Zap className="w-6 h-6 text-white" /> : notif.type === 'alert' ? <AlertTriangle className="w-6 h-6 text-white" /> : <Gift className="w-6 h-6 text-white" />
+                  )}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <h2 className="font-bold text-base text-gray-800">{notif.title}</h2>
+                  <p className="text-xs text-gray-400 mt-0.5">{notif.time}</p>
+                </div>
+              </div>
+              <div className="mt-4">
+                <p className="text-gray-700 text-sm leading-relaxed whitespace-pre-wrap">{notif.message}</p>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Action URL Button */}
+          {notif.actionUrl && (
+            <Card className="border-0 shadow-md">
+              <CardContent className="p-4">
+                <Button
+                  onClick={handleAction}
+                  className={`w-full text-white rounded-xl h-12 font-semibold text-sm ${
+                    notif.type === 'update' ? 'bg-gradient-to-r from-blue-500 to-indigo-500 hover:from-blue-600 hover:to-indigo-600' :
+                    notif.type === 'alert' ? 'bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600' :
+                    'bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600'
+                  }`}
+                >
+                  <ExternalLink className="w-4 h-4 mr-2" />
+                  Open Link
+                </Button>
+                <p className="text-[10px] text-gray-400 mt-2 text-center break-all">{notif.actionUrl}</p>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Other Notifications */}
+          {notifications.filter(n => n.id !== notif.id).length > 0 && (
+            <Card className="border-0 shadow-md">
+              <CardContent className="p-4">
+                <h3 className="font-bold text-sm text-gray-700 mb-3">More Notifications</h3>
+                <div className="space-y-2">
+                  {notifications.filter(n => n.id !== notif.id).slice(0, 5).map((otherNotif) => (
+                    <button
+                      key={otherNotif.id}
+                      onClick={() => { setSelectedNotification(otherNotif); window.scrollTo({ top: 0, behavior: 'smooth' }) }}
+                      className="w-full text-left flex items-center gap-3 p-2.5 rounded-xl bg-gray-50 hover:bg-gray-100 active:bg-gray-200 transition-colors"
+                    >
+                      <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 overflow-hidden ${
+                        otherNotif.type === 'update' ? 'bg-blue-100' : otherNotif.type === 'alert' ? 'bg-amber-100' : 'bg-green-100'
+                      }`}>
+                        {otherNotif.imageUrl ? (
+                          <img src={otherNotif.imageUrl} alt="" className="w-8 h-8 object-cover rounded-full" />
+                        ) : (
+                          otherNotif.type === 'update' ? <Zap className="w-4 h-4 text-blue-500" /> : otherNotif.type === 'alert' ? <AlertTriangle className="w-4 h-4 text-amber-500" /> : <Gift className="w-4 h-4 text-green-500" />
+                        )}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs font-medium text-gray-700 truncate">{otherNotif.title}</p>
+                        <p className="text-[10px] text-gray-400 truncate">{otherNotif.message}</p>
+                      </div>
+                      <ChevronRight className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                    </button>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+        </div>
+      </div>
+    )
+  }
+
   // ===== DAILY TIP DETAIL PAGE =====
   function renderDailyTipDetail() {
     const tip = selectedDailyTip
@@ -4458,6 +4623,7 @@ export default function ExamPrepApp() {
       case 'upcoming-exam-detail': return renderUpcomingExamDetail()
       case 'daily-tip-detail': return renderDailyTipDetail()
       case 'announcement-detail': return renderAnnouncementDetail()
+      case 'notification-detail': return renderNotificationDetail()
       default: return renderHome()
     }
   }

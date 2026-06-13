@@ -5,7 +5,8 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import {
   Bell, Zap, AlertTriangle, Gift, Plus,
-  Trash2, RefreshCw, Edit3, X, Check, ArrowUp, ArrowDown
+  Trash2, RefreshCw, Edit3, X, Check, ArrowUp, ArrowDown,
+  Eye, ExternalLink
 } from 'lucide-react'
 import {
   type Notification,
@@ -23,11 +24,14 @@ export default function NotificationsTab({ notifications, onUpdate }: Notificati
   const [newNotifMessage, setNewNotifMessage] = useState('')
   const [newNotifType, setNewNotifType] = useState<'update' | 'alert' | 'info'>('info')
   const [newNotifImageUrl, setNewNotifImageUrl] = useState('')
+  const [newNotifActionUrl, setNewNotifActionUrl] = useState('')
   const [editingIndex, setEditingIndex] = useState<number | null>(null)
   const [editTitle, setEditTitle] = useState('')
   const [editMessage, setEditMessage] = useState('')
   const [editType, setEditType] = useState<'update' | 'alert' | 'info'>('info')
   const [editImageUrl, setEditImageUrl] = useState('')
+  const [editActionUrl, setEditActionUrl] = useState('')
+  const [previewNotif, setPreviewNotif] = useState<Notification | null>(null)
 
   const handleSend = () => {
     const newNotif: Notification = {
@@ -38,11 +42,13 @@ export default function NotificationsTab({ notifications, onUpdate }: Notificati
       read: false,
       type: newNotifType,
       ...(newNotifImageUrl ? { imageUrl: newNotifImageUrl } : {}),
+      ...(newNotifActionUrl.trim() ? { actionUrl: newNotifActionUrl.trim() } : {}),
     }
     onUpdate([newNotif, ...notifications])
     setNewNotifTitle('')
     setNewNotifMessage('')
     setNewNotifImageUrl('')
+    setNewNotifActionUrl('')
   }
 
   const handleDelete = (index: number) => {
@@ -57,6 +63,7 @@ export default function NotificationsTab({ notifications, onUpdate }: Notificati
     setEditMessage(n.message)
     setEditType(n.type)
     setEditImageUrl(n.imageUrl || '')
+    setEditActionUrl(n.actionUrl || '')
   }
 
   const handleCancelEdit = () => {
@@ -72,6 +79,7 @@ export default function NotificationsTab({ notifications, onUpdate }: Notificati
       message: editMessage,
       type: editType,
       ...(editImageUrl ? { imageUrl: editImageUrl } : { imageUrl: undefined }),
+      ...(editActionUrl.trim() ? { actionUrl: editActionUrl.trim() } : { actionUrl: undefined }),
     }
     onUpdate(updated)
     setEditingIndex(null)
@@ -103,6 +111,81 @@ export default function NotificationsTab({ notifications, onUpdate }: Notificati
 
   return (
     <div className="space-y-4">
+      {/* Preview Modal */}
+      {previewNotif && (
+        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4" onClick={() => setPreviewNotif(null)}>
+          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full max-h-[85vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+            {/* Preview Header */}
+            <div className="relative bg-gradient-to-br from-orange-500 to-red-500 text-white overflow-hidden rounded-t-2xl">
+              <div className="absolute inset-0 opacity-10">
+                <div className="absolute top-3 left-6 w-20 h-20 rounded-full border-4 border-white" />
+                <div className="absolute bottom-2 right-8 w-14 h-14 rounded-full border-4 border-white" />
+              </div>
+              <div className="relative z-10 px-4 py-4 flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Bell className="w-5 h-5" />
+                  <h3 className="font-bold text-sm">Preview — Notification</h3>
+                </div>
+                <button
+                  onClick={() => setPreviewNotif(null)}
+                  className="w-8 h-8 rounded-lg bg-white/20 hover:bg-white/30 flex items-center justify-center transition-colors"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+
+            {/* Preview Content - Same as user sees */}
+            <div className="p-4 space-y-4">
+              {/* Notification card preview */}
+              <div className={`rounded-xl overflow-hidden shadow-sm border ${previewNotif.type === 'update' ? 'border-blue-100' : previewNotif.type === 'alert' ? 'border-amber-100' : 'border-green-100'}`}>
+                {previewNotif.imageUrl && (
+                  <div className="relative">
+                    <img src={previewNotif.imageUrl} alt="" className="w-full h-40 object-cover" />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent" />
+                  </div>
+                )}
+                <div className="p-4">
+                  <div className="flex items-start gap-3">
+                    <div className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 overflow-hidden ${previewNotif.imageUrl ? '' : previewNotif.type === 'update' ? 'bg-blue-100' : previewNotif.type === 'alert' ? 'bg-amber-100' : 'bg-green-100'}`}>
+                      {previewNotif.imageUrl ? (
+                        <img src={previewNotif.imageUrl} alt="" className="w-10 h-10 object-cover rounded-full" />
+                      ) : (
+                        previewNotif.type === 'update' ? <Zap className="w-5 h-5 text-blue-500" /> : previewNotif.type === 'alert' ? <AlertTriangle className="w-5 h-5 text-amber-500" /> : <Gift className="w-5 h-5 text-green-500" />
+                      )}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-bold text-sm text-gray-900">{previewNotif.title}</p>
+                      <p className="text-xs text-gray-500 mt-1 leading-relaxed whitespace-pre-wrap">{previewNotif.message}</p>
+                      <p className="text-[10px] text-gray-400 mt-2">{previewNotif.time}</p>
+                    </div>
+                  </div>
+                  {previewNotif.actionUrl && (
+                    <div className="mt-3 flex items-center gap-2 px-3 py-2 bg-orange-50 rounded-lg">
+                      <ExternalLink className="w-3.5 h-3.5 text-orange-500" />
+                      <span className="text-xs text-orange-600 font-medium truncate">{previewNotif.actionUrl}</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Full Text */}
+              <div>
+                <p className="text-xs text-gray-400 mb-1 font-medium">Full Message</p>
+                <p className="text-sm text-gray-700 leading-relaxed whitespace-pre-wrap bg-gray-50 p-3 rounded-xl">{previewNotif.message}</p>
+              </div>
+
+              {previewNotif.actionUrl && (
+                <div>
+                  <p className="text-xs text-gray-400 mb-1 font-medium">Action URL</p>
+                  <p className="text-xs text-blue-600 break-all bg-gray-50 p-2 rounded-lg">{previewNotif.actionUrl}</p>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Send New Notification */}
       <Card className="border-0 shadow-md">
         <CardContent className="p-4">
@@ -146,6 +229,16 @@ export default function NotificationsTab({ notifications, onUpdate }: Notificati
               folder="notifications"
               label="Image (Optional — shows in notification)"
             />
+            <div>
+              <p className="text-xs text-gray-500 mb-1.5">Action URL (Optional — user will open this link when tapping notification)</p>
+              <input
+                type="url"
+                value={newNotifActionUrl}
+                onChange={e => setNewNotifActionUrl(e.target.value)}
+                placeholder="https://example.com or any URL"
+                className="w-full px-3 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-orange-300"
+              />
+            </div>
             <Button
               className="w-full bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white rounded-xl h-11 font-semibold"
               disabled={!newNotifTitle || !newNotifMessage}
@@ -247,6 +340,16 @@ export default function NotificationsTab({ notifications, onUpdate }: Notificati
                       folder="notifications"
                       label="Image (Optional)"
                     />
+                    <div>
+                      <p className="text-xs text-gray-500 mb-1.5">Action URL (Optional)</p>
+                      <input
+                        type="url"
+                        value={editActionUrl}
+                        onChange={e => setEditActionUrl(e.target.value)}
+                        placeholder="https://example.com or any URL"
+                        className="w-full px-3 py-2.5 rounded-xl border border-blue-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300"
+                      />
+                    </div>
                   </CardContent>
                 ) : (
                   /* View Mode */
@@ -273,10 +376,19 @@ export default function NotificationsTab({ notifications, onUpdate }: Notificati
                           {!n.read && <div className="w-2 h-2 rounded-full bg-orange-500 flex-shrink-0" />}
                         </div>
                         <p className="text-gray-400 text-xs truncate">{n.message}</p>
-                        <p className="text-gray-300 text-[10px] mt-0.5">{n.time}</p>
-                        {n.imageUrl && <span className="text-[9px] text-orange-500 font-medium">Has image</span>}
+                        <div className="flex items-center gap-2 mt-0.5">
+                          <p className="text-gray-300 text-[10px]">{n.time}</p>
+                          {n.actionUrl && <span className="text-[9px] text-blue-500 font-medium flex items-center gap-0.5"><ExternalLink className="w-2.5 h-2.5" />Has URL</span>}
+                        </div>
                       </div>
                       <div className="flex items-center gap-1 flex-shrink-0">
+                        <button
+                          onClick={() => setPreviewNotif(n)}
+                          className="w-6 h-6 rounded-lg bg-blue-50 hover:bg-blue-100 flex items-center justify-center transition-colors"
+                          title="Preview"
+                        >
+                          <Eye className="w-3 h-3 text-blue-500" />
+                        </button>
                         <button
                           onClick={() => handleMoveUp(i)}
                           disabled={i === 0}
