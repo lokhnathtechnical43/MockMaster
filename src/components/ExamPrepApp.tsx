@@ -584,7 +584,14 @@ export default function ExamPrepApp() {
   // --- Test Functions ---
   async function startTest(test: LocalTest, mode: 'real' | 'practice' = 'real') {
     const fullTest = await fetchTestById(test.id)
-    if (!fullTest) return
+    if (!fullTest) {
+      console.error('[App] startTest: Could not fetch test with id:', test.id)
+      return
+    }
+    if (!fullTest.questions || fullTest.questions.length === 0) {
+      console.error('[App] startTest: Test has no questions! Test id:', test.id, 'Test title:', fullTest.title)
+      console.error('[App] This usually means the questions were not seeded to Firestore. Go to Admin Panel → Dashboard → Seed Database.')
+    }
     setSelectedTest(fullTest)
     setAnswers({})
     setMarkedForReview(new Set())
@@ -1578,8 +1585,43 @@ export default function ExamPrepApp() {
   // ===== RENDER: Test Taking =====
   function renderTestTaking() {
     if (!selectedTest) return null
-    const questions = selectedTest.questions
+    const questions = selectedTest.questions || []
     const question = questions[currentQuestionIndex]
+
+    // Show helpful message if no questions loaded
+    if (questions.length === 0) {
+      return (
+        <div className="min-h-screen min-h-dvh bg-slate-50 flex flex-col items-center justify-center p-6">
+          <div className="bg-white rounded-2xl shadow-lg p-8 max-w-sm w-full text-center">
+            <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-amber-100 flex items-center justify-center">
+              <BookOpen className="w-8 h-8 text-amber-600" />
+            </div>
+            <h2 className="text-lg font-bold text-gray-800 mb-2">No Questions Found</h2>
+            <p className="text-sm text-gray-500 mb-4">
+              This test has no questions yet. The database may need to be seeded.
+            </p>
+            <p className="text-xs text-gray-400 mb-4">
+              Test: {selectedTest.title} (ID: {selectedTest.id?.substring(0, 8)}...)
+            </p>
+            {isFirestore() ? (
+              <p className="text-xs text-amber-600 font-medium">
+                Go to Admin Panel → Dashboard → Click &quot;Seed Now&quot; to load sample questions.
+              </p>
+            ) : (
+              <p className="text-xs text-amber-600 font-medium">
+                Using local data. Check if tests have questions in local-data.ts
+              </p>
+            )}
+            <button
+              onClick={() => navigateTo('exams')}
+              className="mt-4 px-4 py-2 bg-orange-500 text-white rounded-lg text-sm font-medium hover:bg-orange-600 transition-colors"
+            >
+              Go Back
+            </button>
+          </div>
+        </div>
+      )
+    }
     if (!question) return null
 
     const totalAnswered = Object.keys(answers).length

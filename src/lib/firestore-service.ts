@@ -496,7 +496,10 @@ export async function getTestById(id: string): Promise<LocalTest | null> {
   return firestoreOperation(
     async () => {
       const testDoc = await getDoc(doc(db, COLLECTIONS.tests, id))
-      if (!testDoc.exists()) return null
+      if (!testDoc.exists()) {
+        console.warn('[Firestore] getTestById: No test document found for id:', id)
+        return null
+      }
 
       const t = { id: testDoc.id, ...testDoc.data() } as FirestoreTest
 
@@ -504,6 +507,7 @@ export async function getTestById(id: string): Promise<LocalTest | null> {
       const qSnap = await getDocs(
         query(collection(db, COLLECTIONS.questions), where('testId', '==', id), orderBy('order'))
       )
+      console.log('[Firestore] getTestById: Found', qSnap.docs.length, 'questions for test:', id, t.title)
       const questions: LocalQuestion[] = qSnap.docs.map((qd) => {
         const q = { id: qd.id, ...qd.data() } as FirestoreQuestion
         return {
