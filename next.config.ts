@@ -1,7 +1,11 @@
 import type { NextConfig } from "next";
 
+const isAndroidBuild = process.env.NEXT_OUTPUT_EXPORT === "true";
+
 const nextConfig: NextConfig = {
-  output: "export",
+  // Only use static export for Android/Capacitor builds
+  // Vercel deployment uses server-side rendering for better performance
+  ...(isAndroidBuild ? { output: "export" as const } : {}),
   images: {
     unoptimized: true,
   },
