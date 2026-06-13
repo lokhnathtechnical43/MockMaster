@@ -8,6 +8,7 @@ export interface LocalExamCategory {
   icon: string
   description: string
   order: number
+  imageUrl?: string
   exams: LocalExam[]
 }
 
@@ -22,6 +23,7 @@ export interface LocalExam {
   markingScheme: string
   order: number
   testCount?: number
+  imageUrl?: string
 }
 
 export interface LocalTest {

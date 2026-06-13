@@ -1376,17 +1376,27 @@ export default function ExamPrepApp() {
                     className="border-0 shadow-md cursor-pointer hover:shadow-xl transition-all active:scale-[0.96] overflow-hidden"
                     onClick={() => { setSelectedCategory(cat); handleBottomNav('exams') }}
                   >
-                    <div className={`bg-gradient-to-br ${color.gradient} p-4 pb-5`}>
-                      <div className="flex items-center justify-between">
-                        <div className="w-12 h-12 rounded-2xl bg-white/25 backdrop-blur-sm flex items-center justify-center shadow-sm">
-                          <div className="text-white">{getCatIcon(cat.slug)}</div>
+                    <div className={`bg-gradient-to-br ${color.gradient} p-4 pb-5 relative overflow-hidden`}>
+                      {cat.imageUrl && (
+                        <>
+                          <img src={cat.imageUrl} alt={cat.name} className="absolute inset-0 w-full h-full object-cover opacity-30" />
+                          <div className={`absolute inset-0 bg-gradient-to-br ${color.gradient} opacity-70`} />
+                        </>
+                      )}
+                      <div className="relative z-10 flex items-center justify-between">
+                        <div className="w-12 h-12 rounded-2xl bg-white/25 backdrop-blur-sm flex items-center justify-center shadow-sm overflow-hidden">
+                          {cat.imageUrl ? (
+                            <img src={cat.imageUrl} alt={cat.name} className="w-12 h-12 object-cover rounded-2xl" />
+                          ) : (
+                            <div className="text-white">{getCatIcon(cat.slug)}</div>
+                          )}
                         </div>
                         <div className="w-7 h-7 rounded-full bg-white/20 flex items-center justify-center">
                           <ChevronRight className="w-4 h-4 text-white/80" />
                         </div>
                       </div>
-                      <p className="font-bold text-white text-sm mt-3">{cat.name}</p>
-                      <div className="flex items-center gap-1.5 mt-1.5">
+                      <p className="font-bold text-white text-sm mt-3 relative z-10">{cat.name}</p>
+                      <div className="flex items-center gap-1.5 mt-1.5 relative z-10">
                         <span className="text-[10px] text-white/80 bg-white/20 px-2 py-0.5 rounded-full font-medium backdrop-blur-sm">{cat.exams.length} {_t('home.exams')}</span>
                       </div>
                     </div>
@@ -1416,8 +1426,12 @@ export default function ExamPrepApp() {
                           {/* Left colored strip */}
                           <div className={`w-1.5 self-stretch bg-gradient-to-b ${color.gradient}`} />
                           <div className="flex items-center gap-3 p-3 flex-1">
-                            <div className={`w-12 h-12 rounded-2xl ${color.light} flex items-center justify-center ${color.text} shadow-sm`}>
-                              {getCatIcon(cat.slug)}
+                            <div className={`w-12 h-12 rounded-2xl ${color.light} flex items-center justify-center ${color.text} shadow-sm overflow-hidden`}>
+                              {exam.imageUrl ? (
+                                <img src={exam.imageUrl} alt={exam.name} className="w-12 h-12 object-cover rounded-2xl" />
+                              ) : (
+                                getCatIcon(cat.slug)
+                              )}
                             </div>
                             <div className="flex-1 min-w-0">
                               <p className="font-bold text-sm truncate text-gray-800">{exam.name}</p>
@@ -1609,8 +1623,12 @@ export default function ExamPrepApp() {
             return (
               <div key={cat.id}>
                 <div className="flex items-center gap-2 mb-3">
-                  <div className={`w-8 h-8 rounded-lg ${color.light} flex items-center justify-center ${color.text}`}>
-                    {getCatIcon(cat.slug)}
+                  <div className={`w-8 h-8 rounded-lg ${color.light} flex items-center justify-center ${color.text} overflow-hidden`}>
+                    {cat.imageUrl ? (
+                      <img src={cat.imageUrl} alt={cat.name} className="w-8 h-8 object-cover rounded-lg" />
+                    ) : (
+                      getCatIcon(cat.slug)
+                    )}
                   </div>
                   <h2 className="font-bold text-base">{cat.name}</h2>
                   <Badge variant="secondary" className="text-xs">{cat.exams.length}</Badge>
@@ -1623,6 +1641,13 @@ export default function ExamPrepApp() {
                       onClick={() => openExam(exam, cat)}
                     >
                       <CardContent className="p-3 flex items-center gap-3">
+                        <div className={`w-10 h-10 rounded-xl ${color.light} flex items-center justify-center ${color.text} shadow-sm overflow-hidden flex-shrink-0`}>
+                          {exam.imageUrl ? (
+                            <img src={exam.imageUrl} alt={exam.name} className="w-10 h-10 object-cover rounded-xl" />
+                          ) : (
+                            <BookOpen className="w-5 h-5" />
+                          )}
+                        </div>
                         <div className="flex-1 min-w-0">
                           <p className="font-semibold text-sm">{exam.name}</p>
                           <p className="text-gray-400 text-xs">{exam.testCount} {_t('exams.tests')} · {exam.totalQuestions} {_t('tests.Qs')} · {exam.duration} {_t('tests.min')}</p>

@@ -108,6 +108,7 @@ export interface FirestoreExamCategory {
   icon: string
   description: string
   order: number
+  imageUrl?: string
 }
 
 export interface FirestoreExam {
@@ -121,6 +122,7 @@ export interface FirestoreExam {
   order: number
   testCount: number
   categoryId: string
+  imageUrl?: string
 }
 
 export interface FirestoreTest {
@@ -287,6 +289,7 @@ export async function getCategories(): Promise<LocalExamCategory[]> {
           icon: cat.icon,
           description: cat.description,
           order: cat.order,
+          ...(cat.imageUrl ? { imageUrl: cat.imageUrl } : {}),
           exams: catExams.map((e) => ({
             id: e.id,
             name: e.name,
@@ -298,6 +301,7 @@ export async function getCategories(): Promise<LocalExamCategory[]> {
             markingScheme: e.markingScheme,
             order: e.order,
             testCount: e.testCount,
+            ...(e.imageUrl ? { imageUrl: e.imageUrl } : {}),
           })),
         } as LocalExamCategory
       })

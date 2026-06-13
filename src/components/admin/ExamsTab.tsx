@@ -23,6 +23,7 @@ import {
   type FirestoreExamCategory, type FirestoreExam, type FirestoreTest, type FirestoreQuestion
 } from '@/lib/firestore-service'
 import { getCategories as getLocalCategories } from '@/lib/local-data'
+import ImageUploadField from './ImageUploadField'
 
 type ViewLevel = 'categories' | 'exams' | 'tests' | 'questions'
 
@@ -54,12 +55,14 @@ export default function ExamsTab() {
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editName, setEditName] = useState('')
   const [editDesc, setEditDesc] = useState('')
+  const [editImageUrl, setEditImageUrl] = useState('')
 
   // Add states
   const [showAdd, setShowAdd] = useState(false)
   const [addName, setAddName] = useState('')
   const [addDesc, setAddDesc] = useState('')
   const [addSlug, setAddSlug] = useState('')
+  const [addImageUrl, setAddImageUrl] = useState('')
 
   // Add question
   const [showAddQuestion, setShowAddQuestion] = useState(false)
@@ -181,9 +184,10 @@ export default function ExamsTab() {
     try {
       await addCategory({
         name: addName, slug: addSlug || addName.toLowerCase().replace(/\s+/g, '-'),
-        icon: '📋', description: addDesc, order: categories.length + 1
+        icon: '📋', description: addDesc, order: categories.length + 1,
+        ...(addImageUrl ? { imageUrl: addImageUrl } : {})
       })
-      setAddName(''); setAddDesc(''); setAddSlug(''); setShowAdd(false)
+      setAddName(''); setAddDesc(''); setAddSlug(''); setAddImageUrl(''); setShowAdd(false)
       showStatus('Category added!', 'success'); loadCategories()
     } catch { showStatus('Failed to add category', 'error') }
   }
@@ -195,9 +199,10 @@ export default function ExamsTab() {
         name: addName, slug: addSlug || addName.toLowerCase().replace(/\s+/g, '-'),
         description: addDesc, totalQuestions: 0, duration: 60,
         markingScheme: '1/-0.25', order: exams.length + 1,
-        testCount: 0, categoryId: selectedCategoryId
+        testCount: 0, categoryId: selectedCategoryId,
+        ...(addImageUrl ? { imageUrl: addImageUrl } : {})
       })
-      setAddName(''); setAddDesc(''); setAddSlug(''); setShowAdd(false)
+      setAddName(''); setAddDesc(''); setAddSlug(''); setAddImageUrl(''); setShowAdd(false)
       showStatus('Exam added!', 'success'); loadExams(selectedCategoryId)
     } catch { showStatus('Failed to add exam', 'error') }
   }
@@ -345,14 +350,14 @@ export default function ExamsTab() {
     finally { setSeeding(false) }
   }
 
-  const handleStartEdit = (id: string, name: string, desc: string) => {
-    setEditingId(id); setEditName(name); setEditDesc(desc || '')
+  const handleStartEdit = (id: string, name: string, desc: string, imageUrl?: string) => {
+    setEditingId(id); setEditName(name); setEditDesc(desc || ''); setEditImageUrl(imageUrl || '')
   }
 
   const handleSaveEdit = async (type: string, id: string) => {
     try {
-      if (type === 'category') { await updateCategory(id, { name: editName, description: editDesc }); loadCategories() }
-      else if (type === 'exam') { await updateExam(id, { name: editName, description: editDesc }); if (selectedCategoryId) loadExams(selectedCategoryId) }
+      if (type === 'category') { await updateCategory(id, { name: editName, description: editDesc, ...(editImageUrl ? { imageUrl: editImageUrl } : { imageUrl: '' }) }); loadCategories() }
+      else if (type === 'exam') { await updateExam(id, { name: editName, description: editDesc, ...(editImageUrl ? { imageUrl: editImageUrl } : { imageUrl: '' }) }); if (selectedCategoryId) loadExams(selectedCategoryId) }
       else if (type === 'test') { await updateTest(id, { title: editName, description: editDesc }); if (selectedExamId) loadTests(selectedExamId) }
       setEditingId(null); showStatus('Updated!', 'success')
     } catch { showStatus('Update failed', 'error') }
@@ -542,7 +547,7 @@ export default function ExamsTab() {
               <p className="text-gray-400 text-xs">{categories.length} categories</p>
             </div>
             <Button size="sm" className="rounded-xl bg-gradient-to-r from-violet-500 to-purple-600 hover:from-violet-600 hover:to-purple-700 text-white shadow-md shadow-violet-200"
-              onClick={() => { setShowAdd(!showAdd); setAddName(''); setAddDesc(''); setAddSlug('') }}>
+              onClick={() => { setShowAdd(!showAdd); setAddName(''); setAddDesc(''); setAddSlug(''); setAddImageUrl('') }}>
               <Plus className="w-4 h-4 mr-1" /> New Category
             </Button>
           </div>
@@ -554,6 +559,7 @@ export default function ExamsTab() {
                 <Input placeholder="Category name (e.g. SSC, Banking)" value={addName} onChange={e => setAddName(e.target.value)} className="rounded-xl bg-white" />
                 <Input placeholder="Slug (auto if empty)" value={addSlug} onChange={e => setAddSlug(e.target.value)} className="rounded-xl bg-white" />
                 <Input placeholder="Short description" value={addDesc} onChange={e => setAddDesc(e.target.value)} className="rounded-xl bg-white" />
+                <ImageUploadField imageUrl={addImageUrl} onImageUrlChange={setAddImageUrl} folder="categories" label="Category Image (Optional)" />
                 <div className="flex gap-2">
                   <Button size="sm" className="rounded-xl bg-gradient-to-r from-violet-500 to-purple-600 text-white" onClick={handleAddCategory} disabled={!addName.trim()}>
                     <Plus className="w-3 h-3 mr-1" /> Add
@@ -582,6 +588,7 @@ export default function ExamsTab() {
                     <CardContent className="p-4 space-y-2 bg-violet-50/50">
                       <Input value={editName} onChange={e => setEditName(e.target.value)} className="rounded-xl" />
                       <Input value={editDesc} onChange={e => setEditDesc(e.target.value)} placeholder="Description" className="rounded-xl" />
+                      <ImageUploadField imageUrl={editImageUrl} onImageUrlChange={setEditImageUrl} folder="categories" label="Category Image (Optional)" />
                       <div className="flex gap-2">
                         <Button size="sm" className="rounded-xl" onClick={() => handleSaveEdit('category', cat.id)}><Save className="w-3 h-3 mr-1" /> Save</Button>
                         <Button size="sm" variant="outline" className="rounded-xl" onClick={() => setEditingId(null)}>Cancel</Button>
@@ -593,15 +600,22 @@ export default function ExamsTab() {
                       <CardContent className="p-4 flex items-center gap-3 flex-1">
                         <button className="flex-1 min-w-0 text-left" onClick={() => handleSelectCategory(cat)}>
                           <div className="flex items-center gap-2">
-                            <span className="text-lg">{cat.icon || '📋'}</span>
-                            <div>
+                            <div className="w-8 h-8 rounded-lg overflow-hidden flex items-center justify-center flex-shrink-0">
+                              {cat.imageUrl ? (
+                                <img src={cat.imageUrl} alt={cat.name} className="w-8 h-8 object-cover rounded-lg" />
+                              ) : (
+                                <span className="text-lg">{cat.icon || '📋'}</span>
+                              )}
+                            </div>
+                            <div className="min-w-0">
                               <p className="font-semibold text-sm">{cat.name}</p>
                               <p className="text-gray-400 text-xs">{cat.description || cat.slug}</p>
+                              {cat.imageUrl && <span className="text-[9px] text-violet-500 font-medium">Has image</span>}
                             </div>
                           </div>
                         </button>
                         <div className="flex items-center gap-1.5">
-                          <button onClick={() => handleStartEdit(cat.id, cat.name, cat.description)} className="w-8 h-8 rounded-xl bg-blue-50 hover:bg-blue-100 flex items-center justify-center transition-colors">
+                          <button onClick={() => handleStartEdit(cat.id, cat.name, cat.description, cat.imageUrl)} className="w-8 h-8 rounded-xl bg-blue-50 hover:bg-blue-100 flex items-center justify-center transition-colors">
                             <Edit3 className="w-3.5 h-3.5 text-blue-500" />
                           </button>
                           <button onClick={() => handleDelete('category', cat.id, cat.name)} className="w-8 h-8 rounded-xl bg-red-50 hover:bg-red-100 flex items-center justify-center transition-colors">
@@ -636,7 +650,7 @@ export default function ExamsTab() {
                 </Button>
               )}
               <Button size="sm" className="rounded-xl bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white shadow-md shadow-blue-200"
-                onClick={() => { setShowAdd(!showAdd); setAddName(''); setAddDesc(''); setAddSlug('') }}>
+                onClick={() => { setShowAdd(!showAdd); setAddName(''); setAddDesc(''); setAddSlug(''); setAddImageUrl('') }}>
                 <Plus className="w-4 h-4 mr-1" /> New Exam
               </Button>
             </div>
@@ -649,6 +663,7 @@ export default function ExamsTab() {
                 <Input placeholder="Exam name (e.g. SSC CGL, IBPS PO)" value={addName} onChange={e => setAddName(e.target.value)} className="rounded-xl bg-white" />
                 <Input placeholder="Slug" value={addSlug} onChange={e => setAddSlug(e.target.value)} className="rounded-xl bg-white" />
                 <Input placeholder="Description" value={addDesc} onChange={e => setAddDesc(e.target.value)} className="rounded-xl bg-white" />
+                <ImageUploadField imageUrl={addImageUrl} onImageUrlChange={setAddImageUrl} folder="exams" label="Exam Image (Optional)" />
                 <div className="flex gap-2">
                   <Button size="sm" className="rounded-xl bg-gradient-to-r from-blue-500 to-indigo-600 text-white" onClick={handleAddExam} disabled={!addName.trim()}>
                     <Plus className="w-3 h-3 mr-1" /> Add
@@ -677,6 +692,7 @@ export default function ExamsTab() {
                     <CardContent className="p-4 space-y-2 bg-blue-50/50">
                       <Input value={editName} onChange={e => setEditName(e.target.value)} className="rounded-xl" />
                       <Input value={editDesc} onChange={e => setEditDesc(e.target.value)} placeholder="Description" className="rounded-xl" />
+                      <ImageUploadField imageUrl={editImageUrl} onImageUrlChange={setEditImageUrl} folder="exams" label="Exam Image (Optional)" />
                       <div className="flex gap-2">
                         <Button size="sm" className="rounded-xl" onClick={() => handleSaveEdit('exam', exam.id)}><Save className="w-3 h-3 mr-1" /> Save</Button>
                         <Button size="sm" variant="outline" className="rounded-xl" onClick={() => setEditingId(null)}>Cancel</Button>
@@ -684,8 +700,12 @@ export default function ExamsTab() {
                     </CardContent>
                   ) : (
                     <CardContent className="p-4 flex items-center gap-3">
-                      <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-blue-100 to-indigo-200 flex items-center justify-center flex-shrink-0">
-                        <BookOpen className="w-5 h-5 text-blue-600" />
+                      <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-blue-100 to-indigo-200 flex items-center justify-center flex-shrink-0 overflow-hidden">
+                        {exam.imageUrl ? (
+                          <img src={exam.imageUrl} alt={exam.name} className="w-11 h-11 object-cover rounded-2xl" />
+                        ) : (
+                          <BookOpen className="w-5 h-5 text-blue-600" />
+                        )}
                       </div>
                       <button className="flex-1 min-w-0 text-left" onClick={() => handleSelectExam(exam)}>
                         <p className="font-semibold text-sm">{exam.name}</p>
@@ -695,7 +715,7 @@ export default function ExamsTab() {
                         </div>
                       </button>
                       <div className="flex items-center gap-1.5">
-                        <button onClick={() => handleStartEdit(exam.id, exam.name, exam.description)} className="w-8 h-8 rounded-xl bg-blue-50 hover:bg-blue-100 flex items-center justify-center">
+                        <button onClick={() => handleStartEdit(exam.id, exam.name, exam.description, exam.imageUrl)} className="w-8 h-8 rounded-xl bg-blue-50 hover:bg-blue-100 flex items-center justify-center">
                           <Edit3 className="w-3.5 h-3.5 text-blue-500" />
                         </button>
                         <button onClick={() => handleDelete('exam', exam.id, exam.name)} className="w-8 h-8 rounded-xl bg-red-50 hover:bg-red-100 flex items-center justify-center">
