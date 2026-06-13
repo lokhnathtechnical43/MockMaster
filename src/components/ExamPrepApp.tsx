@@ -1092,13 +1092,30 @@ export default function ExamPrepApp() {
                 </div>
                 <Button
                   className="bg-white text-orange-600 rounded-xl font-bold shadow-md hover:bg-white/90 active:scale-95 transition-all"
-                  onClick={() => {
+                  onClick={async () => {
                     const allCats = categories
                     const allExams = allCats.flatMap(c => c.exams)
-                    if (allExams.length > 0) {
+                    if (allExams.length === 0) return
+                    // Try to find an exam with tests that have questions
+                    for (let attempt = 0; attempt < Math.min(allExams.length, 10); attempt++) {
                       const randomExam = allExams[Math.floor(Math.random() * allExams.length)]
-                      const randomCat = allCats.find(c => c.exams.some(e => e.id === randomExam.id))!
-                      openExam(randomExam, randomCat)
+                      const randomCat = allCats.find(c => c.exams.some(e => e.id === randomExam.id))
+                      if (!randomCat) continue
+                      const tests = await fetchTestsByExam(randomExam.id)
+                      if (tests.length > 0) {
+                        // Find a test with questions
+                        for (const test of tests) {
+                          const fullTest = await fetchTestById(test.id)
+                          if (fullTest && fullTest.questions && fullTest.questions.length > 0) {
+                            setSelectedExam(randomExam)
+                            setSelectedCategory(randomCat)
+                            setExamTests(tests)
+                            setCurrentTestMode('practice')
+                            startTest(fullTest, 'practice')
+                            return
+                          }
+                        }
+                      }
                     }
                   }}
                 >
