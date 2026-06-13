@@ -1285,7 +1285,7 @@ export default function ExamPrepApp() {
                     </div>
                     <span className="text-[11px] text-gray-400 uppercase tracking-wider font-medium">{_t('testInfo.totalQ')}</span>
                   </div>
-                  <p className="text-xl font-bold text-gray-800 ml-9">{selectedTest.totalQuestions}</p>
+                  <p className="text-xl font-bold text-gray-800 ml-9">{selectedTest.totalQuestions || selectedTest.questions?.length || 0}</p>
                 </div>
                 <div className="p-4 border-b border-gray-100">
                   <div className="flex items-center gap-2 mb-1">
@@ -1294,7 +1294,7 @@ export default function ExamPrepApp() {
                     </div>
                     <span className="text-[11px] text-gray-400 uppercase tracking-wider font-medium">{_t('testInfo.duration')}</span>
                   </div>
-                  <p className="text-xl font-bold text-gray-800 ml-9">{selectedTest.duration} {_t('testInfo.minutes')}</p>
+                  <p className="text-xl font-bold text-gray-800 ml-9">{selectedTest.duration || 0} {_t('testInfo.minutes')}</p>
                 </div>
                 <div className="p-4 border-r border-gray-100">
                   <div className="flex items-center gap-2 mb-1">
@@ -1316,7 +1316,7 @@ export default function ExamPrepApp() {
                     </div>
                     <span className="text-[11px] text-gray-400 uppercase tracking-wider font-medium">{_t('testInfo.maxScore')}</span>
                   </div>
-                  <p className="text-xl font-bold text-orange-600 ml-9">{selectedTest.totalQuestions * selectedTest.correctMarks}</p>
+                  <p className="text-xl font-bold text-orange-600 ml-9">{(selectedTest.totalQuestions || selectedTest.questions?.length || 0) * (selectedTest.correctMarks || 1)}</p>
                 </div>
               </div>
             </CardContent>
@@ -1341,7 +1341,7 @@ export default function ExamPrepApp() {
                     <p className="font-semibold text-gray-800">{_t('testInfo.correctAns')}</p>
                   </div>
                 </div>
-                <span className="text-lg font-bold text-emerald-600">+{selectedTest.correctMarks}</span>
+                <span className="text-lg font-bold text-emerald-600">+{selectedTest.correctMarks || 1}</span>
               </div>
               <div className="flex items-center justify-between p-3 bg-red-50 rounded-xl border border-red-100">
                 <div className="flex items-center gap-3">
@@ -1353,7 +1353,7 @@ export default function ExamPrepApp() {
                     <p className="font-semibold text-gray-800">{_t('testInfo.wrongAns')}</p>
                   </div>
                 </div>
-                <span className="text-lg font-bold text-red-600">-{selectedTest.wrongMarks}</span>
+                <span className="text-lg font-bold text-red-600">-{selectedTest.wrongMarks || 0}</span>
               </div>
               <div className="flex items-center justify-between p-3 bg-gray-50 rounded-xl border border-gray-100">
                 <div className="flex items-center gap-3">
@@ -1379,12 +1379,12 @@ export default function ExamPrepApp() {
                 </div>
                 <div>
                   <p className="text-white/80 text-xs font-medium uppercase tracking-wider">{_t('testInfo.maxScore')}</p>
-                  <p className="text-white font-bold text-2xl">{selectedTest.totalQuestions * selectedTest.correctMarks} {_t('testInfo.marks')}</p>
+                  <p className="text-white font-bold text-2xl">{(selectedTest.totalQuestions || selectedTest.questions?.length || 0) * (selectedTest.correctMarks || 1)} {_t('testInfo.marks')}</p>
                 </div>
               </div>
               <div className="text-right">
                 <p className="text-white/70 text-[10px] uppercase tracking-wider">{_t('testInfo.totalQ')}</p>
-                <p className="text-white font-bold text-lg">{selectedTest.totalQuestions}</p>
+                <p className="text-white font-bold text-lg">{selectedTest.totalQuestions || selectedTest.questions?.length || 0}</p>
               </div>
             </CardContent>
           </Card>
