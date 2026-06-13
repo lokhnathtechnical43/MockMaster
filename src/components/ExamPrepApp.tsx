@@ -1389,7 +1389,14 @@ export default function ExamPrepApp() {
             </button>
             <div className="flex-1 min-w-0">
               <h1 className="text-white text-lg font-bold truncate">{selectedExam.name}</h1>
-              <p className="text-white/70 text-xs">{selectedCategory.name}</p>
+              <div className="flex items-center gap-2">
+                <p className="text-white/70 text-xs">{selectedCategory.name}</p>
+                {currentTestMode === 'practice' && (
+                  <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-amber-200 bg-white/15 px-2 py-0.5 rounded-full">
+                    <Zap className="w-2.5 h-2.5" /> Practice
+                  </span>
+                )}
+              </div>
             </div>
           </div>
           <div className="flex items-center gap-4 mt-3">
@@ -1590,12 +1597,27 @@ export default function ExamPrepApp() {
             </CardContent>
           </Card>
 
+          {/* Practice Mode Badge */}
+          {currentTestMode === 'practice' && (
+            <Card className="border-0 shadow-md bg-gradient-to-r from-amber-500 to-orange-500 overflow-hidden">
+              <CardContent className="p-4 flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center">
+                  <Zap className="w-5 h-5 text-white" />
+                </div>
+                <div>
+                  <p className="text-white font-bold text-sm">Practice Mode</p>
+                  <p className="text-white/70 text-xs">No negative marking · Learn at your pace</p>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
           {/* Start Button */}
           <Button
             className="w-full h-14 bg-gradient-to-r from-orange-500 to-red-500 text-white rounded-2xl text-lg font-bold shadow-lg shadow-orange-200 hover:shadow-xl hover:shadow-orange-300 transition-all active:scale-[0.98]"
-            onClick={() => startTest(selectedTest)}
+            onClick={() => startTest(selectedTest, currentTestMode)}
           >
-            <Play className="w-6 h-6 mr-2" /> {_t('testInfo.startNow')}
+            <Play className="w-6 h-6 mr-2" /> {currentTestMode === 'practice' ? 'Start Practice' : _t('testInfo.startNow')}
           </Button>
         </div>
       </div>
@@ -1663,7 +1685,14 @@ export default function ExamPrepApp() {
             >
               <ArrowLeft className="w-4 h-4 text-gray-700" />
             </button>
-            <h1 className="text-sm font-bold text-gray-800 truncate flex-1 text-center">{selectedTest.title}</h1>
+            <div className="flex-1 text-center min-w-0">
+              <h1 className="text-sm font-bold text-gray-800 truncate">{selectedTest.title}</h1>
+              {currentTestMode === 'practice' && (
+                <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full mt-0.5">
+                  <Zap className="w-2.5 h-2.5" /> Practice Mode
+                </span>
+              )}
+            </div>
             {/* Prominent Timer Box */}
             <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-mono font-bold text-sm flex-shrink-0 ${
               timeLeft < 60 ? 'bg-red-100 text-red-700 ring-2 ring-red-300' :
@@ -1745,37 +1774,71 @@ export default function ExamPrepApp() {
           <div className="px-4 pb-4 space-y-2.5">
             {optionLetters.map(letter => {
               const isSelected = answers[question.id] === letter
+              const isCorrect = question.correctAnswer === letter
+              // In practice mode, show correct/incorrect after answering
+              const showFeedback = currentTestMode === 'practice' && isSelected
               return (
                 <button
                   key={letter}
                   onClick={() => selectAnswer(question.id, letter)}
                   className={`w-full text-left px-4 py-3.5 rounded-lg border-2 transition-all duration-150 active:scale-[0.99] ${
-                    isSelected
+                    showFeedback && isCorrect
+                      ? 'border-emerald-500 bg-emerald-50 shadow-sm ring-1 ring-emerald-200'
+                      : showFeedback && !isCorrect
+                      ? 'border-red-400 bg-red-50 shadow-sm ring-1 ring-red-200'
+                      : isSelected
                       ? 'border-orange-500 bg-orange-50 shadow-sm ring-1 ring-orange-200'
+                      : currentTestMode === 'practice' && answers[question.id] && isCorrect
+                      ? 'border-emerald-300 bg-emerald-50/50' // Show correct answer in practice mode when wrong selected
                       : 'border-gray-200 bg-white hover:border-gray-300 hover:bg-gray-50'
                   }`}
                 >
                   <div className="flex items-center gap-3">
                     {/* Radio-style circle */}
                     <div className={`w-8 h-8 rounded-full border-2 flex items-center justify-center text-sm font-bold flex-shrink-0 transition-all ${
-                      isSelected
+                      showFeedback && isCorrect
+                        ? 'border-emerald-500 bg-emerald-500 text-white shadow-sm'
+                        : showFeedback && !isCorrect
+                        ? 'border-red-400 bg-red-400 text-white shadow-sm'
+                        : isSelected
                         ? 'border-orange-500 bg-orange-500 text-white shadow-sm'
+                        : currentTestMode === 'practice' && answers[question.id] && isCorrect
+                        ? 'border-emerald-400 bg-emerald-100 text-emerald-600'
                         : 'border-gray-300 bg-white text-gray-500'
                     }`}>
-                      {isSelected ? (
+                      {showFeedback && isCorrect ? (
+                        <CheckCircle2 className="w-4 h-4" />
+                      ) : showFeedback && !isCorrect ? (
+                        <XCircle className="w-4 h-4" />
+                      ) : isSelected ? (
                         <span className="text-xs">●</span>
                       ) : (
                         letter
                       )}
                     </div>
-                    <span className={`text-sm leading-relaxed ${isSelected ? 'text-gray-900 font-medium' : 'text-gray-700'}`}>
-                      <span className="font-semibold text-gray-500 mr-1.5">{letter}.</span>
+                    <span className={`text-sm leading-relaxed ${
+                      showFeedback && isCorrect ? 'text-emerald-800 font-semibold'
+                      : showFeedback && !isCorrect ? 'text-red-700 font-medium line-through'
+                      : isSelected ? 'text-gray-900 font-medium' : 'text-gray-700'
+                    }`}>
+                      <span className={`font-semibold mr-1.5 ${
+                        showFeedback && isCorrect ? 'text-emerald-600' : showFeedback && !isCorrect ? 'text-red-500' : 'text-gray-500'
+                      }`}>{letter}.</span>
                       {optionLabels[letter]}
                     </span>
+                    {showFeedback && isCorrect && <span className="ml-auto text-emerald-600 text-xs font-bold">✓ Correct</span>}
+                    {showFeedback && !isCorrect && <span className="ml-auto text-red-500 text-xs font-bold">✗ Wrong</span>}
                   </div>
                 </button>
               )
             })}
+            {/* In practice mode, show explanation after answering */}
+            {currentTestMode === 'practice' && answers[question.id] && question.explanation && (
+              <div className="mt-3 p-3 bg-blue-50 border border-blue-200 rounded-xl">
+                <p className="text-xs font-bold text-blue-700 mb-1">💡 Explanation</p>
+                <p className="text-xs text-blue-800 leading-relaxed">{question.explanation}</p>
+              </div>
+            )}
           </div>
         </ScrollArea>
 
@@ -2322,6 +2385,35 @@ export default function ExamPrepApp() {
 
   // ===== RENDER: Practice Page =====
   function renderPractice() {
+    // Gather stats for practice page
+    const totalBookmarked = bookmarkedQs.length
+
+    // Calculate weak areas from recent results
+    const getWeakAreas = () => {
+      try {
+        const storedResults = localStorage.getItem('mockmaster_results')
+        const allResults: TestResult[] = storedResults ? JSON.parse(storedResults) : []
+        if (allResults.length === 0) return []
+        // Analyze last 10 results for weak categories
+        const recentResults = allResults.slice(-10)
+        const categoryScores: Record<string, { correct: number; total: number }> = {}
+        recentResults.forEach(r => {
+          const catName = r.examName || r.testName || 'Unknown'
+          if (!categoryScores[catName]) categoryScores[catName] = { correct: 0, total: 0 }
+          categoryScores[catName].correct += r.correctAnswers
+          categoryScores[catName].total += r.totalQuestions
+        })
+        return Object.entries(categoryScores)
+          .map(([name, { correct, total }]) => ({ name, accuracy: total > 0 ? Math.round((correct / total) * 100) : 0, total }))
+          .filter(a => a.total >= 3 && a.accuracy < 60)
+          .sort((a, b) => a.accuracy - b.accuracy)
+          .slice(0, 5)
+      } catch {
+        return []
+      }
+    }
+    const weakAreas = getWeakAreas()
+
     return (
       <div className="pb-20">
         <div className="bg-gradient-to-r from-orange-500 to-red-500 px-4 pt-[calc(env(safe-area-inset-top,0px)+3rem)] pb-6 rounded-b-3xl">
@@ -2341,13 +2433,31 @@ export default function ExamPrepApp() {
           <div>
             <h2 className="font-bold text-lg mb-3">{_t('practice.chooseMode')}</h2>
             <div className="grid grid-cols-2 gap-3">
-              <Card className="border-0 shadow-sm cursor-pointer hover:shadow-md transition-shadow" onClick={() => {
+              {/* Quick Practice - Pick a random test and start */}
+              <Card className="border-0 shadow-sm cursor-pointer hover:shadow-md transition-shadow active:scale-[0.97]" onClick={async () => {
                 const allCats = categories
                 const allExams = allCats.flatMap(c => c.exams)
-                if (allExams.length > 0) {
+                if (allExams.length === 0) return
+                // Try to find an exam with tests that have questions
+                for (let attempt = 0; attempt < allExams.length; attempt++) {
                   const randomExam = allExams[Math.floor(Math.random() * allExams.length)]
-                  const randomCat = allCats.find(c => c.exams.some(e => e.id === randomExam.id))!
-                  openExam(randomExam, randomCat, 'practice')
+                  const randomCat = allCats.find(c => c.exams.some(e => e.id === randomExam.id))
+                  if (!randomCat) continue
+                  const tests = await fetchTestsByExam(randomExam.id)
+                  if (tests.length > 0) {
+                    // Find a test with questions
+                    for (const test of tests) {
+                      const fullTest = await fetchTestById(test.id)
+                      if (fullTest && fullTest.questions && fullTest.questions.length > 0) {
+                        setSelectedExam(randomExam)
+                        setSelectedCategory(randomCat)
+                        setExamTests(tests)
+                        setCurrentTestMode('practice')
+                        startTest(fullTest, 'practice')
+                        return
+                      }
+                    }
+                  }
                 }
               }}>
                 <CardContent className="p-4 text-center">
@@ -2358,9 +2468,10 @@ export default function ExamPrepApp() {
                   <p className="text-gray-400 text-[11px] mt-1">{_t('practice.quickSub')}</p>
                 </CardContent>
               </Card>
-              <Card className="border-0 shadow-sm cursor-pointer hover:shadow-md transition-shadow" onClick={() => {
-                // Topic wise: navigate to exams page to pick a category/exam
-                handleBottomNav('exams')
+              {/* Topic Wise - Navigate to exams with practice mode */}
+              <Card className="border-0 shadow-sm cursor-pointer hover:shadow-md transition-shadow active:scale-[0.97]" onClick={() => {
+                setCurrentTestMode('practice')
+                navigateTo('exams')
               }}>
                 <CardContent className="p-4 text-center">
                   <div className="w-12 h-12 rounded-2xl bg-blue-50 flex items-center justify-center mx-auto mb-2">
@@ -2370,28 +2481,78 @@ export default function ExamPrepApp() {
                   <p className="text-gray-400 text-[11px] mt-1">{_t('practice.topicWiseSub')}</p>
                 </CardContent>
               </Card>
-              <Card className="border-0 shadow-sm cursor-pointer hover:shadow-md transition-shadow relative opacity-70">
-                <Badge variant="secondary" className="absolute top-2 right-2 text-[9px]">{_t('menu.soon')}</Badge>
+              {/* Bookmarked Questions - Practice bookmarked questions */}
+              <Card className={`border-0 shadow-sm cursor-pointer hover:shadow-md transition-shadow active:scale-[0.97] ${totalBookmarked === 0 ? 'opacity-70' : ''}`} onClick={() => {
+                if (totalBookmarked === 0) {
+                  navigateTo('bookmarks')
+                  return
+                }
+                navigateTo('bookmarks')
+              }}>
+                {totalBookmarked === 0 && <Badge variant="secondary" className="absolute top-2 right-2 text-[9px]">{_t('menu.soon')}</Badge>}
                 <CardContent className="p-4 text-center">
                   <div className="w-12 h-12 rounded-2xl bg-green-50 flex items-center justify-center mx-auto mb-2">
                     <BookMarked className="w-6 h-6 text-green-500" />
                   </div>
                   <p className="font-semibold text-sm">{_t('practice.bookmarked')}</p>
-                  <p className="text-gray-400 text-[11px] mt-1">{_t('practice.bookmarkedSub')}</p>
+                  <p className="text-gray-400 text-[11px] mt-1">{totalBookmarked > 0 ? `${totalBookmarked} questions` : _t('practice.bookmarkedSub')}</p>
                 </CardContent>
               </Card>
-              <Card className="border-0 shadow-sm cursor-pointer hover:shadow-md transition-shadow relative opacity-70">
-                <Badge variant="secondary" className="absolute top-2 right-2 text-[9px]">{_t('menu.soon')}</Badge>
+              {/* Weak Areas - Practice questions from weak categories */}
+              <Card className={`border-0 shadow-sm cursor-pointer hover:shadow-md transition-shadow active:scale-[0.97] ${weakAreas.length === 0 ? 'opacity-70' : ''}`} onClick={() => {
+                if (weakAreas.length === 0) {
+                  navigateTo('perf-report')
+                  return
+                }
+                // Navigate to exams page with practice mode to practice weak areas
+                setCurrentTestMode('practice')
+                navigateTo('exams')
+              }}>
+                {weakAreas.length === 0 && <Badge variant="secondary" className="absolute top-2 right-2 text-[9px]">{_t('menu.soon')}</Badge>}
                 <CardContent className="p-4 text-center">
                   <div className="w-12 h-12 rounded-2xl bg-purple-50 flex items-center justify-center mx-auto mb-2">
                     <PenTool className="w-6 h-6 text-purple-500" />
                   </div>
                   <p className="font-semibold text-sm">{_t('practice.weakAreas')}</p>
-                  <p className="text-gray-400 text-[11px] mt-1">{_t('practice.weakAreasSub')}</p>
+                  <p className="text-gray-400 text-[11px] mt-1">{weakAreas.length > 0 ? `${weakAreas.length} weak areas` : _t('practice.weakAreasSub')}</p>
                 </CardContent>
               </Card>
             </div>
           </div>
+
+          {/* Weak Areas Highlight (if any) */}
+          {weakAreas.length > 0 && (
+            <div>
+              <h2 className="font-bold text-lg mb-3 flex items-center gap-2">
+                <AlertTriangle className="w-5 h-5 text-amber-500" /> Weak Areas
+              </h2>
+              <div className="space-y-2">
+                {weakAreas.map(area => (
+                  <Card key={area.name} className="border-0 shadow-sm">
+                    <CardContent className="p-3 flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-xl bg-red-50 flex items-center justify-center">
+                        <span className="font-bold text-sm text-red-600">{area.accuracy}%</span>
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-semibold text-sm truncate">{area.name}</p>
+                        <div className="flex items-center gap-2 mt-1">
+                          <Progress value={area.accuracy} className="h-1.5 flex-1" />
+                          <span className="text-gray-400 text-[10px]">{area.total} Qs</span>
+                        </div>
+                      </div>
+                      <Button size="sm" variant="outline" className="rounded-xl text-orange-600 border-orange-200 text-xs"
+                        onClick={() => {
+                          setCurrentTestMode('practice')
+                          navigateTo('exams')
+                        }}>
+                        Practice
+                      </Button>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* Practice by Category */}
           <div>
@@ -2403,11 +2564,11 @@ export default function ExamPrepApp() {
                 return (
                   <Card
                     key={cat.id}
-                    className="border-0 shadow-sm cursor-pointer hover:shadow-md transition-shadow"
+                    className="border-0 shadow-sm cursor-pointer hover:shadow-md transition-shadow active:scale-[0.98]"
                     onClick={() => {
                       setSelectedCategory(cat)
                       setCurrentTestMode('practice')
-                      handleBottomNav('exams')
+                      openExam(cat.exams[0], cat, 'practice')
                     }}
                   >
                     <CardContent className="p-3 flex items-center gap-3">
@@ -2459,7 +2620,7 @@ export default function ExamPrepApp() {
                                 <span className={`font-bold text-sm ${pct >= 60 ? 'text-emerald-600' : pct >= 40 ? 'text-yellow-600' : 'text-red-600'}`}>{pct}%</span>
                               </div>
                               <div className="flex-1 min-w-0">
-                                <p className="font-semibold text-sm truncate">{r.testId.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase())}</p>
+                                <p className="font-semibold text-sm truncate">{r.testName || r.testId.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase())}</p>
                                 <p className="text-gray-400 text-xs">{r.correctAnswers}/{r.totalQuestions} · {Math.round(r.timeTaken / 60)}m</p>
                               </div>
                               <Badge variant="outline" className="text-[10px]">{r.correctAnswers} ✓</Badge>
