@@ -562,7 +562,13 @@ export function getTestsByExam(examId: string): LocalTest[] {
     // Fallback: use default tests
     return ALL_TESTS.filter(t => t.examId === examId)
   }
-  return tests.filter(t => t.examId === examId)
+  // Merge questions from separate storage for each test
+  return tests
+    .filter(t => t.examId === examId)
+    .map(t => {
+      const questions = getQuestions(t.id)
+      return { ...t, questions }
+    })
 }
 
 export function getTestById(testId: string): LocalTest | undefined {
@@ -570,7 +576,11 @@ export function getTestById(testId: string): LocalTest | undefined {
   if (tests.length === 0) {
     return ALL_TESTS.find(t => t.id === testId)
   }
-  return tests.find(t => t.id === testId)
+  const test = tests.find(t => t.id === testId)
+  if (!test) return undefined
+  // Merge questions from separate storage (questions are stored separately from tests)
+  const questions = getQuestions(testId)
+  return { ...test, questions }
 }
 
 export function addTest(data: Omit<LocalTest, 'id' | 'createdAt'>): LocalTest {
