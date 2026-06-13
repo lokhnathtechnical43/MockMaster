@@ -1,1 +1,2 @@
-5396519 Custom app icon: MockMaster logo with orange background for Android
+5396519 -> v1.0.0-stable
+35062d0 -> v1.1.0-fix
