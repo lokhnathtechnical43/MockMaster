@@ -31,6 +31,13 @@ import {
   signOut as firebaseSignOut,
   User
 } from 'firebase/auth'
+import DashboardTab from '@/components/admin/DashboardTab'
+import ExamsTab from '@/components/admin/ExamsTab'
+import UsersTab from '@/components/admin/UsersTab'
+import AnalyticsTab from '@/components/admin/AnalyticsTab'
+import AnnouncementsTab from '@/components/admin/AnnouncementsTab'
+import NotificationsTab from '@/components/admin/NotificationsTab'
+import SettingsTab from '@/components/admin/SettingsTab'
 
 // Suppress Firebase auth errors in static export mode
 const isClient = typeof window !== 'undefined'
