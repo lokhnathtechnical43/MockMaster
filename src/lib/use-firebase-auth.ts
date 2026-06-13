@@ -20,6 +20,7 @@ interface AuthState {
 }
 
 const GUEST_USER_KEY = 'examprep_guest_user'
+const GUEST_QUICK_PRACTICE_USED_KEY = 'examprep_guest_qp_used'
 
 export function useFirebaseAuth() {
   const [authState, setAuthState] = useState<AuthState>({ user: null, loading: true })
@@ -104,6 +105,7 @@ export function useFirebaseAuth() {
       }
       // Clear local guest if email login succeeds
       localStorage.removeItem(GUEST_USER_KEY)
+      localStorage.removeItem(GUEST_QUICK_PRACTICE_USED_KEY)
       setIsLocalGuest(false)
     } catch (err: any) {
       console.error('Login error:', err)
@@ -157,6 +159,7 @@ export function useFirebaseAuth() {
       }
       // Clear local guest if signup succeeds
       localStorage.removeItem(GUEST_USER_KEY)
+      localStorage.removeItem(GUEST_QUICK_PRACTICE_USED_KEY)
       setIsLocalGuest(false)
     } catch (err: any) {
       console.error('Signup error:', err)
@@ -281,6 +284,7 @@ export function useFirebaseAuth() {
   const logout = async () => {
     try {
       localStorage.removeItem(GUEST_USER_KEY)
+      localStorage.removeItem(GUEST_QUICK_PRACTICE_USED_KEY)
       setIsLocalGuest(false)
       if (authState.user && auth) {
         await firebaseSignOut(auth)
@@ -293,6 +297,27 @@ export function useFirebaseAuth() {
   // User is logged in if either Firebase user exists OR local guest
   const isLoggedIn = !!authState.user || isLocalGuest
   const isGuest = isLocalGuest || (authState.user?.isAnonymous ?? false)
+
+  // Check if guest has already used Quick Practice
+  const hasGuestUsedQuickPractice = (): boolean => {
+    try {
+      return localStorage.getItem(GUEST_QUICK_PRACTICE_USED_KEY) === 'true'
+    } catch {
+      return false
+    }
+  }
+
+  // Mark that guest has used Quick Practice
+  const markGuestQuickPracticeUsed = () => {
+    try {
+      localStorage.setItem(GUEST_QUICK_PRACTICE_USED_KEY, 'true')
+    } catch {
+      // ignore
+    }
+  }
+
+  // Check if guest can use Quick Practice (only once)
+  const canGuestUseQuickPractice = !isGuest || !hasGuestUsedQuickPractice()
 
   // Check if email login is available (Firebase must be configured)
   const isEmailLoginAvailable = isFirebaseReady()
@@ -355,5 +380,8 @@ export function useFirebaseAuth() {
     setResetSent,
     setVerifySent,
     logout,
+    canGuestUseQuickPractice,
+    markGuestQuickPracticeUsed,
+    hasGuestUsedQuickPractice,
   }
 }

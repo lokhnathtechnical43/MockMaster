@@ -325,6 +325,16 @@ const translations: Record<Lang, Record<string, string>> = {
     'upcoming.rrbNtpcDate': 'Sep 2025',
     'upcoming.rrbNtpcStatus': 'Admit Card Soon',
 
+    // === Guest Limit ===
+    'guest.limitTitle': 'Free Trial Used!',
+    'guest.limitSub': 'You have used your free Quick Practice as a guest. Create a free account to unlock unlimited practice tests!',
+    'guest.limitFeature1': 'Unlimited Practice Tests',
+    'guest.limitFeature2': 'Track Your Progress',
+    'guest.limitFeature3': 'Compete on Leaderboard',
+    'guest.limitFeature4': 'Save Bookmarks & History',
+    'guest.createAccount': 'Create Free Account',
+    'guest.alreadyUsed': 'Already used',
+
     // === Share ===
     'share.title': 'MockMaster',
     'share.text': 'Prepare for government exams!',
@@ -651,6 +661,16 @@ const translations: Record<Lang, Record<string, string>> = {
     'upcoming.rrbNtpcDate': 'सितंबर 2025',
     'upcoming.rrbNtpcStatus': 'प्रवेश पत्र जल्द',
 
+    // === Guest Limit ===
+    'guest.limitTitle': 'मुफ्त ट्रायल खत्म!',
+    'guest.limitSub': 'अतिथि के रूप में आपने अपना मुफ्त त्वरित अभ्यास उपयोग कर लिया है। असीमित अभ्यास टेस्ट के लिए मुफ्त खाता बनाएं!',
+    'guest.limitFeature1': 'असीमित अभ्यास टेस्ट',
+    'guest.limitFeature2': 'अपनी प्रगति ट्रैक करें',
+    'guest.limitFeature3': 'लीडरबोर्ड पर प्रतिस्पर्धा करें',
+    'guest.limitFeature4': 'बुकमार्क और इतिहास सहेजें',
+    'guest.createAccount': 'मुफ्त खाता बनाएं',
+    'guest.alreadyUsed': 'पहले से उपयोग किया',
+
     // === Share ===
     'share.title': 'MockMaster',
     'share.text': 'सरकारी परीक्षा की तैयारी करें!',
@@ -976,6 +996,16 @@ const translations: Record<Lang, Record<string, string>> = {
     'upcoming.rrbNtpc': 'RRB NTPC CBT-2',
     'upcoming.rrbNtpcDate': 'সেপ্টেম্বর 2025',
     'upcoming.rrbNtpcStatus': 'প্রবেশপত্র শীঘ্র',
+
+    // === Guest Limit ===
+    'guest.limitTitle': 'ফ্রি ট্রায়াল শেষ!',
+    'guest.limitSub': 'অতিথি হিসেবে আপনি আপনার ফ্রি দ্রুত অনুশীলন ব্যবহার করেছেন। সীমাহীন অনুশীলন টেস্টের জন্য একটি ফ্রি অ্যাকাউন্ট তৈরি করুন!',
+    'guest.limitFeature1': 'সীমাহীন অনুশীলন টেস্ট',
+    'guest.limitFeature2': 'আপনার অগ্রগতি ট্র্যাক করুন',
+    'guest.limitFeature3': 'লিডারবোর্ডে প্রতিযোগিতা করুন',
+    'guest.limitFeature4': 'বুকমার্ক ও ইতিহাস সংরক্ষণ করুন',
+    'guest.createAccount': 'ফ্রি অ্যাকাউন্ট তৈরি করুন',
+    'guest.alreadyUsed': 'ইতিমধ্যে ব্যবহৃত',
 
     // === Share ===
     'share.title': 'MockMaster',

@@ -19,7 +19,7 @@ import {
   Menu, BookmarkPlus, Download, BarChart3, Wifi,
   ClipboardList, PenTool, Calculator, Camera, MapPin, Phone,
   Edit3, Save, ChevronUp, Monitor, Users, IndianRupee, Globe,
-  ExternalLink, FileText
+  ExternalLink, FileText, Lock, UserPlus
 } from 'lucide-react'
 import {
   getCategories as getLocalCategories, getTestsByExam as getLocalTestsByExam,
@@ -193,6 +193,7 @@ export default function ExamPrepApp() {
   const [showNotificationPanel, setShowNotificationPanel] = useState(false)
   const [userStats, setUserStats] = useState({ testsTaken: 0, avgScore: 0, bestRank: 0 })
   const [showExitConfirm, setShowExitConfirm] = useState(false)
+  const [showGuestLimitModal, setShowGuestLimitModal] = useState(false)
   const [currentTestMode, setCurrentTestMode] = useState<'real' | 'practice'>('real') // Track if current test is real or practice
   const [showAnswerKey, setShowAnswerKey] = useState(false)
   const [pdfSharing, setPdfSharing] = useState(false)
@@ -615,6 +616,43 @@ export default function ExamPrepApp() {
     setTestActive(true)
     setCurrentTestMode(mode)
     navigateTo('test-taking')
+  }
+
+  // --- Quick Practice with Guest Limit ---
+  async function handleQuickPractice() {
+    // Check if guest has already used Quick Practice
+    if (auth.isGuest && !auth.canGuestUseQuickPractice) {
+      setShowGuestLimitModal(true)
+      return
+    }
+    const allCats = categories
+    const allExams = allCats.flatMap(c => c.exams)
+    if (allExams.length === 0) return
+    // Try to find an exam with tests that have questions
+    for (let attempt = 0; attempt < Math.min(allExams.length, 10); attempt++) {
+      const randomExam = allExams[Math.floor(Math.random() * allExams.length)]
+      const randomCat = allCats.find(c => c.exams.some(e => e.id === randomExam.id))
+      if (!randomCat) continue
+      const tests = await fetchTestsByExam(randomExam.id)
+      if (tests.length > 0) {
+        // Find a test with questions
+        for (const test of tests) {
+          const fullTest = await fetchTestById(test.id)
+          if (fullTest && fullTest.questions && fullTest.questions.length > 0) {
+            setSelectedExam(randomExam)
+            setSelectedCategory(randomCat)
+            setExamTests(tests)
+            setCurrentTestMode('practice')
+            startTest(fullTest, 'practice')
+            // Mark guest has used Quick Practice
+            if (auth.isGuest) {
+              auth.markGuestQuickPracticeUsed()
+            }
+            return
+          }
+        }
+      }
+    }
   }
 
   async function handleFinishTest() {
@@ -1087,39 +1125,26 @@ export default function ExamPrepApp() {
                   </div>
                   <div>
                     <p className="font-bold text-white text-base">{_t('home.quickPractice')}</p>
-                    <p className="text-white/70 text-xs mt-0.5">{_t('home.quickPracticeSub')}</p>
+                    <p className="text-white/70 text-xs mt-0.5">
+                      {auth.isGuest && !auth.canGuestUseQuickPractice
+                        ? _t('guest.alreadyUsed')
+                        : _t('home.quickPracticeSub')}
+                    </p>
                   </div>
                 </div>
                 <Button
-                  className="bg-white text-orange-600 rounded-xl font-bold shadow-md hover:bg-white/90 active:scale-95 transition-all"
-                  onClick={async () => {
-                    const allCats = categories
-                    const allExams = allCats.flatMap(c => c.exams)
-                    if (allExams.length === 0) return
-                    // Try to find an exam with tests that have questions
-                    for (let attempt = 0; attempt < Math.min(allExams.length, 10); attempt++) {
-                      const randomExam = allExams[Math.floor(Math.random() * allExams.length)]
-                      const randomCat = allCats.find(c => c.exams.some(e => e.id === randomExam.id))
-                      if (!randomCat) continue
-                      const tests = await fetchTestsByExam(randomExam.id)
-                      if (tests.length > 0) {
-                        // Find a test with questions
-                        for (const test of tests) {
-                          const fullTest = await fetchTestById(test.id)
-                          if (fullTest && fullTest.questions && fullTest.questions.length > 0) {
-                            setSelectedExam(randomExam)
-                            setSelectedCategory(randomCat)
-                            setExamTests(tests)
-                            setCurrentTestMode('practice')
-                            startTest(fullTest, 'practice')
-                            return
-                          }
-                        }
-                      }
-                    }
-                  }}
+                  className={`rounded-xl font-bold shadow-md active:scale-95 transition-all ${
+                    auth.isGuest && !auth.canGuestUseQuickPractice
+                      ? 'bg-white/30 text-white cursor-not-allowed'
+                      : 'bg-white text-orange-600 hover:bg-white/90'
+                  }`}
+                  onClick={handleQuickPractice}
                 >
-                  <Play className="w-4 h-4 mr-1" /> {_t('home.start')}
+                  {auth.isGuest && !auth.canGuestUseQuickPractice ? (
+                    <><Lock className="w-4 h-4 mr-1" /> {_t('guest.alreadyUsed')}</>
+                  ) : (
+                    <><Play className="w-4 h-4 mr-1" /> {_t('home.start')}</>
+                  )}
                 </Button>
               </div>
             </div>
@@ -2451,38 +2476,21 @@ export default function ExamPrepApp() {
             <h2 className="font-bold text-lg mb-3">{_t('practice.chooseMode')}</h2>
             <div className="grid grid-cols-2 gap-3">
               {/* Quick Practice - Pick a random test and start */}
-              <Card className="border-0 shadow-sm cursor-pointer hover:shadow-md transition-shadow active:scale-[0.97]" onClick={async () => {
-                const allCats = categories
-                const allExams = allCats.flatMap(c => c.exams)
-                if (allExams.length === 0) return
-                // Try to find an exam with tests that have questions
-                for (let attempt = 0; attempt < allExams.length; attempt++) {
-                  const randomExam = allExams[Math.floor(Math.random() * allExams.length)]
-                  const randomCat = allCats.find(c => c.exams.some(e => e.id === randomExam.id))
-                  if (!randomCat) continue
-                  const tests = await fetchTestsByExam(randomExam.id)
-                  if (tests.length > 0) {
-                    // Find a test with questions
-                    for (const test of tests) {
-                      const fullTest = await fetchTestById(test.id)
-                      if (fullTest && fullTest.questions && fullTest.questions.length > 0) {
-                        setSelectedExam(randomExam)
-                        setSelectedCategory(randomCat)
-                        setExamTests(tests)
-                        setCurrentTestMode('practice')
-                        startTest(fullTest, 'practice')
-                        return
-                      }
-                    }
-                  }
-                }
-              }}>
+              <Card className={`border-0 shadow-sm cursor-pointer hover:shadow-md transition-shadow active:scale-[0.97] ${auth.isGuest && !auth.canGuestUseQuickPractice ? 'opacity-60' : ''}`} onClick={handleQuickPractice}>
                 <CardContent className="p-4 text-center">
-                  <div className="w-12 h-12 rounded-2xl bg-orange-50 flex items-center justify-center mx-auto mb-2">
-                    <Zap className="w-6 h-6 text-orange-500" />
+                  <div className={`w-12 h-12 rounded-2xl flex items-center justify-center mx-auto mb-2 ${auth.isGuest && !auth.canGuestUseQuickPractice ? 'bg-gray-100' : 'bg-orange-50'}`}>
+                    {auth.isGuest && !auth.canGuestUseQuickPractice ? (
+                      <Lock className="w-6 h-6 text-gray-400" />
+                    ) : (
+                      <Zap className="w-6 h-6 text-orange-500" />
+                    )}
                   </div>
                   <p className="font-semibold text-sm">{_t('practice.quick')}</p>
-                  <p className="text-gray-400 text-[11px] mt-1">{_t('practice.quickSub')}</p>
+                  <p className="text-gray-400 text-[11px] mt-1">
+                    {auth.isGuest && !auth.canGuestUseQuickPractice
+                      ? _t('guest.alreadyUsed')
+                      : _t('practice.quickSub')}
+                  </p>
                 </CardContent>
               </Card>
               {/* Topic Wise - Navigate to exams with practice mode */}
@@ -4490,6 +4498,76 @@ export default function ExamPrepApp() {
           onClearNeedsVerification={() => { auth.setNeedsVerification(false); auth.setPendingVerifyEmail('') }}
           onClose={() => { auth.setError(''); auth.setResetSent(false); auth.setVerifySent(false); auth.setNeedsVerification(false); auth.setPendingVerifyEmail(''); setShowLoginModal(false) }}
         />
+      )}
+
+      {/* Guest Quick Practice Limit Modal */}
+      {showGuestLimitModal && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4" onClick={() => setShowGuestLimitModal(false)}>
+          <div className="bg-white rounded-3xl w-full max-w-sm overflow-hidden shadow-2xl" onClick={e => e.stopPropagation()}>
+            {/* Header with gradient */}
+            <div className="bg-gradient-to-br from-orange-500 via-red-500 to-pink-500 p-6 text-center relative overflow-hidden">
+              <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -translate-y-1/2 translate-x-1/2" />
+              <div className="absolute bottom-0 left-0 w-24 h-24 bg-white/10 rounded-full translate-y-1/2 -translate-x-1/2" />
+              <div className="relative">
+                <div className="w-16 h-16 rounded-full bg-white/20 flex items-center justify-center mx-auto mb-3 backdrop-blur">
+                  <Lock className="w-8 h-8 text-white" />
+                </div>
+                <h2 className="text-xl font-bold text-white">{_t('guest.limitTitle')}</h2>
+              </div>
+            </div>
+            {/* Body */}
+            <div className="p-5">
+              <p className="text-gray-600 text-sm text-center leading-relaxed mb-5">
+                {_t('guest.limitSub')}
+              </p>
+              {/* Features list */}
+              <div className="space-y-3 mb-6">
+                <div className="flex items-center gap-3 bg-green-50 rounded-xl p-3">
+                  <div className="w-8 h-8 rounded-full bg-green-100 flex items-center justify-center flex-shrink-0">
+                    <Zap className="w-4 h-4 text-green-600" />
+                  </div>
+                  <span className="text-sm font-medium text-green-800">{_t('guest.limitFeature1')}</span>
+                </div>
+                <div className="flex items-center gap-3 bg-blue-50 rounded-xl p-3">
+                  <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0">
+                    <TrendingUp className="w-4 h-4 text-blue-600" />
+                  </div>
+                  <span className="text-sm font-medium text-blue-800">{_t('guest.limitFeature2')}</span>
+                </div>
+                <div className="flex items-center gap-3 bg-purple-50 rounded-xl p-3">
+                  <div className="w-8 h-8 rounded-full bg-purple-100 flex items-center justify-center flex-shrink-0">
+                    <Trophy className="w-4 h-4 text-purple-600" />
+                  </div>
+                  <span className="text-sm font-medium text-purple-800">{_t('guest.limitFeature3')}</span>
+                </div>
+                <div className="flex items-center gap-3 bg-amber-50 rounded-xl p-3">
+                  <div className="w-8 h-8 rounded-full bg-amber-100 flex items-center justify-center flex-shrink-0">
+                    <BookMarked className="w-4 h-4 text-amber-600" />
+                  </div>
+                  <span className="text-sm font-medium text-amber-800">{_t('guest.limitFeature4')}</span>
+                </div>
+              </div>
+              {/* CTA Button */}
+              <Button
+                className="w-full bg-gradient-to-r from-orange-500 to-red-500 text-white rounded-xl h-12 font-bold text-base shadow-lg active:scale-[0.97] transition-all"
+                onClick={() => {
+                  setShowGuestLimitModal(false)
+                  setShowLoginModal(true)
+                }}
+              >
+                <UserPlus className="w-5 h-5 mr-2" /> {_t('guest.createAccount')}
+              </Button>
+              {/* Dismiss */}
+              <Button
+                variant="ghost"
+                className="w-full mt-2 text-gray-400 rounded-xl"
+                onClick={() => setShowGuestLimitModal(false)}
+              >
+                Maybe later
+              </Button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   )
