@@ -7,14 +7,14 @@ import { Badge } from '@/components/ui/badge'
 import {
   BookOpen, Trophy, Flame, Zap, Building, Bell,
   Users, FileText, Home, Plus, XCircle, AlertTriangle, Gift,
-  CheckCircle2, Edit3
+  CheckCircle2, Edit3, Database
 } from 'lucide-react'
 import {
   type Announcement, type Notification,
   DEFAULT_ANNOUNCEMENTS, DEFAULT_NOTIFICATIONS
 } from '@/lib/admin-data'
 import { type TestResult } from '@/lib/local-data'
-import { getDashboardStats, type DashboardStats } from '@/lib/firestore-service'
+import { getDashboardStats, forceSeedFirestore, type DashboardStats } from '@/lib/firestore-service'
 import Link from 'next/link'
 
 interface DashboardTabProps {
@@ -27,10 +27,28 @@ interface DashboardTabProps {
 export default function DashboardTab({ announcements, notifications, allResults, onSwitchTab }: DashboardTabProps) {
   const [stats, setStats] = useState<DashboardStats | null>(null)
   const [loadingStats, setLoadingStats] = useState(false)
+  const [seeding, setSeeding] = useState(false)
+  const [seedResult, setSeedResult] = useState<string | null>(null)
 
   const totalAnnouncements = announcements.length
   const totalNotifications = notifications.length
   const unreadNotifications = notifications.filter(n => !n.read).length
+
+  const handleForceSeed = async () => {
+    if (!confirm('This will DELETE all existing data and replace it with sample data. Are you sure?')) return
+    setSeeding(true)
+    setSeedResult(null)
+    try {
+      const success = await forceSeedFirestore()
+      setSeedResult(success ? 'Database seeded successfully! Refreshing...' : 'Failed to seed database.')
+      if (success) {
+        setTimeout(() => window.location.reload(), 1500)
+      }
+    } catch {
+      setSeedResult('Error occurred while seeding.')
+    }
+    setSeeding(false)
+  }
 
   useEffect(() => {
     setLoadingStats(true)
@@ -178,6 +196,34 @@ export default function DashboardTab({ announcements, notifications, allResults,
               <p className="font-semibold text-xs text-emerald-700">Analytics</p>
               <p className="text-emerald-500/60 text-[10px]">Charts & stats</p>
             </button>
+          </div>
+
+          {/* Seed Database Button */}
+          <div className="mt-4 p-4 rounded-xl bg-gradient-to-r from-indigo-50 to-purple-50 border border-indigo-100">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="font-bold text-xs text-indigo-700 flex items-center gap-1.5">
+                  <Database className="w-3.5 h-3.5" /> Seed Database
+                </p>
+                <p className="text-indigo-500/60 text-[10px] mt-0.5">Load sample data for all categories, exams, tests & questions</p>
+              </div>
+              <Button
+                className="bg-gradient-to-r from-indigo-500 to-purple-500 hover:from-indigo-600 hover:to-purple-600 text-white rounded-xl h-9 px-4 text-xs font-bold shadow-md"
+                onClick={handleForceSeed}
+                disabled={seeding}
+              >
+                {seeding ? (
+                  <><AlertCircle className="w-3.5 h-3.5 mr-1.5 animate-spin" /> Seeding...</>
+                ) : (
+                  <><Database className="w-3.5 h-3.5 mr-1.5" /> Seed Now</>
+                )}
+              </Button>
+            </div>
+            {seedResult && (
+              <p className={`text-xs mt-2 font-medium ${seedResult.includes('success') ? 'text-emerald-600' : 'text-red-500'}`}>
+                {seedResult}
+              </p>
+            )}
           </div>
         </CardContent>
       </Card>

@@ -1437,6 +1437,440 @@ export async function seedFirestoreIfEmpty(): Promise<boolean> {
 }
 
 // ============================================================
+// Force Seed — ALWAYS seeds, even if data exists (deletes old first)
+// ============================================================
+
+export async function forceSeedFirestore(): Promise<boolean> {
+  if (!db || !isFirebaseReady()) {
+    console.error('[Firestore] Cannot seed: Firebase is not configured.')
+    return false
+  }
+  try {
+    console.log('[Firestore] Force seeding — clearing all collections first...')
+
+    // Delete existing data in batches (500 max per batch)
+    const collectionNames = Object.values(COLLECTIONS)
+    for (const colName of collectionNames) {
+      const snap = await getDocs(collection(db, colName))
+      if (snap.size > 0) {
+        for (let i = 0; i < snap.docs.length; i += 500) {
+          const batch = writeBatch(db)
+          snap.docs.slice(i, i + 500).forEach(d => batch.delete(d.ref))
+          await batch.commit()
+        }
+      }
+    }
+    console.log('[Firestore] All collections cleared.')
+
+    // ---- Categories + Exams ----
+    const catData = [
+      { name: 'SSC', slug: 'ssc', icon: 'book', description: 'Staff Selection Commission exams including CGL, CHSL, MTS, and more', order: 1 },
+      { name: 'Banking', slug: 'banking', icon: 'building', description: 'IBPS, SBI, RBI and other banking sector exams', order: 2 },
+      { name: 'Railways', slug: 'railways', icon: 'train', description: 'RRB NTPC, Group D, ALP and railway recruitment exams', order: 3 },
+      { name: 'Defence', slug: 'defence', icon: 'shield', description: 'CDS, NDA, AFCAT and other defence exams', order: 4 },
+      { name: 'Teaching', slug: 'teaching', icon: 'graduation', description: 'CTET, KVS, NVS and other teaching exams', order: 5 },
+      { name: 'Police', slug: 'police', icon: 'shield-check', description: 'State police, CAPF and law enforcement exams', order: 6 },
+    ]
+
+    const examDataByCategory: Record<string, { name: string; slug: string; description: string; order: number }[]> = {
+      ssc: [
+        { name: 'SSC CGL', slug: 'ssc-cgl', description: 'Combined Graduate Level Examination', order: 1 },
+        { name: 'SSC CHSL', slug: 'ssc-chsl', description: 'Combined Higher Secondary Level Exam', order: 2 },
+        { name: 'SSC MTS', slug: 'ssc-mts', description: 'Multi-Tasking Staff Examination', order: 3 },
+      ],
+      banking: [
+        { name: 'IBPS PO', slug: 'ibps-po', description: 'Institute of Banking Personnel Selection - Probationary Officer', order: 1 },
+        { name: 'SBI Clerk', slug: 'sbi-clerk', description: 'State Bank of India Clerk Examination', order: 2 },
+        { name: 'RBI Assistant', slug: 'rbi-assistant', description: 'Reserve Bank of India Assistant Exam', order: 3 },
+      ],
+      railways: [
+        { name: 'RRB NTPC', slug: 'rrb-ntpc', description: 'Non-Technical Popular Categories Exam', order: 1 },
+        { name: 'RRB Group D', slug: 'rrb-group-d', description: 'Railway Group D Recruitment Exam', order: 2 },
+      ],
+      defence: [
+        { name: 'CDS', slug: 'cds', description: 'Combined Defence Services Examination', order: 1 },
+        { name: 'NDA', slug: 'nda', description: 'National Defence Academy Examination', order: 2 },
+      ],
+      teaching: [
+        { name: 'CTET', slug: 'ctet', description: 'Central Teacher Eligibility Test', order: 1 },
+        { name: 'KVS', slug: 'kvs', description: 'Kendriya Vidyalaya Sangathan Exam', order: 2 },
+      ],
+      police: [
+        { name: 'Delhi Police', slug: 'delhi-police', description: 'Delhi Police Constable & Head Constable Exam', order: 1 },
+        { name: 'CAPF', slug: 'capf', description: 'Central Armed Police Forces Exam', order: 2 },
+      ],
+    }
+
+    // Store category and exam references for linking tests
+    const catRefs: Record<string, string> = {}
+    const examRefs: Record<string, string> = {}
+
+    // Seed categories and exams in batches
+    let batch = writeBatch(db)
+    let opCount = 0
+
+    for (const cat of catData) {
+      const catRef = doc(collection(db, COLLECTIONS.categories))
+      catRefs[cat.slug] = catRef.id
+      batch.set(catRef, { name: cat.name, slug: cat.slug, icon: cat.icon, description: cat.description, order: cat.order })
+      opCount++
+
+      const exams = examDataByCategory[cat.slug] || []
+      for (const exam of exams) {
+        const examRef = doc(collection(db, COLLECTIONS.exams))
+        examRefs[exam.slug] = examRef.id
+        batch.set(examRef, {
+          name: exam.name, slug: exam.slug, description: exam.description,
+          totalQuestions: 100, duration: 60, markingScheme: '1 mark each, -0.25 negative',
+          order: exam.order, testCount: 2, categoryId: catRef.id,
+        })
+        opCount++
+      }
+
+      if (opCount >= 450) {
+        await batch.commit()
+        batch = writeBatch(db)
+        opCount = 0
+      }
+    }
+    if (opCount > 0) await batch.commit()
+
+    // ---- Tests + Questions ----
+    const testData: { title: string; examSlug: string; difficulty: string; questions: { q: string; a: string; b: string; c: string; d: string; ans: string; exp: string; sub: string }[] }[] = [
+      {
+        title: 'SSC CGL Tier-I Mock Test 1 (General Awareness)',
+        examSlug: 'ssc-cgl',
+        difficulty: 'Medium',
+        questions: [
+          { q: 'Who is known as the "Father of the Indian Constitution"?', a: 'Mahatma Gandhi', b: 'Jawaharlal Nehru', c: 'Dr. B.R. Ambedkar', d: 'Sardar Patel', ans: 'C', exp: 'Dr. B.R. Ambedkar was the chairman of the Drafting Committee and is considered the Father of the Indian Constitution.', sub: 'General Knowledge' },
+          { q: 'Which planet is known as the "Red Planet"?', a: 'Venus', b: 'Mars', c: 'Jupiter', d: 'Saturn', ans: 'B', exp: 'Mars is called the Red Planet due to the iron oxide (rust) on its surface which gives it a reddish appearance.', sub: 'General Science' },
+          { q: 'The currency of Japan is:', a: 'Yuan', b: 'Won', c: 'Yen', d: 'Ringgit', ans: 'C', exp: 'The Japanese Yen is the official currency of Japan, symbolized by ¥.', sub: 'General Knowledge' },
+          { q: 'Which vitamin is produced by the human body when exposed to sunlight?', a: 'Vitamin A', b: 'Vitamin B', c: 'Vitamin C', d: 'Vitamin D', ans: 'D', exp: 'When skin is exposed to ultraviolet B (UVB) rays from sunlight, it triggers Vitamin D synthesis in the body.', sub: 'General Science' },
+          { q: 'The headquarters of the United Nations is located in:', a: 'Geneva', b: 'Paris', c: 'New York', d: 'London', ans: 'C', exp: 'The United Nations Headquarters is located in New York City, USA, along the East River.', sub: 'General Knowledge' },
+          { q: 'Which Indian state has the largest area?', a: 'Madhya Pradesh', b: 'Maharashtra', c: 'Rajasthan', d: 'Uttar Pradesh', ans: 'C', exp: 'Rajasthan is the largest state in India by area, covering about 342,239 sq km.', sub: 'Geography' },
+          { q: 'The "Quit India Movement" was launched in which year?', a: '1940', b: '1942', c: '1944', d: '1946', ans: 'B', exp: 'The Quit India Movement was launched by Mahatma Gandhi on 8 August 1942 at the Bombay session of AICC.', sub: 'History' },
+          { q: 'Which gas is most abundant in Earth\'s atmosphere?', a: 'Oxygen', b: 'Carbon Dioxide', c: 'Nitrogen', d: 'Hydrogen', ans: 'C', exp: 'Nitrogen makes up approximately 78% of Earth\'s atmosphere by volume.', sub: 'General Science' },
+          { q: 'The Tropic of Cancer passes through how many Indian states?', a: '6', b: '7', c: '8', d: '9', ans: 'C', exp: 'The Tropic of Cancer passes through 8 Indian states: Gujarat, Rajasthan, MP, Chhattisgarh, Jharkhand, WB, Tripura, and Mizoram.', sub: 'Geography' },
+          { q: 'Who wrote the Indian national anthem "Jana Gana Mana"?', a: 'Bankim Chandra Chatterjee', b: 'Rabindranath Tagore', c: 'Sarojini Naidu', d: 'Subhash Chandra Bose', ans: 'B', exp: 'Rabindranath Tagore wrote "Jana Gana Mana" which was adopted as India\'s national anthem on January 24, 1950.', sub: 'General Knowledge' },
+        ]
+      },
+      {
+        title: 'SSC CGL Tier-I Mock Test 2 (Quantitative Aptitude)',
+        examSlug: 'ssc-cgl',
+        difficulty: 'Hard',
+        questions: [
+          { q: 'If the selling price of an article is Rs. 240 and the profit is 20%, what is the cost price?', a: 'Rs. 180', b: 'Rs. 200', c: 'Rs. 220', d: 'Rs. 192', ans: 'B', exp: 'CP = SP × 100/(100+profit%) = 240 × 100/120 = Rs. 200', sub: 'Mathematics' },
+          { q: 'A train 150m long crosses a platform 250m long in 20 seconds. The speed of the train is:', a: '72 km/h', b: '54 km/h', c: '36 km/h', d: '90 km/h', ans: 'A', exp: 'Total distance = 150+250 = 400m, Time = 20s. Speed = 400/20 = 20 m/s = 20×18/5 = 72 km/h', sub: 'Mathematics' },
+          { q: 'What is the LCM of 12, 18, and 24?', a: '36', b: '48', c: '72', d: '144', ans: 'C', exp: '12=2²×3, 18=2×3², 24=2³×3. LCM = 2³×3² = 8×9 = 72', sub: 'Mathematics' },
+          { q: 'If x + y = 7 and xy = 12, then x² + y² = ?', a: '25', b: '37', c: '49', d: '23', ans: 'A', exp: 'x² + y² = (x+y)² - 2xy = 49 - 24 = 25', sub: 'Mathematics' },
+          { q: 'A can do a work in 15 days and B can do it in 10 days. Together they will complete the work in:', a: '5 days', b: '6 days', c: '8 days', d: '12 days', ans: 'B', exp: 'A\'s 1 day work = 1/15, B\'s 1 day work = 1/10. Together = 1/15 + 1/10 = 1/6. So 6 days.', sub: 'Mathematics' },
+          { q: 'The average of first 50 natural numbers is:', a: '25', b: '25.5', c: '26', d: '26.5', ans: 'B', exp: 'Sum = 50×51/2 = 1275. Average = 1275/50 = 25.5', sub: 'Mathematics' },
+          { q: 'A sum of money doubles itself in 10 years at simple interest. The rate of interest is:', a: '5%', b: '10%', c: '15%', d: '20%', ans: 'B', exp: 'If money doubles, Interest = Principal. So P×R×10/100 = P → R = 10%', sub: 'Mathematics' },
+          { q: 'The ratio of the ages of A and B is 3:5. After 6 years, the ratio becomes 2:3. The present age of A is:', a: '18 years', b: '24 years', c: '30 years', d: '36 years', ans: 'A', exp: 'Let ages be 3x and 5x. After 6 years: (3x+6)/(5x+6) = 2/3 → 9x+18 = 10x+12 → x = 6. A = 18 years.', sub: 'Mathematics' },
+          { q: 'The perimeter of a rectangle is 40 cm and its length is 12 cm. The area of the rectangle is:', a: '96 cm²', b: '84 cm²', c: '108 cm²', d: '72 cm²', ans: 'A', exp: '2(l+b) = 40 → b = 20-12 = 8 cm. Area = 12×8 = 96 cm².', sub: 'Mathematics' },
+          { q: 'If 30% of a number is 75, what is 120% of that number?', a: '250', b: '300', c: '225', d: '280', ans: 'B', exp: '30% of x = 75 → x = 250. 120% of 250 = 300.', sub: 'Mathematics' },
+        ]
+      },
+      {
+        title: 'IBPS PO Prelims Mock Test 1 (Reasoning)',
+        examSlug: 'ibps-po',
+        difficulty: 'Hard',
+        questions: [
+          { q: 'In a row of 40 students, Ravi is 7th from the left and Sumit is 15th from the right. How many students are between them?', a: '18', b: '19', c: '20', d: '17', ans: 'A', exp: 'Total = 40. Ravi = 7th from left, Sumit = 40-15+1 = 26th from left. Between them = 26-7-1 = 18.', sub: 'Reasoning' },
+          { q: 'If APPLE is coded as ELPPA, then ORANGE is coded as:', a: 'EGNARO', b: 'ORANGE', c: 'EGANRO', d: 'ORAGNE', ans: 'A', exp: 'The code reverses the letters. ORANGE reversed is EGNARO.', sub: 'Reasoning' },
+          { q: 'Pointing to a man, a woman said, "His mother is the only daughter of my mother." How is the woman related to the man?', a: 'Mother', b: 'Sister', c: 'Grandmother', d: 'Daughter', ans: 'A', exp: 'The only daughter of my mother is the woman herself. So the man\'s mother is the woman. She is his mother.', sub: 'Reasoning' },
+          { q: 'Complete the series: 2, 6, 12, 20, 30, ?', a: '40', b: '42', c: '44', d: '36', ans: 'B', exp: 'Differences: 4, 6, 8, 10, 12. Next = 30+12 = 42.', sub: 'Reasoning' },
+          { q: 'If South-East becomes North, then what does North-West become?', a: 'South', b: 'North-East', c: 'East', d: 'South-West', ans: 'B', exp: 'SE→N is a 135° clockwise rotation. Applying same to NW: NW rotated 135° clockwise = NE.', sub: 'Reasoning' },
+          { q: 'In a class, A ranks 12th from the top and B ranks 18th from the bottom. If they interchange their positions, B becomes 25th from the bottom. How many students are in the class?', a: '36', b: '37', c: '35', d: '38', ans: 'A', exp: 'After interchange, B is 25th from bottom and was originally 18th from bottom. So A\'s original position from top = total - 25 + 1 = total - 24. Given A was 12th, total = 12 + 24 = 36.', sub: 'Reasoning' },
+          { q: 'Which of the following does not belong to the group?', a: 'Rose', b: 'Lotus', c: 'Tulip', d: 'Carrot', ans: 'D', exp: 'Rose, Lotus, and Tulip are flowers while Carrot is a vegetable/root.', sub: 'Reasoning' },
+          { q: 'If A+B means A is the father of B, A-B means A is the wife of B, then what does P+Q-R mean?', a: 'P is the father of R', b: 'P is the grandfather of R', c: 'R is the wife of P\'s son', d: 'Cannot be determined', ans: 'C', exp: 'P+Q means P is father of Q. Q-R means Q is wife of R. So R is wife of P\'s son Q.', sub: 'Reasoning' },
+          { q: 'How many triangles are there in a pentagon?', a: '3', b: '5', c: '8', d: '10', ans: 'D', exp: 'A pentagon has 5 vertices. Number of triangles = C(5,3) = 10.', sub: 'Reasoning' },
+          { q: 'If EARTH is coded as HDUWA, then MOON is coded as:', a: 'PLLQ', b: 'PRRQ', c: 'QNNL', d: 'NQQO', ans: 'B', exp: 'Each letter is shifted by +3: E→H, A→D, R→U, T→W, H→A(k). Similarly M→P, O→R, O→R, N→Q = PRRQ.', sub: 'Reasoning' },
+        ]
+      },
+      {
+        title: 'IBPS PO Prelims Mock Test 2 (English Language)',
+        examSlug: 'ibps-po',
+        difficulty: 'Medium',
+        questions: [
+          { q: 'Choose the correct synonym of "ABUNDANT":', a: 'Scarce', b: 'Plentiful', c: 'Insufficient', d: 'Limited', ans: 'B', exp: 'Abundant means existing in large quantities; plentiful.', sub: 'English' },
+          { q: 'Choose the correct antonym of "BENEVOLENT":', a: 'Kind', b: 'Generous', c: 'Malevolent', d: 'Charitable', ans: 'C', exp: 'Benevolent means well-meaning and kindly. Its antonym is malevolent (having evil intent).', sub: 'English' },
+          { q: 'Fill in the blank: She was ___ by the beauty of the sunset.', a: 'captivated', b: 'capturing', c: 'capture', d: 'captures', ans: 'A', exp: 'The correct past participle "captivated" fits grammatically: "was captivated by".', sub: 'English' },
+          { q: 'Identify the error: "Each of the boys have completed their assignment."', a: 'Each', b: 'have', c: 'completed', d: 'their', ans: 'B', exp: '"Each" is singular, so the verb should be "has" not "have". Correct: "Each of the boys has completed..."', sub: 'English' },
+          { q: 'Choose the correctly spelt word:', a: 'Accomodate', b: 'Accommodate', c: 'Acommodate', d: 'Acomodate', ans: 'B', exp: 'The correct spelling is "Accommodate" — double c and double m.', sub: 'English' },
+          { q: 'What does the idiom "Break the ice" mean?', a: 'Destroy something', b: 'Start a conversation', c: 'Cause damage', d: 'Feel cold', ans: 'B', exp: '"Break the ice" means to initiate conversation in an awkward social situation.', sub: 'English' },
+          { q: 'Choose the correct preposition: He is addicted ___ coffee.', a: 'with', b: 'for', c: 'to', d: 'by', ans: 'C', exp: 'The correct phrase is "addicted to" — addiction always takes the preposition "to".', sub: 'English' },
+          { q: 'Rearrange: "the / quickly / ran / boy / field / across / the"', a: 'The boy ran quickly across the field', b: 'The quickly boy ran across the field', c: 'The boy across ran quickly the field', d: 'Quickly the boy ran the field across', ans: 'A', exp: 'The correct sentence structure is: Subject (The boy) + Verb (ran) + Adverb (quickly) + Preposition (across) + Object (the field).', sub: 'English' },
+          { q: 'Choose the passive voice of: "She writes a letter."', a: 'A letter is written by her.', b: 'A letter was written by her.', c: 'A letter has been written by her.', d: 'A letter will be written by her.', ans: 'A', exp: 'Present simple active "writes" becomes present simple passive "is written".', sub: 'English' },
+          { q: 'The word "AMBIGUOUS" means:', a: 'Clear', b: 'Uncertain', c: 'Definite', d: 'Obvious', ans: 'B', exp: 'Ambiguous means open to more than one interpretation; uncertain or unclear.', sub: 'English' },
+        ]
+      },
+      {
+        title: 'RRB NTPC Mock Test 1 (General Science)',
+        examSlug: 'rrb-ntpc',
+        difficulty: 'Easy',
+        questions: [
+          { q: 'What is the chemical formula of water?', a: 'H2O2', b: 'HO2', c: 'H2O', d: 'OH2', ans: 'C', exp: 'Water consists of two hydrogen atoms and one oxygen atom, hence H2O.', sub: 'Chemistry' },
+          { q: 'Which organ in the human body purifies blood?', a: 'Heart', b: 'Liver', c: 'Kidney', d: 'Lungs', ans: 'C', exp: 'Kidneys filter waste products and excess fluid from the blood, effectively purifying it.', sub: 'Biology' },
+          { q: 'The SI unit of electric current is:', a: 'Volt', b: 'Watt', c: 'Ohm', d: 'Ampere', ans: 'D', exp: 'The SI unit of electric current is Ampere (A), named after André-Marie Ampère.', sub: 'Physics' },
+          { q: 'Photosynthesis takes place in which part of the plant?', a: 'Root', b: 'Stem', c: 'Leaf', d: 'Flower', ans: 'C', exp: 'Photosynthesis occurs primarily in leaves which contain chlorophyll in chloroplasts.', sub: 'Biology' },
+          { q: 'Which gas is released during photosynthesis?', a: 'Carbon Dioxide', b: 'Oxygen', c: 'Nitrogen', d: 'Hydrogen', ans: 'B', exp: 'During photosynthesis, plants absorb CO2 and release O2 as a byproduct.', sub: 'Biology' },
+          { q: 'The pH value of pure water is:', a: '0', b: '7', c: '14', d: '1', ans: 'B', exp: 'Pure water is neutral with a pH of 7, neither acidic nor basic.', sub: 'Chemistry' },
+          { q: 'Which planet is closest to the Sun?', a: 'Venus', b: 'Earth', c: 'Mercury', d: 'Mars', ans: 'C', exp: 'Mercury is the closest planet to the Sun at an average distance of about 58 million km.', sub: 'Physics' },
+          { q: 'What is the hardest naturally occurring substance?', a: 'Gold', b: 'Iron', c: 'Diamond', d: 'Platinum', ans: 'C', exp: 'Diamond rates 10 on the Mohs hardness scale, making it the hardest natural substance.', sub: 'Chemistry' },
+          { q: 'Sound travels fastest through which medium?', a: 'Air', b: 'Water', c: 'Steel', d: 'Vacuum', ans: 'C', exp: 'Sound travels fastest through solids like steel (~5960 m/s) because molecules are closely packed.', sub: 'Physics' },
+          { q: 'The powerhouse of the cell is called:', a: 'Nucleus', b: 'Ribosome', c: 'Mitochondria', d: 'Golgi Body', ans: 'C', exp: 'Mitochondria produce ATP (energy) through cellular respiration, hence called the powerhouse of the cell.', sub: 'Biology' },
+        ]
+      },
+      {
+        title: 'RRB Group D Mock Test 1 (Mathematics)',
+        examSlug: 'rrb-group-d',
+        difficulty: 'Easy',
+        questions: [
+          { q: 'What is 25% of 400?', a: '50', b: '100', c: '150', d: '200', ans: 'B', exp: '25% of 400 = 400 × 25/100 = 100', sub: 'Mathematics' },
+          { q: 'What is the square root of 144?', a: '10', b: '11', c: '12', d: '13', ans: 'C', exp: '12 × 12 = 144, so √144 = 12.', sub: 'Mathematics' },
+          { q: 'If a dozen eggs cost Rs. 60, what is the cost of 5 eggs?', a: 'Rs. 20', b: 'Rs. 25', c: 'Rs. 30', d: 'Rs. 35', ans: 'B', exp: '1 dozen = 12 eggs. Cost per egg = 60/12 = Rs. 5. Cost of 5 eggs = 5×5 = Rs. 25.', sub: 'Mathematics' },
+          { q: 'What is the next prime number after 7?', a: '8', b: '9', c: '10', d: '11', ans: 'D', exp: '8=2×4, 9=3×3, 10=2×5 — not prime. 11 is only divisible by 1 and itself, hence prime.', sub: 'Mathematics' },
+          { q: 'Simplify: 15 + 6 × 3 - 4 ÷ 2', a: '31', b: '25', c: '29', d: '27', ans: 'A', exp: 'By BODMAS: 4÷2=2, then 6×3=18, then 15+18-2 = 31.', sub: 'Mathematics' },
+          { q: 'A shopkeeper gives a discount of 10% on an item marked at Rs. 500. What is the selling price?', a: 'Rs. 400', b: 'Rs. 450', c: 'Rs. 460', d: 'Rs. 490', ans: 'B', exp: 'Discount = 10% of 500 = Rs. 50. Selling price = 500 - 50 = Rs. 450.', sub: 'Mathematics' },
+          { q: 'How many sides does a hexagon have?', a: '5', b: '6', c: '7', d: '8', ans: 'B', exp: 'A hexagon has 6 sides. "Hexa" means six in Greek.', sub: 'Mathematics' },
+          { q: 'If 3x = 27, then x = ?', a: '3', b: '6', c: '9', d: '81', ans: 'C', exp: '3x = 27 → x = 27/3 = 9.', sub: 'Mathematics' },
+          { q: 'The fraction 3/5 as a percentage is:', a: '30%', b: '50%', c: '60%', d: '75%', ans: 'C', exp: '3/5 × 100 = 60%.', sub: 'Mathematics' },
+          { q: 'What is the area of a triangle with base 10 cm and height 6 cm?', a: '60 cm²', b: '30 cm²', c: '16 cm²', d: '36 cm²', ans: 'B', exp: 'Area of triangle = ½ × base × height = ½ × 10 × 6 = 30 cm².', sub: 'Mathematics' },
+        ]
+      },
+      {
+        title: 'CDS Mock Test 1 (General Knowledge)',
+        examSlug: 'cds',
+        difficulty: 'Hard',
+        questions: [
+          { q: 'The Battle of Plassey was fought in which year?', a: '1757', b: '1764', c: '1857', d: '1947', ans: 'A', exp: 'The Battle of Plassey was fought on 23 June 1757 between the British East India Company and the Nawab of Bengal.', sub: 'History' },
+          { q: 'Which article of the Indian Constitution deals with the Right to Equality?', a: 'Article 12', b: 'Article 14', c: 'Article 19', d: 'Article 21', ans: 'B', exp: 'Article 14 guarantees equality before law and equal protection of laws within the territory of India.', sub: 'Polity' },
+          { q: 'The Gulf of Mannar is located between India and:', a: 'Sri Lanka', b: 'Bangladesh', c: 'Myanmar', d: 'Maldives', ans: 'A', exp: 'The Gulf of Mannar lies between the southeastern tip of India and the west coast of Sri Lanka.', sub: 'Geography' },
+          { q: 'Who was the first Indian to win the Nobel Prize?', a: 'C.V. Raman', b: 'Rabindranath Tagore', c: 'Hargobind Khorana', d: 'Amartya Sen', ans: 'B', exp: 'Rabindranath Tagore won the Nobel Prize in Literature in 1913, the first Indian to receive this honor.', sub: 'General Knowledge' },
+          { q: 'The Panchayati Raj system was introduced by which Constitutional Amendment?', a: '42nd', b: '44th', c: '73rd', d: '74th', ans: 'C', exp: 'The 73rd Constitutional Amendment Act of 1992 gave constitutional status to Panchayati Raj institutions.', sub: 'Polity' },
+          { q: 'Which Indian river is known as the "Sorrow of Bengal"?', a: 'Ganga', b: 'Yamuna', c: 'Damodar', d: 'Mahanadi', ans: 'C', exp: 'The Damodar River was known as the "Sorrow of Bengal" due to its devastating floods before the DVC project.', sub: 'Geography' },
+          { q: 'The Simla Conference of 1945 was held to discuss:', a: 'Indian independence', b: 'Wavell Plan', c: 'Cabinet Mission', d: 'Mountbatten Plan', ans: 'B', exp: 'The Simla Conference (June-July 1945) was convened by Viceroy Wavell to discuss the Wavell Plan for Indian self-governance.', sub: 'History' },
+          { q: 'Rashtrapati Bhavan was designed by:', a: 'Le Corbusier', b: 'Edwin Lutyens', c: 'Herbert Baker', d: 'Robert Tor Russell', ans: 'B', exp: 'Edwin Lutyens designed Rashtrapati Bhavan (then Viceroy\'s House) as part of New Delhi\'s plan.', sub: 'General Knowledge' },
+          { q: 'The first satellite launched by India was:', a: 'Bhaskara', b: 'Aryabhata', c: 'INSAT-1A', d: 'Rohini', ans: 'B', exp: 'Aryabhata was India\'s first satellite, launched on 19 April 1975 by the Soviet Union.', sub: 'General Knowledge' },
+          { q: 'The fundamental duties were added to the Constitution by which Amendment?', a: '42nd', b: '44th', c: '46th', d: '52nd', ans: 'A', exp: 'The 42nd Amendment Act, 1976 added Fundamental Duties (Article 51A) based on the Swaran Singh Committee recommendation.', sub: 'Polity' },
+        ]
+      },
+      {
+        title: 'NDA Mock Test 1 (Mathematics)',
+        examSlug: 'nda',
+        difficulty: 'Hard',
+        questions: [
+          { q: 'If sin θ = 3/5, what is the value of cos θ?', a: '4/5', b: '3/5', c: '5/3', d: '5/4', ans: 'A', exp: 'sin²θ + cos²θ = 1 → cos²θ = 1 - 9/25 = 16/25 → cos θ = 4/5 (taking positive value for acute angle).', sub: 'Mathematics' },
+          { q: 'The derivative of x³ + 2x² - 5x + 7 is:', a: '3x² + 4x - 5', b: '3x² + 2x - 5', c: 'x³ + 4x - 5', d: '3x² + 4x + 5', ans: 'A', exp: 'd/dx(x³) = 3x², d/dx(2x²) = 4x, d/dx(-5x) = -5, d/dx(7) = 0. So derivative = 3x² + 4x - 5.', sub: 'Mathematics' },
+          { q: 'The value of log₁₀ 1000 is:', a: '1', b: '2', c: '3', d: '4', ans: 'C', exp: 'log₁₀ 1000 = log₁₀ 10³ = 3 × log₁₀ 10 = 3 × 1 = 3.', sub: 'Mathematics' },
+          { q: 'If a matrix A is 3×2 and matrix B is 2×4, then the order of AB is:', a: '3×4', b: '2×2', c: '4×3', d: '2×4', ans: 'A', exp: 'If A is m×n and B is n×p, then AB is m×p. Here 3×2 and 2×4 gives 3×4.', sub: 'Mathematics' },
+          { q: 'The integral of sin(x) dx is:', a: '-cos(x) + C', b: 'cos(x) + C', c: '-sin(x) + C', d: 'sin(x) + C', ans: 'A', exp: '∫sin(x) dx = -cos(x) + C. The derivative of -cos(x) is sin(x).', sub: 'Mathematics' },
+          { q: 'In how many ways can 5 people be seated in a row?', a: '25', b: '60', c: '120', d: '720', ans: 'C', exp: 'Number of arrangements = 5! = 5×4×3×2×1 = 120.', sub: 'Mathematics' },
+          { q: 'What is the value of C(10,2)?', a: '20', b: '45', c: '90', d: '55', ans: 'B', exp: 'C(10,2) = 10!/(2!×8!) = (10×9)/(2×1) = 45.', sub: 'Mathematics' },
+          { q: 'The distance between points (1,2) and (4,6) is:', a: '3', b: '4', c: '5', d: '7', ans: 'C', exp: 'd = √((4-1)² + (6-2)²) = √(9+16) = √25 = 5.', sub: 'Mathematics' },
+          { q: 'If f(x) = 2x - 3, then f⁻¹(x) = ?', a: '(x+3)/2', b: '(x-3)/2', c: '2x+3', d: '(x+2)/3', ans: 'A', exp: 'Let y = 2x-3, then x = (y+3)/2. So f⁻¹(x) = (x+3)/2.', sub: 'Mathematics' },
+          { q: 'The sum of an arithmetic series with first term 2, last term 20, and 10 terms is:', a: '100', b: '110', c: '120', d: '220', ans: 'B', exp: 'S = n(a+l)/2 = 10(2+20)/2 = 10×11 = 110.', sub: 'Mathematics' },
+        ]
+      },
+      {
+        title: 'CTET Mock Test 1 (Child Development)',
+        examSlug: 'ctet',
+        difficulty: 'Medium',
+        questions: [
+          { q: 'Who proposed the theory of "Multiple Intelligences"?', a: 'Jean Piaget', b: 'Howard Gardner', c: 'Lev Vygotsky', d: 'B.F. Skinner', ans: 'B', exp: 'Howard Gardner proposed the theory of Multiple Intelligences in 1983, identifying 8 distinct types of intelligence.', sub: 'Child Development' },
+          { q: 'The Zone of Proximal Development (ZPD) was introduced by:', a: 'Piaget', b: 'Bruner', c: 'Vygotsky', d: 'Erikson', ans: 'C', exp: 'Lev Vygotsky introduced ZPD — the gap between what a learner can do independently and what they can do with guidance.', sub: 'Child Development' },
+          { q: 'Which stage of Piaget\'s development is characterized by object permanence?', a: 'Sensorimotor', b: 'Preoperational', c: 'Concrete Operational', d: 'Formal Operational', ans: 'A', exp: 'The Sensorimotor stage (0-2 years) is when infants develop object permanence — understanding objects exist even when unseen.', sub: 'Child Development' },
+          { q: 'Constructivist approach to learning was primarily proposed by:', a: 'Skinner', b: 'Pavlov', c: 'Piaget and Vygotsky', d: 'Thorndike', ans: 'C', exp: 'Both Piaget and Vygotsky are considered founders of constructivism — the idea that learners actively construct knowledge.', sub: 'Child Development' },
+          { q: 'Inclusive education means:', a: 'Separate schools for disabled children', b: 'Education for all children together regardless of ability', c: 'Only gifted children in one class', d: 'Online education only', ans: 'B', exp: 'Inclusive education means all students, regardless of ability, learn together in the same classroom with appropriate support.', sub: 'Pedagogy' },
+          { q: 'Which type of assessment is conducted during the learning process?', a: 'Summative', b: 'Formative', c: 'Diagnostic', d: 'Achievement', ans: 'B', exp: 'Formative assessment occurs during learning to provide feedback and adjust teaching, unlike summative which is at the end.', sub: 'Pedagogy' },
+          { q: 'Kohlberg\'s theory is related to:', a: 'Cognitive development', b: 'Moral development', c: 'Language development', d: 'Social development', ans: 'B', exp: 'Lawrence Kohlberg developed the theory of moral development with 3 levels: pre-conventional, conventional, and post-conventional.', sub: 'Child Development' },
+          { q: 'The concept of "scaffolding" in education was introduced by:', a: 'Piaget', b: 'Bruner', c: 'Vygotsky', d: 'Dewey', ans: 'C', exp: 'While Vygotsky introduced ZPD, the term "scaffolding" was coined by Wood, Bruner & Ross (1976) based on Vygotsky\'s work.', sub: 'Pedagogy' },
+          { q: 'A child who can conserve quantity but not volume is likely in which Piagetian stage?', a: 'Sensorimotor', b: 'Preoperational', c: 'Concrete Operational', d: 'Formal Operational', ans: 'C', exp: 'Concrete operational children (7-11 yrs) can conserve quantity but may still struggle with volume conservation.', sub: 'Child Development' },
+          { q: 'Bloom\'s Taxonomy of educational objectives has how many domains?', a: '2', b: '3', c: '4', d: '5', ans: 'B', exp: 'Bloom\'s Taxonomy has 3 domains: Cognitive (knowledge), Affective (attitudes), and Psychomotor (skills).', sub: 'Pedagogy' },
+        ]
+      },
+      {
+        title: 'Delhi Police Constable Mock Test 1',
+        examSlug: 'delhi-police',
+        difficulty: 'Easy',
+        questions: [
+          { q: 'The national flag of India was adopted on:', a: '15 August 1947', b: '26 January 1950', c: '22 July 1947', d: '2 October 1947', ans: 'C', exp: 'The Indian national flag was adopted by the Constituent Assembly on 22 July 1947.', sub: 'General Knowledge' },
+          { q: 'Which article of the Indian Constitution guarantees the Right to Life?', a: 'Article 14', b: 'Article 19', c: 'Article 21', d: 'Article 32', ans: 'C', exp: 'Article 21 guarantees "No person shall be deprived of his life or personal liberty except according to procedure established by law."', sub: 'General Knowledge' },
+          { q: 'Delhi Police comes under which ministry?', a: 'Ministry of Defence', b: 'Ministry of Home Affairs', c: 'Ministry of Law', d: 'Ministry of External Affairs', ans: 'B', exp: 'Delhi Police functions under the Ministry of Home Affairs, Government of India.', sub: 'General Knowledge' },
+          { q: 'The full form of FIR is:', a: 'First Information Report', b: 'First Investigation Report', c: 'Final Information Report', d: 'First Incident Report', ans: 'A', exp: 'FIR stands for First Information Report — a document prepared by police when they receive information about a cognizable offense.', sub: 'General Knowledge' },
+          { q: 'Which is the largest bone in the human body?', a: 'Humerus', b: 'Femur', c: 'Tibia', d: 'Fibula', ans: 'B', exp: 'The femur (thigh bone) is the longest and strongest bone in the human body.', sub: 'General Science' },
+          { q: 'IPC stands for:', a: 'Indian Penal Code', b: 'Indian Police Code', c: 'Indian Public Court', d: 'Indian Protection Code', ans: 'A', exp: 'IPC stands for Indian Penal Code, which defines criminal offenses and their punishments in India.', sub: 'General Knowledge' },
+          { q: 'How many Union Territories are there in India (as of 2024)?', a: '7', b: '8', c: '9', d: '6', ans: 'B', exp: 'India has 8 Union Territories: J&K, Ladakh, Chandigarh, Delhi, Puducherry, DNH&DD, Lakshadweep, Andaman & Nicobar.', sub: 'General Knowledge' },
+          { q: 'The speed of light is approximately:', a: '3 × 10⁶ m/s', b: '3 × 10⁸ m/s', c: '3 × 10¹⁰ m/s', d: '3 × 10⁴ m/s', ans: 'B', exp: 'The speed of light in vacuum is approximately 3 × 10⁸ m/s (299,792,458 m/s precisely).', sub: 'General Science' },
+          { q: 'Who is the head of Delhi Police?', a: 'IG', b: 'DG', c: 'Commissioner', d: 'SP', ans: 'C', exp: 'Delhi Police is headed by the Commissioner of Police, who holds the rank of DG (Director General).', sub: 'General Knowledge' },
+          { q: 'The Red Fort is located in which city?', a: 'Agra', b: 'Delhi', c: 'Jaipur', d: 'Lucknow', ans: 'B', exp: 'The Red Fort (Lal Qila) is a historic fort in Old Delhi, built by Mughal Emperor Shah Jahan in 1648.', sub: 'General Knowledge' },
+        ]
+      },
+    ]
+
+    // Seed tests and questions
+    batch = writeBatch(db)
+    opCount = 0
+
+    for (const test of testData) {
+      const examId = examRefs[test.examSlug]
+      if (!examId) continue
+
+      const testRef = doc(collection(db, COLLECTIONS.tests))
+      batch.set(testRef, {
+        title: test.title,
+        slug: test.title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/-+$/, ''),
+        description: test.title + ' — practice and improve your score!',
+        totalQuestions: test.questions.length,
+        duration: 30,
+        markingCorrect: 1,
+        markingWrong: -0.25,
+        markingSkipped: 0,
+        difficulty: test.difficulty,
+        isFree: true,
+        isLive: true,
+        examId: examId,
+        examName: test.examSlug.replace(/-/g, ' ').toUpperCase(),
+        examSlug: test.examSlug,
+      })
+      opCount++
+
+      for (let i = 0; i < test.questions.length; i++) {
+        const q = test.questions[i]
+        const qRef = doc(collection(db, COLLECTIONS.questions))
+        batch.set(qRef, {
+          questionText: q.q,
+          optionA: q.a,
+          optionB: q.b,
+          optionC: q.c,
+          optionD: q.d,
+          correctAnswer: q.ans,
+          explanation: q.exp,
+          subject: q.sub,
+          order: i + 1,
+          testId: testRef.id,
+        })
+        opCount++
+
+        if (opCount >= 450) {
+          await batch.commit()
+          batch = writeBatch(db)
+          opCount = 0
+        }
+      }
+    }
+    if (opCount > 0) await batch.commit()
+
+    // ---- Announcements ----
+    batch = writeBatch(db)
+    const annData = [
+      { image: 'ssc', title: 'SSC CGL 2025', subtitle: 'New Mock Tests Added!', action: 'exams', gradient: 'from-orange-500 to-red-500' },
+      { image: 'banking', title: 'Banking PO', subtitle: 'MEGA Test Series Live!', action: 'exams', gradient: 'from-blue-500 to-indigo-500' },
+      { image: 'leaderboard', title: 'Weekly Winners', subtitle: 'Get Special Badges!', action: 'leaderboard', gradient: 'from-emerald-500 to-teal-500' },
+      { image: 'practice', title: 'Practice Mode', subtitle: 'Topic-wise Practice LIVE!', action: 'practice', gradient: 'from-purple-500 to-pink-500' },
+    ]
+    for (const ann of annData) {
+      const ref = doc(collection(db, COLLECTIONS.announcements))
+      batch.set(ref, { ...ann, id: ref.id })
+    }
+
+    // ---- Notifications ----
+    const notifData = [
+      { title: 'Welcome to MockMaster!', message: 'Start your exam preparation journey today. Explore all available tests and practice mock exams.', time: 'Just now', read: false, type: 'info' },
+      { title: 'New SSC CGL Test Available', message: 'A new mock test for SSC CGL 2025 has been added. Try it now!', time: '2h ago', read: false, type: 'update' },
+      { title: 'Weekly Maintenance Notice', message: 'App maintenance scheduled this Sunday 2AM-4AM.', time: '1d ago', read: true, type: 'alert' },
+    ]
+    for (const n of notifData) {
+      const ref = doc(collection(db, COLLECTIONS.notifications))
+      batch.set(ref, { ...n, id: ref.id })
+    }
+
+    // ---- Upcoming Exams ----
+    const upcomingData = [
+      { name: 'SSC CGL 2025 Tier-I', date: 'Jul 2025', status: 'Registration Open', statusType: 'open' },
+      { name: 'IBPS PO 2025 Prelims', date: 'Aug 2025', status: 'Coming Soon', statusType: 'coming' },
+      { name: 'RRB NTPC CBT-2', date: 'Sep 2025', status: 'Admit Card Soon', statusType: 'admit' },
+      { name: 'CTET July 2025', date: 'Jul 2025', status: 'Registration Open', statusType: 'open' },
+      { name: 'CDS II 2025', date: 'Sep 2025', status: 'Coming Soon', statusType: 'coming' },
+      { name: 'Delhi Police Constable 2025', date: 'Nov 2025', status: 'Notification Soon', statusType: 'coming' },
+    ]
+    for (const e of upcomingData) {
+      const ref = doc(collection(db, COLLECTIONS.upcoming_exams))
+      batch.set(ref, { ...e, id: ref.id })
+    }
+
+    // ---- Daily Tips ----
+    const tipsData = [
+      { text: 'Solve at least 50 questions daily from different topics. Consistency beats intensity in exam preparation!' },
+      { text: 'Review your mistakes regularly. Understanding why you got something wrong is more valuable than getting it right.' },
+      { text: 'Practice time management. Set a timer for each mock test to simulate real exam conditions.' },
+      { text: 'Focus on weak areas first. Spend 70% of your study time on topics you find difficult.' },
+      { text: 'Take short breaks every 45 minutes. Your brain consolidates information during rest periods.' },
+      { text: 'Read the question carefully before answering. Most mistakes happen due to misreading, not lack of knowledge.' },
+      { text: 'Attempt previous year papers. They give you the best idea of the exam pattern and difficulty level.' },
+    ]
+    for (const t of tipsData) {
+      const ref = doc(collection(db, COLLECTIONS.daily_tips))
+      batch.set(ref, { ...t, id: ref.id })
+    }
+
+    // ---- Previous Year Papers ----
+    const papersData = [
+      { year: '2025', name: 'SSC CGL Tier-I 2025', examCategory: 'ssc', testId: '', totalQuestions: 100, duration: 60, difficulty: 'Medium', questions: [] },
+      { year: '2025', name: 'IBPS PO Prelims 2025', examCategory: 'banking', testId: '', totalQuestions: 100, duration: 60, difficulty: 'Hard', questions: [] },
+      { year: '2024', name: 'SSC CGL Tier-I 2024', examCategory: 'ssc', testId: '', totalQuestions: 100, duration: 60, difficulty: 'Easy', questions: [] },
+      { year: '2024', name: 'IBPS PO Prelims 2024', examCategory: 'banking', testId: '', totalQuestions: 100, duration: 60, difficulty: 'Medium', questions: [] },
+      { year: '2024', name: 'RRB NTPC CBT-2 2024', examCategory: 'railways', testId: '', totalQuestions: 120, duration: 90, difficulty: 'Medium', questions: [] },
+      { year: '2023', name: 'CTET Paper-I 2023', examCategory: 'teaching', testId: '', totalQuestions: 150, duration: 150, difficulty: 'Medium', questions: [] },
+      { year: '2023', name: 'CDS II 2023', examCategory: 'defence', testId: '', totalQuestions: 120, duration: 120, difficulty: 'Hard', questions: [] },
+    ]
+    for (const p of papersData) {
+      const ref = doc(collection(db, COLLECTIONS.prev_year_papers))
+      batch.set(ref, { ...p, id: ref.id })
+    }
+
+    // ---- Sidebar Menu ----
+    const sidebarData = [
+      { icon: 'Home', label: 'Home', page: 'home', gradient: 'from-orange-500 to-amber-500', visible: true, order: 1 },
+      { icon: 'BookOpen', label: 'All Exams', page: 'exams', gradient: 'from-blue-500 to-indigo-500', visible: true, order: 2 },
+      { icon: 'Trophy', label: 'Leaderboard', page: 'leaderboard', gradient: 'from-yellow-500 to-orange-500', visible: true, order: 3 },
+      { icon: 'Zap', label: 'Quick Practice', page: 'practice', gradient: 'from-amber-400 to-orange-500', visible: true, order: 4 },
+      { icon: 'BookmarkPlus', label: 'Bookmarks', page: 'bookmarks', gradient: 'from-rose-400 to-pink-500', visible: true, order: 5 },
+      { icon: 'BarChart3', label: 'Performance', page: 'perf-report', gradient: 'from-emerald-400 to-teal-500', visible: true, order: 6 },
+      { icon: 'FileText', label: 'Prev. Papers', page: 'prev-papers', gradient: 'from-blue-400 to-cyan-500', visible: true, order: 7 },
+      { icon: 'Target', label: 'Your Exam', page: 'your-exam', gradient: 'from-violet-400 to-purple-500', visible: true, order: 8 },
+      { icon: 'Clock', label: 'Daily Routine', page: 'daily-routine', gradient: 'from-sky-400 to-blue-500', visible: true, order: 9 },
+    ]
+    for (const s of sidebarData) {
+      const ref = doc(collection(db, COLLECTIONS.sidebar_menu))
+      batch.set(ref, { ...s, id: ref.id })
+    }
+
+    await batch.commit()
+
+    // Mark all collections as initialized
+    if (typeof window !== 'undefined') {
+      try {
+        const STORAGE_KEYS_LOCAL = {
+          fsInitialized: 'examprep_firestore_initialized',
+        }
+        const allCols = Object.values(COLLECTIONS)
+        const initialized: Record<string, boolean> = {}
+        allCols.forEach(c => initialized[c] = true)
+        localStorage.setItem(STORAGE_KEYS_LOCAL.fsInitialized, JSON.stringify(initialized))
+      } catch {}
+    }
+
+    console.log('[Firestore] Force seed completed successfully!')
+    return true
+  } catch (error) {
+    console.error('[Firestore] Force seed error:', error)
+    return false
+  }
+}
+
+// ============================================================
 // Upcoming Exam CRUD
 // ============================================================
 
