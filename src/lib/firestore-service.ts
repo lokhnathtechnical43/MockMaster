@@ -40,18 +40,26 @@ import {
   Notification,
   UpcomingExam,
   DailyTip,
+  PrevYearPaper,
+  SidebarMenuItem,
   getAnnouncements as getLocalAnnouncements,
   getNotifications as getLocalNotifications,
   getUpcomingExams as getLocalUpcomingExams,
   getDailyTips as getLocalDailyTips,
+  getPrevYearPapers as getLocalPrevYearPapers,
+  getSidebarMenu as getLocalSidebarMenu,
   saveAnnouncements as saveLocalAnnouncements,
   saveNotifications as saveLocalNotifications,
   saveUpcomingExams as saveLocalUpcomingExams,
   saveDailyTips as saveLocalDailyTips,
+  savePrevYearPapers as saveLocalPrevYearPapers,
+  saveSidebarMenu as saveLocalSidebarMenu,
   DEFAULT_ANNOUNCEMENTS,
   DEFAULT_NOTIFICATIONS,
   DEFAULT_UPCOMING_EXAMS,
   DEFAULT_DAILY_TIPS,
+  DEFAULT_PREV_YEAR_PAPERS,
+  DEFAULT_SIDEBAR_MENU,
 } from '@/lib/admin-data'
 
 // ============================================================
@@ -84,6 +92,8 @@ const COLLECTIONS = {
   notifications: 'notifications',
   upcoming_exams: 'upcoming_exams',
   daily_tips: 'daily_tips',
+  prev_year_papers: 'prev_year_papers',
+  sidebar_menu: 'sidebar_menu',
 } as const
 
 // ============================================================
@@ -1295,6 +1305,18 @@ export async function seedFirestoreIfEmpty(): Promise<boolean> {
       batch.set(tipRef, { ...tip, id: tipRef.id })
     }
 
+    // Seed default previous year papers
+    for (const paper of DEFAULT_PREV_YEAR_PAPERS) {
+      const paperRef = doc(collection(db, COLLECTIONS.prev_year_papers))
+      batch.set(paperRef, { ...paper, id: paperRef.id })
+    }
+
+    // Seed default sidebar menu
+    for (const item of DEFAULT_SIDEBAR_MENU) {
+      const menuRef = doc(collection(db, COLLECTIONS.sidebar_menu))
+      batch.set(menuRef, { ...item, id: menuRef.id })
+    }
+
     await batch.commit()
     console.log('[Firestore] Database seeded successfully')
     return true
@@ -1397,5 +1419,93 @@ export async function saveDailyTips(
   } catch (error) {
     console.error('[Firestore] saveDailyTips error, saving locally:', error)
     saveLocalDailyTips(data)
+  }
+}
+
+// ============================================================
+// Previous Year Papers CRUD
+// ============================================================
+
+/**
+ * Get all previous year papers from Firestore (with localStorage fallback).
+ */
+export async function getPrevYearPapers(): Promise<PrevYearPaper[]> {
+  return firestoreOperation(
+    async () => {
+      const snap = await getDocs(collection(db, COLLECTIONS.prev_year_papers))
+      if (snap.empty) return []
+      return snap.docs.map((d) => ({ id: d.id, ...d.data() } as PrevYearPaper))
+    },
+    () => getLocalPrevYearPapers()
+  )
+}
+
+/**
+ * Save (overwrite) the previous year papers collection.
+ */
+export async function savePrevYearPapers(
+  data: PrevYearPaper[]
+): Promise<void> {
+  if (!useFirestore) {
+    saveLocalPrevYearPapers(data)
+    return
+  }
+  try {
+    const batch = writeBatch(db)
+    const existing = await getDocs(collection(db, COLLECTIONS.prev_year_papers))
+    existing.docs.forEach((d) => batch.delete(d.ref))
+    for (const item of data) {
+      const docRef = doc(collection(db, COLLECTIONS.prev_year_papers))
+      batch.set(docRef, { ...item, id: docRef.id })
+    }
+    await batch.commit()
+    saveLocalPrevYearPapers(data)
+  } catch (error) {
+    console.error('[Firestore] savePrevYearPapers error, saving locally:', error)
+    saveLocalPrevYearPapers(data)
+  }
+}
+
+// ============================================================
+// Sidebar Menu CRUD
+// ============================================================
+
+/**
+ * Get all sidebar menu items from Firestore (with localStorage fallback).
+ */
+export async function getSidebarMenu(): Promise<SidebarMenuItem[]> {
+  return firestoreOperation(
+    async () => {
+      const snap = await getDocs(collection(db, COLLECTIONS.sidebar_menu))
+      if (snap.empty) return []
+      return snap.docs.map((d) => ({ id: d.id, ...d.data() } as SidebarMenuItem))
+    },
+    () => getLocalSidebarMenu()
+  )
+}
+
+/**
+ * Save (overwrite) the sidebar menu items collection.
+ */
+export async function saveSidebarMenu(
+  data: SidebarMenuItem[]
+): Promise<void> {
+  if (!useFirestore) {
+    saveLocalSidebarMenu(data)
+    return
+  }
+  try {
+    const batch = writeBatch(db)
+    const existing = await getDocs(collection(db, COLLECTIONS.sidebar_menu))
+    existing.docs.forEach((d) => batch.delete(d.ref))
+    for (const item of data) {
+      const docRef = doc(collection(db, COLLECTIONS.sidebar_menu))
+      batch.set(docRef, { ...item, id: docRef.id })
+    }
+    await batch.commit()
+    saveLocalSidebarMenu(data)
+  } catch (error) {
+    console.error('[Firestore] saveSidebarMenu error, saving locally:', error)
+    saveLocalSidebarMenu(data)
   }
 }

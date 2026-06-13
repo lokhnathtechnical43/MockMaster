@@ -32,12 +32,37 @@ export interface DailyTip {
   text: string
 }
 
+// Previous Year Paper: grouped by year, each paper has name + link to a test
+export interface PrevYearPaper {
+  id: string
+  year: string          // e.g. "2026", "2025"
+  name: string          // e.g. "SSC CGL Tier-I 2026"
+  examCategory: string  // e.g. "ssc", "banking" - links to category slug
+  testId: string        // links to an existing test in the system
+  totalQuestions: number
+  duration: number      // minutes
+  difficulty: string    // e.g. "Easy", "Medium", "Hard"
+}
+
+// Sidebar Menu Item - admin can control which items appear
+export interface SidebarMenuItem {
+  id: string
+  icon: string          // icon name from lucide-react: "Zap", "BookmarkPlus", "BarChart3", "FileText", "Target", "Clock", "Home", "BookOpen", "Trophy"
+  label: string         // display name
+  page: string          // page to navigate to: "practice", "bookmarks", "perf-report", "prev-papers", "your-exam", "daily-routine", "home", "exams", "leaderboard"
+  gradient: string      // tailwind gradient: "from-amber-400 to-orange-500"
+  visible: boolean      // whether item shows in sidebar
+  order: number         // display order (lower = higher)
+}
+
 export const STORAGE_KEYS = {
   announcements: 'examprep_announcements',
   notifications: 'examprep_notifications',
   readNotifs: 'examprep_read_notifications',
   upcomingExams: 'examprep_upcoming_exams',
   dailyTips: 'examprep_daily_tips',
+  prevYearPapers: 'examprep_prev_year_papers',
+  sidebarMenu: 'examprep_sidebar_menu',
   fsInitialized: 'examprep_firestore_initialized',
 } as const
 
@@ -66,6 +91,28 @@ export const DEFAULT_DAILY_TIPS: DailyTip[] = [
   { id: '3', text: 'Practice time management. Set a timer for each mock test to simulate real exam conditions.' },
   { id: '4', text: 'Focus on weak areas first. Spend 70% of your study time on topics you find difficult.' },
   { id: '5', text: 'Take short breaks every 45 minutes. Your brain consolidates information during rest periods.' },
+]
+
+export const DEFAULT_PREV_YEAR_PAPERS: PrevYearPaper[] = [
+  { id: '1', year: '2026', name: 'SSC CGL Tier-I 2026', examCategory: 'ssc', testId: '', totalQuestions: 100, duration: 60, difficulty: 'Medium' },
+  { id: '2', year: '2026', name: 'IBPS PO Prelims 2026', examCategory: 'banking', testId: '', totalQuestions: 100, duration: 60, difficulty: 'Hard' },
+  { id: '3', year: '2025', name: 'SSC CGL Tier-I 2025', examCategory: 'ssc', testId: '', totalQuestions: 100, duration: 60, difficulty: 'Medium' },
+  { id: '4', year: '2025', name: 'IBPS PO Prelims 2025', examCategory: 'banking', testId: '', totalQuestions: 100, duration: 60, difficulty: 'Hard' },
+  { id: '5', year: '2025', name: 'RRB NTPC CBT-2 2025', examCategory: 'railways', testId: '', totalQuestions: 120, duration: 90, difficulty: 'Medium' },
+  { id: '6', year: '2024', name: 'SSC CGL Tier-I 2024', examCategory: 'ssc', testId: '', totalQuestions: 100, duration: 60, difficulty: 'Easy' },
+  { id: '7', year: '2024', name: 'IBPS PO Prelims 2024', examCategory: 'banking', testId: '', totalQuestions: 100, duration: 60, difficulty: 'Medium' },
+]
+
+export const DEFAULT_SIDEBAR_MENU: SidebarMenuItem[] = [
+  { id: '1', icon: 'Home', label: 'Home', page: 'home', gradient: 'from-orange-500 to-amber-500', visible: true, order: 1 },
+  { id: '2', icon: 'BookOpen', label: 'All Exams', page: 'exams', gradient: 'from-blue-500 to-indigo-500', visible: true, order: 2 },
+  { id: '3', icon: 'Trophy', label: 'Leaderboard', page: 'leaderboard', gradient: 'from-yellow-500 to-orange-500', visible: true, order: 3 },
+  { id: '4', icon: 'Zap', label: 'Quick Practice', page: 'practice', gradient: 'from-amber-400 to-orange-500', visible: true, order: 4 },
+  { id: '5', icon: 'BookmarkPlus', label: 'Bookmarks', page: 'bookmarks', gradient: 'from-rose-400 to-pink-500', visible: true, order: 5 },
+  { id: '6', icon: 'BarChart3', label: 'Performance', page: 'perf-report', gradient: 'from-emerald-400 to-teal-500', visible: true, order: 6 },
+  { id: '7', icon: 'FileText', label: 'Prev. Papers', page: 'prev-papers', gradient: 'from-blue-400 to-cyan-500', visible: true, order: 7 },
+  { id: '8', icon: 'Target', label: 'Your Exam', page: 'your-exam', gradient: 'from-violet-400 to-purple-500', visible: true, order: 8 },
+  { id: '9', icon: 'Clock', label: 'Daily Routine', page: 'daily-routine', gradient: 'from-sky-400 to-blue-500', visible: true, order: 9 },
 ]
 
 // Client-side helpers (for static/Capacitor app)
@@ -127,6 +174,36 @@ export function getDailyTips(): DailyTip[] {
 export function saveDailyTips(tips: DailyTip[]): void {
   if (typeof window === 'undefined') return
   localStorage.setItem(STORAGE_KEYS.dailyTips, JSON.stringify(tips))
+}
+
+export function getPrevYearPapers(): PrevYearPaper[] {
+  if (typeof window === 'undefined') return DEFAULT_PREV_YEAR_PAPERS
+  try {
+    const stored = localStorage.getItem(STORAGE_KEYS.prevYearPapers)
+    return stored ? JSON.parse(stored) : DEFAULT_PREV_YEAR_PAPERS
+  } catch {
+    return DEFAULT_PREV_YEAR_PAPERS
+  }
+}
+
+export function savePrevYearPapers(papers: PrevYearPaper[]): void {
+  if (typeof window === 'undefined') return
+  localStorage.setItem(STORAGE_KEYS.prevYearPapers, JSON.stringify(papers))
+}
+
+export function getSidebarMenu(): SidebarMenuItem[] {
+  if (typeof window === 'undefined') return DEFAULT_SIDEBAR_MENU
+  try {
+    const stored = localStorage.getItem(STORAGE_KEYS.sidebarMenu)
+    return stored ? JSON.parse(stored) : DEFAULT_SIDEBAR_MENU
+  } catch {
+    return DEFAULT_SIDEBAR_MENU
+  }
+}
+
+export function saveSidebarMenu(items: SidebarMenuItem[]): void {
+  if (typeof window === 'undefined') return
+  localStorage.setItem(STORAGE_KEYS.sidebarMenu, JSON.stringify(items))
 }
 
 // Track which notification IDs the user has read (persists across refreshes)

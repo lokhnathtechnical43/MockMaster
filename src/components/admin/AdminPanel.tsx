@@ -7,13 +7,13 @@ import {
   Shield, LogOut, Lock, Eye, EyeOff,
   BarChart3, Users, Settings,
   BookOpen, Bell, Flame, PieChart, Calendar,
-  AlertCircle, Loader2, Star
+  AlertCircle, Loader2, Star, FileText, Menu
 } from 'lucide-react'
 import {
-  type Announcement, type Notification, type UpcomingExam, type DailyTip,
-  getAnnouncements, getNotifications, getUpcomingExams, getDailyTips,
-  saveAnnouncements, saveNotifications, saveUpcomingExams, saveDailyTips,
-  DEFAULT_UPCOMING_EXAMS, DEFAULT_DAILY_TIPS,
+  type Announcement, type Notification, type UpcomingExam, type DailyTip, type PrevYearPaper, type SidebarMenuItem,
+  getAnnouncements, getNotifications, getUpcomingExams, getDailyTips, getPrevYearPapers, getSidebarMenu,
+  saveAnnouncements, saveNotifications, saveUpcomingExams, saveDailyTips, savePrevYearPapers, saveSidebarMenu,
+  DEFAULT_UPCOMING_EXAMS, DEFAULT_DAILY_TIPS, DEFAULT_PREV_YEAR_PAPERS, DEFAULT_SIDEBAR_MENU,
   isFsCollectionInitialized, markFsCollectionInitialized,
 } from '@/lib/admin-data'
 import { getResults, type TestResult } from '@/lib/local-data'
@@ -22,10 +22,14 @@ import {
   getNotifications as getFsNotifications,
   getUpcomingExams as getFsUpcomingExams,
   getDailyTips as getFsDailyTips,
+  getPrevYearPapers as getFsPrevYearPapers,
+  getSidebarMenu as getFsSidebarMenu,
   saveAnnouncements as saveFsAnnouncements,
   saveNotifications as saveFsNotifications,
   saveUpcomingExams as saveFsUpcomingExams,
   saveDailyTips as saveFsDailyTips,
+  savePrevYearPapers as saveFsPrevYearPapers,
+  saveSidebarMenu as saveFsSidebarMenu,
   getResults as getFsResults,
   getUseFirestore,
   getUser,
@@ -46,11 +50,13 @@ import NotificationsTab from '@/components/admin/NotificationsTab'
 import SettingsTab from '@/components/admin/SettingsTab'
 import UpcomingExamsTab from '@/components/admin/UpcomingExamsTab'
 import DailyTipsTab from '@/components/admin/DailyTipsTab'
+import PrevPapersTab from '@/components/admin/PrevPapersTab'
+import SidebarTab from '@/components/admin/SidebarTab'
 
 // Suppress Firebase auth errors in static export mode
 const isClient = typeof window !== 'undefined'
 
-type AdminTab = 'dashboard' | 'exams' | 'users' | 'analytics' | 'announcements' | 'notifications' | 'upcoming' | 'dailytips' | 'settings'
+type AdminTab = 'dashboard' | 'exams' | 'users' | 'analytics' | 'announcements' | 'notifications' | 'upcoming' | 'dailytips' | 'papers' | 'sidebar' | 'settings'
 
 type AuthStatus = 'checking' | 'not_logged_in' | 'verifying' | 'authorized' | 'denied'
 
@@ -75,6 +81,10 @@ export default function AdminPanel() {
   const [upcomingExamsLoaded, setUpcomingExamsLoaded] = useState(false)
   const [dailyTips, setDailyTips] = useState<DailyTip[]>([])
   const [dailyTipsLoaded, setDailyTipsLoaded] = useState(false)
+  const [prevPapers, setPrevPapers] = useState<PrevYearPaper[]>([])
+  const [prevPapersLoaded, setPrevPapersLoaded] = useState(false)
+  const [sidebarMenu, setSidebarMenu] = useState<SidebarMenuItem[]>([])
+  const [sidebarMenuLoaded, setSidebarMenuLoaded] = useState(false)
   const [announcementsLoaded, setAnnouncementsLoaded] = useState(false)
   const [notificationsLoaded, setNotificationsLoaded] = useState(false)
 
@@ -189,6 +199,30 @@ export default function AdminPanel() {
           }
           setDailyTipsLoaded(true)
 
+          // Load previous year papers from Firestore
+          const fsPapers = await getFsPrevYearPapers()
+          if (fsPapers && fsPapers.length > 0) {
+            setPrevPapers(fsPapers)
+            markFsCollectionInitialized('prev_year_papers')
+          } else if (isFsCollectionInitialized('prev_year_papers')) {
+            setPrevPapers([])
+          } else {
+            setPrevPapers(getPrevYearPapers())
+          }
+          setPrevPapersLoaded(true)
+
+          // Load sidebar menu from Firestore
+          const fsSidebar = await getFsSidebarMenu()
+          if (fsSidebar && fsSidebar.length > 0) {
+            setSidebarMenu(fsSidebar)
+            markFsCollectionInitialized('sidebar_menu')
+          } else if (isFsCollectionInitialized('sidebar_menu')) {
+            setSidebarMenu([])
+          } else {
+            setSidebarMenu(getSidebarMenu())
+          }
+          setSidebarMenuLoaded(true)
+
           const fsResults = await getFsResults()
           setAllResults(fsResults as TestResult[] || getResults())
         } catch (e) {
@@ -198,10 +232,14 @@ export default function AdminPanel() {
           setAllResults(getResults())
           setUpcomingExams(getUpcomingExams())
           setDailyTips(getDailyTips())
+          setPrevPapers(getPrevYearPapers())
+          setSidebarMenu(getSidebarMenu())
           setAnnouncementsLoaded(true)
           setNotificationsLoaded(true)
           setUpcomingExamsLoaded(true)
           setDailyTipsLoaded(true)
+          setPrevPapersLoaded(true)
+          setSidebarMenuLoaded(true)
         }
       } else {
         setAnnouncements(getAnnouncements())
@@ -209,10 +247,14 @@ export default function AdminPanel() {
         setAllResults(getResults())
         setUpcomingExams(getUpcomingExams())
         setDailyTips(getDailyTips())
+        setPrevPapers(getPrevYearPapers())
+        setSidebarMenu(getSidebarMenu())
         setAnnouncementsLoaded(true)
         setNotificationsLoaded(true)
         setUpcomingExamsLoaded(true)
         setDailyTipsLoaded(true)
+        setPrevPapersLoaded(true)
+        setSidebarMenuLoaded(true)
       }
     }
     loadData()
@@ -291,6 +333,32 @@ export default function AdminPanel() {
         .catch(e => console.warn('[Admin] Firestore save daily tips failed:', e))
     }
   }, [dailyTips, dailyTipsLoaded])
+
+  useEffect(() => {
+    if (!prevPapersLoaded) return
+    savePrevYearPapers(prevPapers)
+    if (getUseFirestore()) {
+      saveFsPrevYearPapers(prevPapers)
+        .then(() => {
+          console.log('[Admin] Prev year papers saved to Firestore:', prevPapers.length)
+          markFsCollectionInitialized('prev_year_papers')
+        })
+        .catch(e => console.warn('[Admin] Firestore save prev papers failed:', e))
+    }
+  }, [prevPapers, prevPapersLoaded])
+
+  useEffect(() => {
+    if (!sidebarMenuLoaded) return
+    saveSidebarMenu(sidebarMenu)
+    if (getUseFirestore()) {
+      saveFsSidebarMenu(sidebarMenu)
+        .then(() => {
+          console.log('[Admin] Sidebar menu saved to Firestore:', sidebarMenu.length)
+          markFsCollectionInitialized('sidebar_menu')
+        })
+        .catch(e => console.warn('[Admin] Firestore save sidebar menu failed:', e))
+    }
+  }, [sidebarMenu, sidebarMenuLoaded])
 
   // --- Firebase Auth Login ---
   const handleLogin = async () => {
@@ -509,6 +577,8 @@ export default function AdminPanel() {
     { id: 'notifications', icon: Bell, label: 'Notify' },
     { id: 'upcoming', icon: Calendar, label: 'Upcoming' },
     { id: 'dailytips', icon: Star, label: 'Tips' },
+    { id: 'papers', icon: FileText, label: 'Papers' },
+    { id: 'sidebar', icon: Menu, label: 'Sidebar' },
     { id: 'settings', icon: Settings, label: 'Settings' },
   ]
 
@@ -604,6 +674,20 @@ export default function AdminPanel() {
           <DailyTipsTab
             tips={dailyTips}
             onUpdate={setDailyTips}
+          />
+        )}
+
+        {adminTab === 'papers' && (
+          <PrevPapersTab
+            papers={prevPapers}
+            onUpdate={setPrevPapers}
+          />
+        )}
+
+        {adminTab === 'sidebar' && (
+          <SidebarTab
+            items={sidebarMenu}
+            onUpdate={setSidebarMenu}
           />
         )}
 

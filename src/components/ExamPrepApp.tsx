@@ -32,6 +32,7 @@ import {
   getLeaderboard as getFsLeaderboard, getUseFirestore,
   getAnnouncements as getFsAnnouncements, getNotifications as getFsNotifications,
   getUpcomingExams as getFsUpcomingExams, getDailyTips as getFsDailyTips,
+  getPrevYearPapers as getFsPrevYearPapers, getSidebarMenu as getFsSidebarMenu,
   getResults as getFsResults, updateUserTestStats,
 } from '@/lib/firestore-service'
 import { useFirebaseAuth } from '@/lib/use-firebase-auth'
@@ -40,7 +41,7 @@ import { App } from '@capacitor/app'
 import { Share } from '@capacitor/share'
 import { Filesystem, Directory } from '@capacitor/filesystem'
 import jsPDF from 'jspdf'
-import { getAnnouncements as getLocalAnnouncements, getNotifications as getLocalNotifications, getUpcomingExams as getLocalUpcomingExams, getDailyTips as getLocalDailyTips, getReadNotifIds, markNotifAsRead, markAllNotifsAsRead, type UpcomingExam, type DailyTip } from '@/lib/admin-data'
+import { getAnnouncements as getLocalAnnouncements, getNotifications as getLocalNotifications, getUpcomingExams as getLocalUpcomingExams, getDailyTips as getLocalDailyTips, getPrevYearPapers as getLocalPrevYearPapers, getSidebarMenu as getLocalSidebarMenu, getReadNotifIds, markNotifAsRead, markAllNotifsAsRead, type UpcomingExam, type DailyTip, type PrevYearPaper, type SidebarMenuItem } from '@/lib/admin-data'
 import { t, type Lang } from '@/lib/i18n'
 
 // ===== Types =====
@@ -97,6 +98,24 @@ const CATEGORY_ICONS: Record<string, React.ReactNode> = {
   teaching: <GraduationCap className="w-5 h-5" />,
   defence: <Swords className="w-5 h-5" />,
   police: <ShieldCheck className="w-5 h-5" />,
+}
+
+// Map icon name strings to React icon components for admin-managed sidebar
+const SIDEBAR_ICON_MAP: Record<string, React.ElementType> = {
+  Home, BookOpen, Trophy, Zap, BookmarkPlus, BarChart3, FileText, Target, Clock,
+}
+
+// Map page names to light bg and text colors
+const SIDEBAR_PAGE_COLORS: Record<string, { lightBg: string; textColor: string }> = {
+  home: { lightBg: 'bg-orange-50', textColor: 'text-orange-700' },
+  exams: { lightBg: 'bg-blue-50', textColor: 'text-blue-700' },
+  leaderboard: { lightBg: 'bg-yellow-50', textColor: 'text-yellow-700' },
+  practice: { lightBg: 'bg-amber-50', textColor: 'text-amber-700' },
+  bookmarks: { lightBg: 'bg-rose-50', textColor: 'text-rose-700' },
+  'perf-report': { lightBg: 'bg-emerald-50', textColor: 'text-emerald-700' },
+  'prev-papers': { lightBg: 'bg-blue-50', textColor: 'text-blue-700' },
+  'your-exam': { lightBg: 'bg-violet-50', textColor: 'text-violet-700' },
+  'daily-routine': { lightBg: 'bg-sky-50', textColor: 'text-sky-700' },
 }
 
 // ===== Helper Functions =====
@@ -270,6 +289,9 @@ export default function ExamPrepApp() {
   const [activeAnnouncement, setActiveAnnouncement] = useState(0)
   const [upcomingExams, setUpcomingExams] = useState<UpcomingExam[]>([])
   const [dailyTips, setDailyTips] = useState<DailyTip[]>([])
+  const [prevPapers, setPrevPapers] = useState<PrevYearPaper[]>([])
+  const [sidebarMenu, setSidebarMenu] = useState<SidebarMenuItem[]>([])
+  const [selectedPaperYear, setSelectedPaperYear] = useState<string>('')
 
 
 
@@ -304,12 +326,40 @@ export default function ExamPrepApp() {
         getFsDailyTips()
           .then(tips => setDailyTips(tips))
           .catch(() => setDailyTips(getLocalDailyTips()))
+
+        getFsPrevYearPapers()
+          .then(papers => {
+            setPrevPapers(papers)
+            if (papers.length > 0) {
+              const years = [...new Set(papers.map(p => p.year))].sort((a, b) => Number(b) - Number(a))
+              setSelectedPaperYear(years[0] || '')
+            }
+          })
+          .catch(() => {
+            const local = getLocalPrevYearPapers()
+            setPrevPapers(local)
+            if (local.length > 0) {
+              const years = [...new Set(local.map(p => p.year))].sort((a, b) => Number(b) - Number(a))
+              setSelectedPaperYear(years[0] || '')
+            }
+          })
+
+        getFsSidebarMenu()
+          .then(items => setSidebarMenu(items.filter(i => i.visible)))
+          .catch(() => setSidebarMenu(getLocalSidebarMenu().filter(i => i.visible)))
       } else {
         // Fallback to localStorage
         setAnnouncements(getLocalAnnouncements().map(a => ({ ...a, action: a.action as Page })))
         setNotifications(getLocalNotifications().map(n => ({ ...n, read: n.read || readIds.has(n.id) })))
         setUpcomingExams(getLocalUpcomingExams())
         setDailyTips(getLocalDailyTips())
+        const localPapers = getLocalPrevYearPapers()
+        setPrevPapers(localPapers)
+        if (localPapers.length > 0) {
+          const paperYears = [...new Set(localPapers.map(p => p.year))].sort((a, b) => Number(b) - Number(a))
+          setSelectedPaperYear(paperYears[0] || '')
+        }
+        setSidebarMenu(getLocalSidebarMenu().filter(i => i.visible))
       }
     }
     loadData()
@@ -335,6 +385,14 @@ export default function ExamPrepApp() {
 
         getFsDailyTips()
           .then(tips => setDailyTips(tips))
+          .catch(() => {})
+
+        getFsPrevYearPapers()
+          .then(papers => setPrevPapers(papers))
+          .catch(() => {})
+
+        getFsSidebarMenu()
+          .then(items => setSidebarMenu(items.filter(i => i.visible)))
           .catch(() => {})
       } else {
         setAnnouncements(getLocalAnnouncements().map(a => ({ ...a, action: a.action as Page })))
@@ -2741,7 +2799,12 @@ export default function ExamPrepApp() {
 
   // ===== RENDER: Previous Year Papers =====
   function renderPrevPapers() {
-    // Group tests by "year-like" naming or just show all tests as practice papers
+    // Admin-managed previous year papers, grouped by year
+    const years = [...new Set(prevPapers.map(p => p.year))].sort((a, b) => Number(b) - Number(a))
+    const currentYear = selectedPaperYear || years[0] || ''
+    const filteredPapers = prevPapers.filter(p => p.year === currentYear)
+
+    // Also keep local tests as fallback
     const allTestsByExam: Record<string, { exam: LocalExam; cat: LocalExamCategory; tests: LocalTest[] }> = {}
     categories.forEach(cat => {
       cat.exams.forEach(exam => {
@@ -2751,6 +2814,28 @@ export default function ExamPrepApp() {
         }
       })
     })
+
+    // Find matching test for a paper
+    const findTestForPaper = (paper: PrevYearPaper) => {
+      // Try to find by testId first
+      if (paper.testId) {
+        for (const cat of categories) {
+          for (const exam of cat.exams) {
+            const tests = getLocalTestsByExam(exam.id)
+            const found = tests.find(t => t.id === paper.testId)
+            if (found) return { test: found, exam, cat }
+          }
+        }
+      }
+      // Fallback: find by category
+      const cat = categories.find(c => c.slug === paper.examCategory)
+      if (cat && cat.exams.length > 0) {
+        const exam = cat.exams[0]
+        const tests = getLocalTestsByExam(exam.id)
+        if (tests.length > 0) return { test: tests[0], exam, cat }
+      }
+      return null
+    }
 
     return (
       <div className="min-h-screen bg-gray-50">
@@ -2765,36 +2850,98 @@ export default function ExamPrepApp() {
         </div>
 
         <div className="px-4 mt-4 space-y-4 pb-24">
-          {Object.values(allTestsByExam).map(({ exam, cat, tests }) => (
-            <Card key={exam.id} className="border-0 shadow-sm">
-              <CardContent className="p-4">
-                <div className="flex items-center gap-3 mb-3">
-                  <div className={`w-10 h-10 rounded-xl ${getCatColor(cat.slug).light} flex items-center justify-center ${getCatColor(cat.slug).text}`}>
-                    {getCatIcon(cat.slug)}
-                  </div>
-                  <div className="flex-1">
-                    <p className="font-semibold text-sm">{exam.name}</p>
-                    <p className="text-gray-400 text-xs">{tests.length} {_t('prevPapers.papers')}</p>
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  {tests.map(test => (
-                    <button key={test.id} onClick={() => { setSelectedTest(test); setSelectedCategory(cat); setSelectedExam(exam); navigateTo('test-info') }}
-                      className="w-full flex items-center gap-3 p-3 bg-gray-50 rounded-xl hover:bg-gray-100 active:bg-gray-200 transition-colors"
-                      style={{ touchAction: 'manipulation', WebkitTapHighlightColor: 'transparent' }}
-                    >
-                      <FileText className="w-4 h-4 text-orange-500" />
-                      <div className="flex-1 text-left">
-                        <p className="font-medium text-xs">{test.title}</p>
-                        <p className="text-gray-400 text-[10px]">{test.totalQuestions} Qs · {test.duration}m · {test.difficulty}</p>
+          {/* Year Tabs */}
+          {years.length > 0 && (
+            <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1">
+              {years.map(year => (
+                <button
+                  key={year}
+                  onClick={() => setSelectedPaperYear(year)}
+                  className={`flex-shrink-0 px-5 py-2.5 rounded-xl text-sm font-bold transition-all ${
+                    currentYear === year
+                      ? 'bg-gradient-to-r from-blue-500 to-indigo-500 text-white shadow-md'
+                      : 'bg-white text-gray-600 shadow-sm hover:bg-gray-100'
+                  }`}
+                  style={{ touchAction: 'manipulation', WebkitTapHighlightColor: 'transparent' }}
+                >
+                  {year}
+                </button>
+              ))}
+            </div>
+          )}
+
+          {/* Papers for selected year */}
+          {filteredPapers.length > 0 ? filteredPapers.map(paper => {
+            const match = findTestForPaper(paper)
+            const cat = categories.find(c => c.slug === paper.examCategory)
+            return (
+              <Card key={paper.id} className="border-0 shadow-sm overflow-hidden">
+                <CardContent className="p-0">
+                  <div className="flex items-center gap-3 p-3">
+                    <div className={`w-11 h-11 rounded-2xl ${cat ? getCatColor(cat.slug).light : 'bg-blue-50'} flex items-center justify-center`}>
+                      {cat ? getCatIcon(cat.slug) : <FileText className="w-5 h-5 text-blue-500" />}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-semibold text-sm truncate">{paper.name}</p>
+                      <div className="flex items-center gap-2 mt-0.5">
+                        <span className="text-gray-400 text-xs">{paper.totalQuestions} Qs · {paper.duration}m</span>
+                        <Badge className={`text-[9px] border-0 ${
+                          paper.difficulty === 'Easy' ? 'bg-emerald-100 text-emerald-700' :
+                          paper.difficulty === 'Hard' ? 'bg-red-100 text-red-700' :
+                          'bg-amber-100 text-amber-700'
+                        }`}>
+                          {paper.difficulty}
+                        </Badge>
                       </div>
-                      <ChevronRight className="w-4 h-4 text-gray-300" />
-                    </button>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          ))}
+                    </div>
+                    {match ? (
+                      <button
+                        onClick={() => { setSelectedTest(match.test); setSelectedCategory(match.cat); setSelectedExam(match.exam); navigateTo('test-info') }}
+                        className="w-9 h-9 rounded-xl bg-gradient-to-br from-orange-400 to-red-400 flex items-center justify-center shadow-sm"
+                        style={{ touchAction: 'manipulation', WebkitTapHighlightColor: 'transparent' }}
+                      >
+                        <Play className="w-4 h-4 text-white" />
+                      </button>
+                    ) : (
+                      <Badge className="text-[9px] border-0 bg-gray-100 text-gray-500">Coming Soon</Badge>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            )
+          }) : (
+            // Fallback: show all tests by exam if no admin papers
+            Object.values(allTestsByExam).map(({ exam, cat, tests }) => (
+              <Card key={exam.id} className="border-0 shadow-sm">
+                <CardContent className="p-4">
+                  <div className="flex items-center gap-3 mb-3">
+                    <div className={`w-10 h-10 rounded-xl ${getCatColor(cat.slug).light} flex items-center justify-center ${getCatColor(cat.slug).text}`}>
+                      {getCatIcon(cat.slug)}
+                    </div>
+                    <div className="flex-1">
+                      <p className="font-semibold text-sm">{exam.name}</p>
+                      <p className="text-gray-400 text-xs">{tests.length} {_t('prevPapers.papers')}</p>
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    {tests.map(test => (
+                      <button key={test.id} onClick={() => { setSelectedTest(test); setSelectedCategory(cat); setSelectedExam(exam); navigateTo('test-info') }}
+                        className="w-full flex items-center gap-3 p-3 bg-gray-50 rounded-xl hover:bg-gray-100 active:bg-gray-200 transition-colors"
+                        style={{ touchAction: 'manipulation', WebkitTapHighlightColor: 'transparent' }}
+                      >
+                        <FileText className="w-4 h-4 text-orange-500" />
+                        <div className="flex-1 text-left">
+                          <p className="font-medium text-xs">{test.title}</p>
+                          <p className="text-gray-400 text-[10px]">{test.totalQuestions} Qs · {test.duration}m · {test.difficulty}</p>
+                        </div>
+                        <ChevronRight className="w-4 h-4 text-gray-300" />
+                      </button>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            ))
+          )}
         </div>
       </div>
     )
@@ -3716,25 +3863,27 @@ export default function ExamPrepApp() {
                 <div className="flex-1 h-px bg-gradient-to-r from-transparent via-gray-200 to-transparent" />
               </div>
 
-              {/* Quick Actions */}
+              {/* Quick Actions - Admin Managed */}
               <div className="mb-2">
                 <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest px-3 mb-2">{_t('menu.quickActions')}</p>
-                {[
-                  { icon: Zap, label: _t('menu.quickPractice'), page: 'practice' as Page, gradient: 'from-amber-400 to-orange-500', lightBg: 'bg-amber-50', textColor: 'text-amber-700', iconText: 'text-amber-500' },
-                  { icon: BookmarkPlus, label: _t('menu.bookmarkedQ'), page: 'bookmarks' as Page, gradient: 'from-rose-400 to-pink-500', lightBg: 'bg-rose-50', textColor: 'text-rose-700', iconText: 'text-rose-500' },
-                  { icon: BarChart3, label: _t('menu.perfReport'), page: 'perf-report' as Page, gradient: 'from-emerald-400 to-teal-500', lightBg: 'bg-emerald-50', textColor: 'text-emerald-700', iconText: 'text-emerald-500' },
-                  { icon: FileText, label: _t('menu.prevPapers'), page: 'prev-papers' as Page, gradient: 'from-blue-400 to-cyan-500', lightBg: 'bg-blue-50', textColor: 'text-blue-700', iconText: 'text-blue-500' },
-                  { icon: Target, label: _t('menu.yourExam'), page: 'your-exam' as Page, gradient: 'from-violet-400 to-purple-500', lightBg: 'bg-violet-50', textColor: 'text-violet-700', iconText: 'text-violet-500' },
-                  { icon: Clock, label: _t('menu.dailyRoutine'), page: 'daily-routine' as Page, gradient: 'from-sky-400 to-blue-500', lightBg: 'bg-sky-50', textColor: 'text-sky-700', iconText: 'text-sky-500' },
-                ].map((item, i) => {
+                {(sidebarMenu.length > 0 ? sidebarMenu : [
+                  { icon: 'Zap', label: _t('menu.quickPractice'), page: 'practice', gradient: 'from-amber-400 to-orange-500', visible: true, order: 1, id: '1' },
+                  { icon: 'BookmarkPlus', label: _t('menu.bookmarkedQ'), page: 'bookmarks', gradient: 'from-rose-400 to-pink-500', visible: true, order: 2, id: '2' },
+                  { icon: 'BarChart3', label: _t('menu.perfReport'), page: 'perf-report', gradient: 'from-emerald-400 to-teal-500', visible: true, order: 3, id: '3' },
+                  { icon: 'FileText', label: _t('menu.prevPapers'), page: 'prev-papers', gradient: 'from-blue-400 to-cyan-500', visible: true, order: 4, id: '4' },
+                  { icon: 'Target', label: _t('menu.yourExam'), page: 'your-exam', gradient: 'from-violet-400 to-purple-500', visible: true, order: 5, id: '5' },
+                  { icon: 'Clock', label: _t('menu.dailyRoutine'), page: 'daily-routine', gradient: 'from-sky-400 to-blue-500', visible: true, order: 6, id: '6' },
+                ]).filter(i => i.visible).sort((a, b) => a.order - b.order).map((item, i) => {
+                  const IconComp = SIDEBAR_ICON_MAP[item.icon] || Zap
+                  const pageColors = SIDEBAR_PAGE_COLORS[item.page] || { lightBg: 'bg-gray-50', textColor: 'text-gray-700' }
                   const isActive = currentPage === item.page
                   return (
                     <button
-                      key={i}
-                      onClick={() => { if (!sideMenuScrollRef.current?.scrolled) { navigateTo(item.page); setShowSideMenu(false) } }}
+                      key={item.id || i}
+                      onClick={() => { if (!sideMenuScrollRef.current?.scrolled) { navigateTo(item.page as Page); setShowSideMenu(false) } }}
                       className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200 mb-0.5 ${
                         isActive
-                          ? `${item.lightBg} ${item.textColor} shadow-sm border border-white/60`
+                          ? `${pageColors.lightBg} ${pageColors.textColor} shadow-sm border border-white/60`
                           : 'text-gray-600 hover:bg-gray-50 active:bg-gray-100'
                       }`}
                       style={{ touchAction: 'pan-y', WebkitTapHighlightColor: 'transparent' }}
@@ -3744,7 +3893,7 @@ export default function ExamPrepApp() {
                           ? `bg-gradient-to-br ${item.gradient} shadow-sm`
                           : 'bg-gray-100'
                       }`}>
-                        <item.icon className={`w-4 h-4 ${isActive ? 'text-white' : 'text-gray-400'}`} />
+                        <IconComp className={`w-4 h-4 ${isActive ? 'text-white' : 'text-gray-400'}`} />
                       </div>
                       <span className={`font-medium text-[13px] flex-1 text-left ${isActive ? 'font-bold' : ''}`}>{item.label}</span>
                       {isActive && (

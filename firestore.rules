@@ -97,5 +97,21 @@ service cloud.firestore {
       allow read: if true;
       allow write: if isAdmin();
     }
+
+    // ===========================
+    // Previous Year Papers - Anyone can read, admin can write
+    // ===========================
+    match /prev_year_papers/{prevYearPaperId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // ===========================
+    // Sidebar Menu - Anyone can read, admin can write
+    // ===========================
+    match /sidebar_menu/{sidebarMenuId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
   }
 }
