@@ -970,7 +970,8 @@ export default function ExamPrepApp() {
           </div>
         </div>
 
-        {/* Announcements - Image Banner Carousel */}
+        {/* Announcements - Image Banner Carousel - Only show when admin has added announcements */}
+        {announcements.length > 0 && (
         <div className="px-4 mt-3 mb-1">
           <div className="relative">
             <div
@@ -1046,6 +1047,7 @@ export default function ExamPrepApp() {
             </div>
           </div>
         </div>
+        )}
 
         <div className="px-4 mt-4 space-y-5">
           {/* Quick Practice - Professional Card */}
@@ -1163,7 +1165,8 @@ export default function ExamPrepApp() {
             </div>
           </div>
 
-          {/* Daily Tips Section */}
+          {/* Daily Tips Section - Only show when admin has added tips */}
+          {dailyTips.length > 0 && (
           <div>
             <div className="flex items-center gap-2 mb-3">
               <div className="w-7 h-7 rounded-lg bg-amber-50 flex items-center justify-center">
@@ -1172,35 +1175,24 @@ export default function ExamPrepApp() {
               <h2 className="font-bold text-lg">{_t('home.dailyTips')}</h2>
             </div>
             <div className="space-y-2">
-              {dailyTips.length > 0 ? (
-                dailyTips.slice(0, 3).map((tip, i) => (
-                  <Card key={tip.id || i} className="border-0 shadow-md overflow-hidden">
-                    <div className="bg-gradient-to-r from-amber-50 to-orange-50 p-4">
-                      <div className="flex items-start gap-3">
-                        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-400 to-orange-400 flex items-center justify-center flex-shrink-0 shadow-sm">
-                          <Star className="w-5 h-5 text-white" />
-                        </div>
-                        <p className="text-sm text-gray-700 leading-relaxed pt-1">{tip.text}</p>
-                      </div>
-                    </div>
-                  </Card>
-                ))
-              ) : (
-                <Card className="border-0 shadow-md overflow-hidden">
+              {dailyTips.slice(0, 3).map((tip, i) => (
+                <Card key={tip.id || i} className="border-0 shadow-md overflow-hidden">
                   <div className="bg-gradient-to-r from-amber-50 to-orange-50 p-4">
                     <div className="flex items-start gap-3">
                       <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-400 to-orange-400 flex items-center justify-center flex-shrink-0 shadow-sm">
                         <Star className="w-5 h-5 text-white" />
                       </div>
-                      <p className="text-sm text-gray-700 leading-relaxed pt-1">{_t('home.dailyTip')}</p>
+                      <p className="text-sm text-gray-700 leading-relaxed pt-1">{tip.text}</p>
                     </div>
                   </div>
                 </Card>
-              )}
+              ))}
             </div>
           </div>
+          )}
 
-          {/* Upcoming Exams Section */}
+          {/* Upcoming Exams Section - Only show when admin has added exams */}
+          {upcomingExams.length > 0 && (
           <div>
             <div className="flex items-center gap-2 mb-3">
               <div className="w-7 h-7 rounded-lg bg-blue-50 flex items-center justify-center">
@@ -1209,7 +1201,7 @@ export default function ExamPrepApp() {
               <h2 className="font-bold text-lg">{_t('home.upcomingExams')}</h2>
             </div>
             <div className="space-y-2">
-              {upcomingExams.length > 0 ? upcomingExams.map((exam, i) => (
+              {upcomingExams.map((exam, i) => (
                 <Card key={i} className="border-0 shadow-sm overflow-hidden">
                   <CardContent className="p-0">
                     <div className="flex items-center gap-3 p-3">
@@ -1231,16 +1223,10 @@ export default function ExamPrepApp() {
                     </div>
                   </CardContent>
                 </Card>
-              )) : (
-                <Card className="border-0 shadow-sm">
-                  <CardContent className="p-4 text-center">
-                    <Calendar className="w-8 h-8 text-gray-300 mx-auto mb-2" />
-                    <p className="text-gray-400 text-xs">No upcoming exams announced yet</p>
-                  </CardContent>
-                </Card>
-              )}
+              ))}
             </div>
           </div>
+          )}
 
           {/* Study Stats / Motivation - Professional */}
           <div>

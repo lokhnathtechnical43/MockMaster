@@ -7,7 +7,9 @@ import {
   Shield, LogOut, Lock, Eye, EyeOff,
   BarChart3, Users, Settings,
   BookOpen, Bell, Flame, PieChart, Calendar,
-  AlertCircle, Loader2, Star, FileText, Menu
+  AlertCircle, Loader2, Star, FileText, Menu,
+  ChevronLeft, Sparkles, Zap, Activity,
+  Database, Crown
 } from 'lucide-react'
 import {
   type Announcement, type Notification, type UpcomingExam, type DailyTip, type PrevYearPaper, type SidebarMenuItem,
@@ -69,6 +71,8 @@ export default function AdminPanel() {
   const [loginError, setLoginError] = useState('')
   const [loginLoading, setLoginLoading] = useState(false)
   const [firebaseUser, setFirebaseUser] = useState<User | null>(null)
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
 
   // --- Tab ---
   const [adminTab, setAdminTab] = useState<AdminTab>('dashboard')
@@ -260,28 +264,7 @@ export default function AdminPanel() {
     loadData()
   }, [authStatus])
 
-  // Refresh user data periodically
-  useEffect(() => {
-    if (authStatus !== 'authorized') return
-
-    const interval = setInterval(async () => {
-      if (getUseFirestore()) {
-        try {
-          const fsResults = await getFsResults()
-          setAllResults(fsResults as TestResult[] || [])
-        } catch (e) {}
-      } else {
-        setAllResults(getResults())
-      }
-    }, 5000)
-    return () => clearInterval(interval)
-  }, [authStatus])
-
-  // Save data when it changes (both local + Firestore)
-  // Always save - even empty lists (so deletes persist)
-  // Note: announcementsLoaded, notificationsLoaded, upcomingExamsLoaded, dailyTipsLoaded
-  // are defined above with the data states
-
+  // --- Auto-save to Firestore when data changes ---
   useEffect(() => {
     if (!announcementsLoaded) return
     saveAnnouncements(announcements)
@@ -394,15 +377,15 @@ export default function AdminPanel() {
     } catch (err: any) {
       console.error('[Admin] Login error:', err)
       if (err.code === 'auth/user-not-found') {
-        setLoginError('No account found with this email. Create user in Firebase Console → Authentication first.')
+        setLoginError('No account found with this email. Create user in Firebase Console first.')
       } else if (err.code === 'auth/wrong-password' || err.code === 'auth/invalid-credential') {
-        setLoginError('Incorrect password. Check credentials in Firebase Console → Authentication.')
+        setLoginError('Incorrect password. Check credentials in Firebase Console.')
       } else if (err.code === 'auth/invalid-email') {
         setLoginError('Invalid email address.')
       } else if (err.code === 'auth/too-many-requests') {
         setLoginError('Too many failed attempts. Try again later.')
       } else {
-        setLoginError('Login failed: ' + (err?.message || 'Unknown error') + '. Check if Firebase is configured correctly.')
+        setLoginError('Login failed: ' + (err?.message || 'Unknown error'))
       }
       setAuthStatus('not_logged_in')
     }
@@ -424,13 +407,21 @@ export default function AdminPanel() {
 
   const handleRefreshResults = () => setAllResults(getResults())
 
+  const handleTabChange = (tab: AdminTab) => {
+    setAdminTab(tab)
+    setMobileMenuOpen(false)
+  }
+
   // --- Checking auth state (loading) ---
   if (authStatus === 'checking') {
     return (
-      <div className="min-h-screen min-h-dvh flex items-center justify-center bg-slate-50">
+      <div className="min-h-screen min-h-dvh flex items-center justify-center bg-gradient-to-br from-indigo-950 via-slate-900 to-purple-950">
         <div className="text-center">
-          <Loader2 className="w-8 h-8 text-slate-400 animate-spin mx-auto mb-3" />
-          <p className="text-slate-500 text-sm">Checking...</p>
+          <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-orange-400 to-pink-500 flex items-center justify-center mx-auto mb-4 animate-pulse shadow-lg shadow-orange-500/30">
+            <Shield className="w-8 h-8 text-white" />
+          </div>
+          <Loader2 className="w-6 h-6 text-white/40 animate-spin mx-auto mb-3" />
+          <p className="text-white/40 text-sm">Initializing...</p>
         </div>
       </div>
     )
@@ -439,10 +430,13 @@ export default function AdminPanel() {
   // --- Verifying admin role ---
   if (authStatus === 'verifying') {
     return (
-      <div className="min-h-screen min-h-dvh flex items-center justify-center bg-slate-50">
+      <div className="min-h-screen min-h-dvh flex items-center justify-center bg-gradient-to-br from-indigo-950 via-slate-900 to-purple-950">
         <div className="text-center">
-          <Loader2 className="w-8 h-8 text-slate-400 animate-spin mx-auto mb-3" />
-          <p className="text-slate-500 text-sm">Verifying access...</p>
+          <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center mx-auto mb-4 shadow-lg shadow-amber-500/30">
+            <Crown className="w-8 h-8 text-white" />
+          </div>
+          <Loader2 className="w-6 h-6 text-white/40 animate-spin mx-auto mb-3" />
+          <p className="text-white/40 text-sm">Verifying access...</p>
         </div>
       </div>
     )
@@ -451,17 +445,19 @@ export default function AdminPanel() {
   // --- Access denied (logged in but not admin) ---
   if (authStatus === 'denied') {
     return (
-      <div className="min-h-screen min-h-dvh flex flex-col items-center justify-center bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 px-4">
-        <div className="w-full max-w-sm">
-          <Card className="border-0 shadow-2xl bg-white/95 backdrop-blur-xl">
-            <CardContent className="p-6 text-center">
-              <div className="w-14 h-14 bg-red-50 rounded-2xl flex items-center justify-center mx-auto mb-3">
-                <AlertCircle className="w-7 h-7 text-red-500" />
+      <div className="min-h-screen min-h-dvh flex flex-col items-center justify-center bg-gradient-to-br from-indigo-950 via-slate-900 to-purple-950 px-4 relative overflow-hidden">
+        <div className="absolute top-0 right-0 w-80 h-80 bg-red-500/5 rounded-full -translate-y-1/2 translate-x-1/4 blur-3xl" />
+        <div className="absolute bottom-0 left-0 w-60 h-60 bg-purple-500/5 rounded-full translate-y-1/2 -translate-x-1/4 blur-3xl" />
+        <div className="w-full max-w-sm relative z-10">
+          <Card className="border-0 shadow-2xl bg-white/[0.07] backdrop-blur-2xl">
+            <CardContent className="p-8 text-center">
+              <div className="w-16 h-16 bg-red-500/10 rounded-2xl flex items-center justify-center mx-auto mb-4 border border-red-500/20">
+                <AlertCircle className="w-8 h-8 text-red-400" />
               </div>
-              <h2 className="font-bold text-lg mb-2">Access Denied</h2>
-              <p className="text-gray-500 text-sm mb-4">You do not have permission to access this page.</p>
+              <h2 className="font-bold text-xl text-white mb-2">Access Denied</h2>
+              <p className="text-white/40 text-sm mb-6">You do not have permission to access this page.</p>
               <Button
-                className="w-full bg-gradient-to-r from-slate-700 to-slate-800 hover:from-slate-800 hover:to-slate-900 text-white rounded-xl h-11 font-semibold"
+                className="w-full bg-white/10 hover:bg-white/15 text-white rounded-xl h-11 font-semibold border border-white/10"
                 onClick={handleLogout}
               >
                 <LogOut className="w-4 h-4 mr-2" /> Sign Out
@@ -476,34 +472,35 @@ export default function AdminPanel() {
   // --- Login Screen ---
   if (authStatus === 'not_logged_in') {
     return (
-      <div className="min-h-screen min-h-dvh flex flex-col items-center justify-center bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 px-4 relative overflow-hidden">
-        {/* Decorative elements */}
-        <div className="absolute top-0 right-0 w-64 h-64 bg-slate-700/10 rounded-full -translate-y-1/2 translate-x-1/4" />
-        <div className="absolute bottom-0 left-0 w-48 h-48 bg-slate-700/10 rounded-full translate-y-1/2 -translate-x-1/4" />
+      <div className="min-h-screen min-h-dvh flex flex-col items-center justify-center bg-gradient-to-br from-indigo-950 via-slate-900 to-purple-950 px-4 relative overflow-hidden">
+        {/* Decorative blobs */}
+        <div className="absolute top-0 right-0 w-96 h-96 bg-orange-500/8 rounded-full -translate-y-1/2 translate-x-1/4 blur-3xl" />
+        <div className="absolute bottom-0 left-0 w-72 h-72 bg-purple-500/8 rounded-full translate-y-1/2 -translate-x-1/4 blur-3xl" />
+        <div className="absolute top-1/3 left-1/4 w-48 h-48 bg-blue-500/5 rounded-full blur-3xl" />
 
         <div className="w-full max-w-sm relative z-10">
-          {/* Minimal branding - no app logo, no app name */}
+          {/* Branding */}
           <div className="text-center mb-8">
-            <div className="w-16 h-16 bg-gradient-to-r from-slate-700 to-slate-800 rounded-2xl flex items-center justify-center mx-auto mb-4">
-              <Lock className="w-8 h-8 text-white" />
+            <div className="w-18 h-18 bg-gradient-to-br from-orange-400 via-pink-500 to-purple-600 rounded-2xl flex items-center justify-center mx-auto mb-5 shadow-2xl shadow-orange-500/30" style={{ width: '72px', height: '72px' }}>
+              <Shield className="w-9 h-9 text-white" />
             </div>
-            <h1 className="text-white text-2xl font-bold">System Login</h1>
-            <p className="text-slate-400 text-sm mt-1">Authorized personnel only</p>
+            <h1 className="text-white text-2xl font-bold tracking-tight">Admin Console</h1>
+            <p className="text-white/30 text-sm mt-1.5">Authorized personnel only</p>
           </div>
 
           {/* Login Card */}
-          <Card className="border-0 shadow-2xl bg-white/95 backdrop-blur-xl">
-            <CardContent className="p-6">
-              <div className="space-y-4">
+          <Card className="border-0 shadow-2xl bg-white/[0.07] backdrop-blur-2xl border border-white/10">
+            <CardContent className="p-7">
+              <div className="space-y-5">
                 {/* Email field */}
                 <div>
-                  <label className="text-sm font-medium text-gray-700 mb-1 block">Email</label>
+                  <label className="text-xs font-semibold text-white/50 mb-2 block uppercase tracking-wider">Email</label>
                   <input
                     type="email"
                     value={adminEmail}
                     onChange={e => { setAdminEmail(e.target.value); setLoginError('') }}
                     placeholder="Enter email address"
-                    className="w-full px-4 py-3 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-slate-400"
+                    className="w-full px-4 py-3.5 rounded-xl bg-white/[0.06] border border-white/10 text-white text-sm placeholder:text-white/25 focus:outline-none focus:ring-2 focus:ring-orange-400/50 focus:border-orange-400/30 transition-all"
                     onKeyDown={e => {
                       if (e.key === 'Enter' && adminEmail && adminPassword) {
                         handleLogin()
@@ -514,14 +511,14 @@ export default function AdminPanel() {
 
                 {/* Password field */}
                 <div>
-                  <label className="text-sm font-medium text-gray-700 mb-1 block">Password</label>
+                  <label className="text-xs font-semibold text-white/50 mb-2 block uppercase tracking-wider">Password</label>
                   <div className="relative">
                     <input
                       type={showPassword ? 'text' : 'password'}
                       value={adminPassword}
                       onChange={e => { setAdminPassword(e.target.value); setLoginError('') }}
                       placeholder="Enter password"
-                      className="w-full px-4 py-3 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-slate-400 pr-12"
+                      className="w-full px-4 py-3.5 rounded-xl bg-white/[0.06] border border-white/10 text-white text-sm placeholder:text-white/25 focus:outline-none focus:ring-2 focus:ring-orange-400/50 focus:border-orange-400/30 transition-all pr-12"
                       onKeyDown={e => {
                         if (e.key === 'Enter' && adminEmail && adminPassword) {
                           handleLogin()
@@ -531,7 +528,7 @@ export default function AdminPanel() {
                     <button
                       type="button"
                       onClick={() => setShowPassword(!showPassword)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                      className="absolute right-3.5 top-1/2 -translate-y-1/2 text-white/30 hover:text-white/60 transition-colors"
                     >
                       {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                     </button>
@@ -540,162 +537,273 @@ export default function AdminPanel() {
 
                 {/* Error message */}
                 {loginError && (
-                  <div className="flex items-center gap-2 text-red-500 text-xs bg-red-50 px-3 py-2 rounded-xl">
-                    <AlertCircle className="w-3.5 h-3.5 flex-shrink-0" />
-                    <span>{loginError}</span>
+                  <div className="flex items-start gap-2.5 text-red-300 text-xs bg-red-500/10 px-4 py-3 rounded-xl border border-red-500/20">
+                    <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
+                    <span className="leading-relaxed">{loginError}</span>
                   </div>
                 )}
 
                 {/* Login button */}
                 <Button
-                  className="w-full bg-gradient-to-r from-slate-700 to-slate-800 hover:from-slate-800 hover:to-slate-900 text-white rounded-xl h-11 font-semibold"
+                  className="w-full bg-gradient-to-r from-orange-500 to-pink-500 hover:from-orange-600 hover:to-pink-600 text-white rounded-xl h-12 font-bold text-sm shadow-lg shadow-orange-500/25 transition-all active:scale-[0.98]"
                   onClick={handleLogin}
                   disabled={loginLoading || !adminEmail || !adminPassword}
                 >
                   {loginLoading ? (
                     <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                   ) : (
-                    <Shield className="w-4 h-4 mr-2" />
+                    <Sparkles className="w-4 h-4 mr-2" />
                   )}
                   {loginLoading ? 'Signing in...' : 'Sign In'}
                 </Button>
               </div>
             </CardContent>
           </Card>
+
+          <p className="text-white/15 text-[10px] text-center mt-6">Secured by Firebase Authentication</p>
         </div>
       </div>
     )
   }
 
   // --- Admin Panel (Logged In) ---
-  const tabs: { id: AdminTab; icon: React.ElementType; label: string; color: string }[] = [
-    { id: 'dashboard', icon: BarChart3, label: 'Dashboard', color: 'from-violet-500 to-purple-500' },
-    { id: 'exams', icon: BookOpen, label: 'Mock Tests', color: 'from-blue-500 to-indigo-500' },
-    { id: 'users', icon: Users, label: 'Users', color: 'from-emerald-500 to-teal-500' },
-    { id: 'analytics', icon: PieChart, label: 'Analytics', color: 'from-pink-500 to-rose-500' },
-    { id: 'announcements', icon: Flame, label: 'Announce', color: 'from-orange-500 to-amber-500' },
-    { id: 'notifications', icon: Bell, label: 'Notify', color: 'from-cyan-500 to-blue-500' },
-    { id: 'upcoming', icon: Calendar, label: 'Upcoming', color: 'from-fuchsia-500 to-pink-500' },
-    { id: 'dailytips', icon: Star, label: 'Tips', color: 'from-yellow-500 to-amber-500' },
-    { id: 'papers', icon: FileText, label: 'Papers', color: 'from-lime-500 to-green-500' },
-    { id: 'sidebar', icon: Menu, label: 'Sidebar', color: 'from-sky-500 to-cyan-500' },
-    { id: 'settings', icon: Settings, label: 'Settings', color: 'from-gray-500 to-slate-500' },
+  const tabs: { id: AdminTab; icon: React.ElementType; label: string; gradient: string; section: string }[] = [
+    { id: 'dashboard', icon: Activity, label: 'Dashboard', gradient: 'from-violet-500 to-purple-600', section: 'Overview' },
+    { id: 'exams', icon: BookOpen, label: 'Mock Tests', gradient: 'from-blue-500 to-indigo-600', section: 'Content' },
+    { id: 'announcements', icon: Flame, label: 'Announcements', gradient: 'from-orange-500 to-amber-500', section: 'Content' },
+    { id: 'notifications', icon: Bell, label: 'Notifications', gradient: 'from-cyan-500 to-blue-500', section: 'Content' },
+    { id: 'upcoming', icon: Calendar, label: 'Upcoming Exams', gradient: 'from-fuchsia-500 to-pink-500', section: 'Content' },
+    { id: 'dailytips', icon: Star, label: 'Daily Tips', gradient: 'from-yellow-500 to-amber-500', section: 'Content' },
+    { id: 'papers', icon: FileText, label: 'Prev. Papers', gradient: 'from-lime-500 to-green-500', section: 'Content' },
+    { id: 'sidebar', icon: Menu, label: 'Sidebar Menu', gradient: 'from-sky-500 to-cyan-500', section: 'Content' },
+    { id: 'users', icon: Users, label: 'Users', gradient: 'from-emerald-500 to-teal-500', section: 'Data' },
+    { id: 'analytics', icon: PieChart, label: 'Analytics', gradient: 'from-pink-500 to-rose-500', section: 'Data' },
+    { id: 'settings', icon: Settings, label: 'Settings', gradient: 'from-gray-500 to-slate-500', section: 'System' },
   ]
 
+  const currentTab = tabs.find(t => t.id === adminTab)!
+
   return (
-    <div className="min-h-screen min-h-dvh bg-slate-50">
-      {/* Header */}
-      <div className="bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 px-4 pt-[calc(env(safe-area-inset-top,0px)+1rem)] pb-5 sticky top-0 z-30 shadow-xl">
-        <div className="max-w-4xl mx-auto">
-          <div className="flex items-center gap-3 mb-4">
-            <div className="flex-1">
-              <h1 className="text-white text-lg font-bold flex items-center gap-2">
-                <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-orange-400 to-amber-500 flex items-center justify-center shadow-lg shadow-orange-500/20">
-                  <Shield className="w-4 h-4 text-white" />
-                </div>
-                Admin Panel
-              </h1>
-              <p className="text-slate-400 text-[11px] mt-0.5">
-                {firebaseUser?.email || 'Admin'}
-              </p>
+    <div className="min-h-screen min-h-dvh bg-gradient-to-br from-slate-50 via-white to-slate-50">
+      {/* ===== Top Header Bar ===== */}
+      <header className="bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 px-4 pt-[calc(env(safe-area-inset-top,0px)+0.75rem)] pb-4 sticky top-0 z-40 shadow-xl shadow-slate-900/20">
+        <div className="max-w-6xl mx-auto">
+          <div className="flex items-center gap-3">
+            {/* Mobile menu toggle */}
+            <button
+              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              className="lg:hidden w-9 h-9 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-white/60 hover:text-white/90 hover:bg-white/10 transition-all"
+            >
+              <Menu className="w-4 h-4" />
+            </button>
+
+            {/* Brand */}
+            <div className="flex items-center gap-3 flex-1">
+              <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-orange-400 via-pink-500 to-purple-600 flex items-center justify-center shadow-lg shadow-orange-500/20">
+                <Shield className="w-4.5 h-4.5 text-white" />
+              </div>
+              <div>
+                <h1 className="text-white text-base font-bold tracking-tight flex items-center gap-2">
+                  Admin Console
+                  <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-orange-500/20 text-orange-400 font-bold uppercase tracking-wider">Pro</span>
+                </h1>
+                <p className="text-white/25 text-[10px] font-medium">{firebaseUser?.email || 'Admin'}</p>
+              </div>
             </div>
+
+            {/* Status badge */}
+            <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20">
+              <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+              <span className="text-emerald-400 text-[10px] font-semibold">Online</span>
+            </div>
+
+            {/* Logout */}
             <button
               onClick={handleLogout}
-              className="h-9 px-3 rounded-xl bg-white/5 border border-white/10 flex items-center gap-2 hover:bg-white/10 transition-all text-white/50 hover:text-white/80"
+              className="h-9 px-3 rounded-xl bg-white/5 border border-white/10 flex items-center gap-2 hover:bg-red-500/10 hover:border-red-500/20 hover:text-red-400 transition-all text-white/40"
               title="Logout"
             >
               <LogOut className="w-3.5 h-3.5" />
-              <span className="text-xs font-medium hidden sm:inline">Logout</span>
+              <span className="text-xs font-medium hidden md:inline">Logout</span>
             </button>
           </div>
+        </div>
+      </header>
 
-          {/* Tabs - Scrollable with active indicator */}
-          <div className="flex gap-1.5 overflow-x-auto scrollbar-hide pb-1 -mx-1 px-1">
-            {tabs.map(tab => (
-              <button
-                key={tab.id}
-                onClick={() => setAdminTab(tab.id)}
-                className={`flex-shrink-0 py-2 px-3.5 rounded-xl text-xs font-semibold transition-all duration-200 flex items-center gap-1.5 ${
-                  adminTab === tab.id
-                    ? `bg-gradient-to-r ${tab.color} text-white shadow-lg shadow-black/20 scale-[1.02]`
-                    : 'text-white/35 hover:text-white/60 hover:bg-white/5'
-                }`}
-              >
-                <tab.icon className="w-3.5 h-3.5" />
-                <span className="hidden sm:inline">{tab.label}</span>
-              </button>
-            ))}
+      {/* ===== Mobile Slide-out Menu ===== */}
+      {mobileMenuOpen && (
+        <div className="fixed inset-0 z-50 lg:hidden">
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setMobileMenuOpen(false)} />
+          <div className="absolute left-0 top-0 bottom-0 w-72 bg-gradient-to-b from-slate-900 via-indigo-950 to-slate-900 shadow-2xl animate-in slide-in-from-left duration-300">
+            <div className="p-4">
+              <div className="flex items-center justify-between mb-6">
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-orange-400 to-pink-500 flex items-center justify-center">
+                    <Shield className="w-4 h-4 text-white" />
+                  </div>
+                  <span className="text-white font-bold text-sm">Navigation</span>
+                </div>
+                <button onClick={() => setMobileMenuOpen(false)} className="w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center text-white/40 hover:text-white/70">
+                  <ChevronLeft className="w-4 h-4" />
+                </button>
+              </div>
+              <nav className="space-y-1">
+                {tabs.map(tab => (
+                  <button
+                    key={tab.id}
+                    onClick={() => handleTabChange(tab.id)}
+                    className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left transition-all duration-200 ${
+                      adminTab === tab.id
+                        ? `bg-gradient-to-r ${tab.gradient} text-white shadow-lg`
+                        : 'text-white/40 hover:text-white/70 hover:bg-white/5'
+                    }`}
+                  >
+                    <tab.icon className="w-4 h-4" />
+                    <span className="text-sm font-medium">{tab.label}</span>
+                  </button>
+                ))}
+              </nav>
+            </div>
           </div>
         </div>
-      </div>
+      )}
 
-      {/* Content */}
-      <div className="max-w-4xl mx-auto px-4 py-5">
-        {adminTab === 'dashboard' && (
-          <DashboardTab
-            announcements={announcements}
-            notifications={notifications}
-            allResults={allResults}
-            onSwitchTab={(tab) => setAdminTab(tab as AdminTab)}
-          />
-        )}
+      <div className="max-w-6xl mx-auto flex">
+        {/* ===== Desktop Sidebar ===== */}
+        <aside className="hidden lg:block w-56 xl:w-60 flex-shrink-0 sticky top-[68px] h-[calc(100vh-68px)] border-r border-slate-200/60 bg-white/50 backdrop-blur-sm overflow-y-auto">
+          <div className="p-3 space-y-0.5">
+            {['Overview', 'Content', 'Data', 'System'].map(section => (
+              <div key={section}>
+                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest px-3 pt-4 pb-2">{section}</p>
+                {tabs.filter(t => t.section === section).map(tab => (
+                  <button
+                    key={tab.id}
+                    onClick={() => handleTabChange(tab.id)}
+                    className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left transition-all duration-200 group ${
+                      adminTab === tab.id
+                        ? `bg-gradient-to-r ${tab.gradient} text-white shadow-md shadow-slate-900/10`
+                        : 'text-slate-500 hover:text-slate-800 hover:bg-slate-100/80'
+                    }`}
+                  >
+                    <div className={`w-7 h-7 rounded-lg flex items-center justify-center transition-all ${
+                      adminTab === tab.id
+                        ? 'bg-white/20'
+                        : 'bg-slate-100 group-hover:bg-slate-200'
+                    }`}>
+                      <tab.icon className="w-3.5 h-3.5" />
+                    </div>
+                    <span className="text-sm font-medium">{tab.label}</span>
+                  </button>
+                ))}
+              </div>
+            ))}
+          </div>
+        </aside>
 
-        {adminTab === 'exams' && <ExamsTab />}
+        {/* ===== Main Content ===== */}
+        <main className="flex-1 min-w-0">
+          {/* Tab Header - mobile */}
+          <div className="lg:hidden overflow-x-auto scrollbar-hide border-b border-slate-200/60 bg-white/70 backdrop-blur-sm">
+            <div className="flex gap-1 px-3 py-2">
+              {tabs.map(tab => (
+                <button
+                  key={tab.id}
+                  onClick={() => handleTabChange(tab.id)}
+                  className={`flex-shrink-0 py-2 px-3 rounded-lg text-[11px] font-semibold transition-all flex items-center gap-1.5 ${
+                    adminTab === tab.id
+                      ? `bg-gradient-to-r ${tab.gradient} text-white shadow-md`
+                      : 'text-slate-400 hover:text-slate-600 hover:bg-slate-100'
+                  }`}
+                >
+                  <tab.icon className="w-3 h-3" />
+                  {tab.label}
+                </button>
+              ))}
+            </div>
+          </div>
 
-        {adminTab === 'users' && (
-          <UsersTab
-            allResults={allResults}
-            onRefresh={handleRefreshResults}
-          />
-        )}
+          {/* Tab Title Bar */}
+          <div className="px-4 lg:px-6 py-4 border-b border-slate-200/40">
+            <div className="flex items-center gap-3">
+              <div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${currentTab.gradient} flex items-center justify-center shadow-lg`}>
+                <currentTab.icon className="w-5 h-5 text-white" />
+              </div>
+              <div>
+                <h2 className="font-bold text-lg text-slate-800">{currentTab.label}</h2>
+                <p className="text-slate-400 text-xs">Manage your {currentTab.label.toLowerCase()} data</p>
+              </div>
+            </div>
+          </div>
 
-        {adminTab === 'analytics' && (
-          <AnalyticsTab allResults={allResults} />
-        )}
+          {/* Content Area */}
+          <div className="p-4 lg:p-6">
+            {adminTab === 'dashboard' && (
+              <DashboardTab
+                announcements={announcements}
+                notifications={notifications}
+                allResults={allResults}
+                onSwitchTab={(tab) => handleTabChange(tab as AdminTab)}
+              />
+            )}
 
-        {adminTab === 'announcements' && (
-          <AnnouncementsTab
-            announcements={announcements}
-            onUpdate={setAnnouncements}
-          />
-        )}
+            {adminTab === 'exams' && <ExamsTab />}
 
-        {adminTab === 'notifications' && (
-          <NotificationsTab
-            notifications={notifications}
-            onUpdate={setNotifications}
-          />
-        )}
+            {adminTab === 'users' && (
+              <UsersTab
+                allResults={allResults}
+                onRefresh={handleRefreshResults}
+              />
+            )}
 
-        {adminTab === 'upcoming' && (
-          <UpcomingExamsTab
-            exams={upcomingExams}
-            onUpdate={setUpcomingExams}
-          />
-        )}
+            {adminTab === 'analytics' && (
+              <AnalyticsTab allResults={allResults} />
+            )}
 
-        {adminTab === 'dailytips' && (
-          <DailyTipsTab
-            tips={dailyTips}
-            onUpdate={setDailyTips}
-          />
-        )}
+            {adminTab === 'announcements' && (
+              <AnnouncementsTab
+                announcements={announcements}
+                onUpdate={setAnnouncements}
+              />
+            )}
 
-        {adminTab === 'papers' && (
-          <PrevPapersTab
-            papers={prevPapers}
-            onUpdate={setPrevPapers}
-          />
-        )}
+            {adminTab === 'notifications' && (
+              <NotificationsTab
+                notifications={notifications}
+                onUpdate={setNotifications}
+              />
+            )}
 
-        {adminTab === 'sidebar' && (
-          <SidebarTab
-            items={sidebarMenu}
-            onUpdate={setSidebarMenu}
-          />
-        )}
+            {adminTab === 'upcoming' && (
+              <UpcomingExamsTab
+                exams={upcomingExams}
+                onUpdate={setUpcomingExams}
+              />
+            )}
 
-        {adminTab === 'settings' && <SettingsTab />}
+            {adminTab === 'dailytips' && (
+              <DailyTipsTab
+                tips={dailyTips}
+                onUpdate={setDailyTips}
+              />
+            )}
+
+            {adminTab === 'papers' && (
+              <PrevPapersTab
+                papers={prevPapers}
+                onUpdate={setPrevPapers}
+              />
+            )}
+
+            {adminTab === 'sidebar' && (
+              <SidebarTab
+                items={sidebarMenu}
+                onUpdate={setSidebarMenu}
+              />
+            )}
+
+            {adminTab === 'settings' && <SettingsTab />}
+          </div>
+        </main>
       </div>
     </div>
   )
