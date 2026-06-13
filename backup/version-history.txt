@@ -97,3 +97,12 @@ v1.2.0-buttons
 Commit: 847f2e4a158796380023f1e48f5f18b536c8d3c4
 Tag: v1.2.0-stable
 Date: Sat Jun 13 06:51:02 UTC 2026
+
+=== v1.4.0-local-save (2026-06-13 17:03) ===
+- Full project save-as backup created
+- Files: project-save-20260613-170339.tar.gz (76MB - full project without node_modules)
+- Files: src-save-20260613-170351.tar.gz (208KB - src/ only)
+- Files: download-save-20260613-170352.tar.gz (34MB - download/ assets)
+- State: Local data CRUD in progress (local-data.ts expanded)
+- Note: Delete bug in local-data.ts still pending fix
+- Note: imageUrl support for exam buttons still pending
