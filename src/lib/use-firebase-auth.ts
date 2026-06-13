@@ -306,6 +306,11 @@ export function useFirebaseAuth() {
   const isLoggedIn = !!authState.user || isLocalGuest
   const isGuest = isLocalGuest || (authState.user?.isAnonymous ?? false)
 
+  // Check if user has a REAL account (not guest, not anonymous)
+  // Anyone without a real email-verified account needs to create one
+  const hasRealAccount = !!authState.user && !authState.user.isAnonymous && authState.user.emailVerified
+  const needsRealAccount = !hasRealAccount
+
   // Check if guest has already used Quick Practice
   const hasGuestUsedQuickPractice = (): boolean => {
     try {
@@ -326,7 +331,7 @@ export function useFirebaseAuth() {
   }
 
   // Check if guest can use Quick Practice (only once)
-  const canGuestUseQuickPractice = !isGuest || !guestQuickPracticeUsed
+  const canGuestUseQuickPractice = !needsRealAccount || !guestQuickPracticeUsed
 
   // Check if email login is available (Firebase must be configured)
   const isEmailLoginAvailable = isFirebaseReady()
@@ -392,5 +397,7 @@ export function useFirebaseAuth() {
     canGuestUseQuickPractice,
     markGuestQuickPracticeUsed,
     hasGuestUsedQuickPractice,
+    hasRealAccount,
+    needsRealAccount,
   }
 }

@@ -598,9 +598,9 @@ export default function ExamPrepApp() {
     }
   }, [testActive])
 
-  // --- Auth Gate for Guest Users ---
+  // --- Auth Gate for non-account Users ---
   function requireAuth(): boolean {
-    if (auth.isGuest) {
+    if (auth.needsRealAccount) {
       setGuestAuthMode('login-required')
       setShowGuestAuthModal(true)
       return false
@@ -610,8 +610,8 @@ export default function ExamPrepApp() {
 
   // --- Test Functions ---
   async function startTest(test: LocalTest, mode: 'real' | 'practice' = 'real') {
-    // Gate: guests cannot start any test (only handleQuickPractice bypasses this)
-    if (auth.isGuest) {
+    // Gate: users without real account cannot start any test
+    if (auth.needsRealAccount) {
       setGuestAuthMode('login-required')
       setShowGuestAuthModal(true)
       return
@@ -637,8 +637,8 @@ export default function ExamPrepApp() {
 
   // --- Quick Practice with Guest Limit ---
   async function handleQuickPractice() {
-    // Check if guest has already used Quick Practice
-    if (auth.isGuest && !auth.canGuestUseQuickPractice) {
+    // Check if user without account has already used Quick Practice
+    if (auth.needsRealAccount && !auth.canGuestUseQuickPractice) {
       setGuestAuthMode('qp-limit')
       setShowGuestAuthModal(true)
       return
@@ -669,8 +669,8 @@ export default function ExamPrepApp() {
             setTimeLeft(fullTest.duration * 60)
             setTestActive(true)
             navigateTo('test-taking')
-            // Mark guest has used Quick Practice
-            if (auth.isGuest) {
+            // Mark that free Quick Practice has been used
+            if (auth.needsRealAccount) {
               auth.markGuestQuickPracticeUsed()
             }
             return
@@ -1151,7 +1151,7 @@ export default function ExamPrepApp() {
                   <div>
                     <p className="font-bold text-white text-base">{_t('home.quickPractice')}</p>
                     <p className="text-white/70 text-xs mt-0.5">
-                      {auth.isGuest && !auth.canGuestUseQuickPractice
+                      {auth.needsRealAccount && !auth.canGuestUseQuickPractice
                         ? _t('guest.alreadyUsed')
                         : _t('home.quickPracticeSub')}
                     </p>
@@ -1159,13 +1159,13 @@ export default function ExamPrepApp() {
                 </div>
                 <Button
                   className={`rounded-xl font-bold shadow-md active:scale-95 transition-all ${
-                    auth.isGuest && !auth.canGuestUseQuickPractice
+                    auth.needsRealAccount && !auth.canGuestUseQuickPractice
                       ? 'bg-white/30 text-white cursor-not-allowed'
                       : 'bg-white text-orange-600 hover:bg-white/90'
                   }`}
                   onClick={handleQuickPractice}
                 >
-                  {auth.isGuest && !auth.canGuestUseQuickPractice ? (
+                  {auth.needsRealAccount && !auth.canGuestUseQuickPractice ? (
                     <><Lock className="w-4 h-4 mr-1" /> {_t('guest.alreadyUsed')}</>
                   ) : (
                     <><Play className="w-4 h-4 mr-1" /> {_t('home.start')}</>
@@ -2501,10 +2501,10 @@ export default function ExamPrepApp() {
             <h2 className="font-bold text-lg mb-3">{_t('practice.chooseMode')}</h2>
             <div className="grid grid-cols-2 gap-3">
               {/* Quick Practice - Pick a random test and start */}
-              <Card className={`border-0 shadow-sm cursor-pointer hover:shadow-md transition-shadow active:scale-[0.97] ${auth.isGuest && !auth.canGuestUseQuickPractice ? 'opacity-60' : ''}`} onClick={handleQuickPractice}>
+              <Card className={`border-0 shadow-sm cursor-pointer hover:shadow-md transition-shadow active:scale-[0.97] ${auth.needsRealAccount && !auth.canGuestUseQuickPractice ? 'opacity-60' : ''}`} onClick={handleQuickPractice}>
                 <CardContent className="p-4 text-center">
-                  <div className={`w-12 h-12 rounded-2xl flex items-center justify-center mx-auto mb-2 ${auth.isGuest && !auth.canGuestUseQuickPractice ? 'bg-gray-100' : 'bg-orange-50'}`}>
-                    {auth.isGuest && !auth.canGuestUseQuickPractice ? (
+                  <div className={`w-12 h-12 rounded-2xl flex items-center justify-center mx-auto mb-2 ${auth.needsRealAccount && !auth.canGuestUseQuickPractice ? 'bg-gray-100' : 'bg-orange-50'}`}>
+                    {auth.needsRealAccount && !auth.canGuestUseQuickPractice ? (
                       <Lock className="w-6 h-6 text-gray-400" />
                     ) : (
                       <Zap className="w-6 h-6 text-orange-500" />
@@ -2512,14 +2512,14 @@ export default function ExamPrepApp() {
                   </div>
                   <p className="font-semibold text-sm">{_t('practice.quick')}</p>
                   <p className="text-gray-400 text-[11px] mt-1">
-                    {auth.isGuest && !auth.canGuestUseQuickPractice
+                    {auth.needsRealAccount && !auth.canGuestUseQuickPractice
                       ? _t('guest.alreadyUsed')
                       : _t('practice.quickSub')}
                   </p>
                 </CardContent>
               </Card>
               {/* Topic Wise - Navigate to exams with practice mode */}
-              <Card className={`border-0 shadow-sm cursor-pointer hover:shadow-md transition-shadow active:scale-[0.97] ${auth.isGuest ? 'opacity-80' : ''}`} onClick={() => {
+              <Card className={`border-0 shadow-sm cursor-pointer hover:shadow-md transition-shadow active:scale-[0.97] ${auth.needsRealAccount ? 'opacity-80' : ''}`} onClick={() => {
                 if (!requireAuth()) return
                 setCurrentTestMode('practice')
                 navigateTo('exams')
@@ -2533,7 +2533,7 @@ export default function ExamPrepApp() {
                 </CardContent>
               </Card>
               {/* Bookmarked Questions - Practice bookmarked questions */}
-              <Card className={`border-0 shadow-sm cursor-pointer hover:shadow-md transition-shadow active:scale-[0.97] ${totalBookmarked === 0 ? 'opacity-70' : ''} ${auth.isGuest ? 'opacity-80' : ''}`} onClick={() => {
+              <Card className={`border-0 shadow-sm cursor-pointer hover:shadow-md transition-shadow active:scale-[0.97] ${totalBookmarked === 0 ? 'opacity-70' : ''} ${auth.needsRealAccount ? 'opacity-80' : ''}`} onClick={() => {
                 if (!requireAuth()) return
                 if (totalBookmarked === 0) {
                   navigateTo('bookmarks')
@@ -2551,7 +2551,7 @@ export default function ExamPrepApp() {
                 </CardContent>
               </Card>
               {/* Weak Areas - Practice questions from weak categories */}
-              <Card className={`border-0 shadow-sm cursor-pointer hover:shadow-md transition-shadow active:scale-[0.97] ${weakAreas.length === 0 ? 'opacity-70' : ''} ${auth.isGuest ? 'opacity-80' : ''}`} onClick={() => {
+              <Card className={`border-0 shadow-sm cursor-pointer hover:shadow-md transition-shadow active:scale-[0.97] ${weakAreas.length === 0 ? 'opacity-70' : ''} ${auth.needsRealAccount ? 'opacity-80' : ''}`} onClick={() => {
                 if (!requireAuth()) return
                 if (weakAreas.length === 0) {
                   navigateTo('perf-report')
@@ -2617,7 +2617,7 @@ export default function ExamPrepApp() {
                 return (
                   <Card
                     key={cat.id}
-                    className={`border-0 shadow-sm cursor-pointer hover:shadow-md transition-shadow active:scale-[0.98] ${auth.isGuest ? 'opacity-80' : ''}`}
+                    className={`border-0 shadow-sm cursor-pointer hover:shadow-md transition-shadow active:scale-[0.98] ${auth.needsRealAccount ? 'opacity-80' : ''}`}
                     onClick={() => {
                       if (!requireAuth()) return
                       setSelectedCategory(cat)
