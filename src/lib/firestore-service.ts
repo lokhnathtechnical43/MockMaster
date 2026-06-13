@@ -1639,6 +1639,10 @@ export async function forceSeedFirestore(): Promise<{ success: boolean; error?: 
     return { success: false, error: 'Firebase is not configured', step: 'init' }
   }
   try {
+    // Declare batch and opCount at the top level so all sections can use them
+    let batch = writeBatch(db)
+    let opCount = 0
+
     // First, check if user has admin role - this validates Firestore rules are working
     const currentUser = auth?.currentUser
     if (currentUser) {
@@ -1736,8 +1740,8 @@ export async function forceSeedFirestore(): Promise<{ success: boolean; error?: 
     const examRefs: Record<string, string> = {}
 
     // Seed categories and exams in batches
-    let batch = writeBatch(db)
-    let opCount = 0
+    batch = writeBatch(db)
+    opCount = 0
 
     for (const cat of catData) {
       const catRef = doc(collection(db, COLLECTIONS.categories))
