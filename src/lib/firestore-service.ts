@@ -1510,13 +1510,57 @@ export async function seedFirestoreIfEmpty(): Promise<boolean> {
 }
 
 // ============================================================
+// Diagnostic: Test Firestore write permission
+// ============================================================
+
+export async function testFirestoreWritePermission(): Promise<{ ok: boolean; error?: string; details?: string }> {
+  if (!db || !isFirebaseReady()) {
+    return { ok: false, error: 'Firebase not configured', details: 'Add Firebase config to .env.local' }
+  }
+  try {
+    const currentUser = auth?.currentUser
+    if (!currentUser) {
+      return { ok: false, error: 'Not logged in', details: 'You must be logged in as admin to write to Firestore' }
+    }
+
+    // Check user role
+    const userData = await getUser(currentUser.uid)
+    if (!userData) {
+      return { ok: false, error: 'User document not found', details: `No Firestore document found for UID: ${currentUser.uid}. Your account exists in Firebase Auth but has no profile in the users collection.` }
+    }
+    if (userData.role !== 'admin') {
+      return { ok: false, error: 'Not admin', details: `Your role is "${userData.role}". You need role "admin" to write data. Go to Firebase Console → Firestore Database → users collection → find your UID document → set role field to "admin".` }
+    }
+
+    // Test actual write to categories collection
+    const testRef = doc(collection(db, COLLECTIONS.categories))
+    await setDoc(testRef, { _test: true, _timestamp: new Date().toISOString() })
+    // Immediately delete the test doc
+    await deleteDoc(testRef)
+
+    return { ok: true }
+  } catch (e: any) {
+    const msg = e?.message || String(e)
+    let hint = ''
+    if (msg.includes('permission') || msg.includes('PERMISSION_DENIED') || msg.includes('denied')) {
+      hint = 'Firestore security rules are blocking writes. Go to Firebase Console → Firestore Database → Rules tab and update rules to allow admin writes. Current rules may not recognize your admin role.'
+    } else if (msg.includes('network') || msg.includes('unavailable')) {
+      hint = 'Network error. Check your internet connection.'
+    } else if (msg.includes('not-found')) {
+      hint = 'Firestore database may not exist yet. Create it in Firebase Console.'
+    }
+    return { ok: false, error: msg, details: hint || 'Unknown error. Check browser console for more details.' }
+  }
+}
+
+// ============================================================
 // Force Seed — ALWAYS seeds, even if data exists (deletes old first)
 // ============================================================
 
-export async function forceSeedFirestore(): Promise<boolean> {
+export async function forceSeedFirestore(): Promise<{ success: boolean; error?: string; step?: string }> {
   if (!db || !isFirebaseReady()) {
     console.error('[Firestore] Cannot seed: Firebase is not configured.')
-    return false
+    return { success: false, error: 'Firebase is not configured', step: 'init' }
   }
   try {
     // First, check if user has admin role - this validates Firestore rules are working
@@ -1957,10 +2001,11 @@ export async function forceSeedFirestore(): Promise<boolean> {
     }
 
     console.log('[Firestore] Force seed completed successfully!')
-    return true
-  } catch (error) {
+    return { success: true }
+  } catch (error: any) {
     console.error('[Firestore] Force seed error:', error)
-    return false
+    const msg = error?.message || String(error)
+    return { success: false, error: msg, step: 'seed' }
   }
 }
 

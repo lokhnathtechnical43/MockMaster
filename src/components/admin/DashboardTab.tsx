@@ -14,7 +14,7 @@ import {
   DEFAULT_ANNOUNCEMENTS, DEFAULT_NOTIFICATIONS
 } from '@/lib/admin-data'
 import { type TestResult } from '@/lib/local-data'
-import { getDashboardStats, forceSeedFirestore, type DashboardStats } from '@/lib/firestore-service'
+import { getDashboardStats, forceSeedFirestore, testFirestoreWritePermission, type DashboardStats } from '@/lib/firestore-service'
 import Link from 'next/link'
 
 interface DashboardTabProps {
@@ -39,17 +39,26 @@ export default function DashboardTab({ announcements, notifications, allResults,
     setSeeding(true)
     setSeedResult(null)
     try {
-      const success = await forceSeedFirestore()
-      if (success) {
+      // Step 1: Test write permission first
+      const permTest = await testFirestoreWritePermission()
+      if (!permTest.ok) {
+        setSeedResult(`Permission check failed: ${permTest.error}. ${permTest.details}`)
+        setSeeding(false)
+        return
+      }
+
+      // Step 2: Do the actual seed
+      const result = await forceSeedFirestore()
+      if (result.success) {
         setSeedResult('Database seeded successfully! Refreshing...')
         setTimeout(() => window.location.reload(), 1500)
       } else {
-        setSeedResult('Failed to seed database. Check browser console (F12) for detailed error.')
+        setSeedResult(`Seed failed at step "${result.step}": ${result.error || 'Unknown error'}. Check browser console (F12) for details.`)
       }
     } catch (e: any) {
       console.error('[Dashboard] Seed error:', e)
       const msg = e?.message || 'Unknown error'
-      setSeedResult(`Seed failed: ${msg}. Check console for details.`)
+      setSeedResult(`Seed error: ${msg}`)
     }
     setSeeding(false)
   }
