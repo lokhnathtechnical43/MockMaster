@@ -193,7 +193,8 @@ export default function ExamPrepApp() {
   const [showNotificationPanel, setShowNotificationPanel] = useState(false)
   const [userStats, setUserStats] = useState({ testsTaken: 0, avgScore: 0, bestRank: 0 })
   const [showExitConfirm, setShowExitConfirm] = useState(false)
-  const [showGuestLimitModal, setShowGuestLimitModal] = useState(false)
+  const [showGuestAuthModal, setShowGuestAuthModal] = useState(false)
+  const [guestAuthMode, setGuestAuthMode] = useState<'qp-limit' | 'login-required'>('login-required')
   const [currentTestMode, setCurrentTestMode] = useState<'real' | 'practice'>('real') // Track if current test is real or practice
   const [showAnswerKey, setShowAnswerKey] = useState(false)
   const [pdfSharing, setPdfSharing] = useState(false)
@@ -597,8 +598,24 @@ export default function ExamPrepApp() {
     }
   }, [testActive])
 
+  // --- Auth Gate for Guest Users ---
+  function requireAuth(): boolean {
+    if (auth.isGuest) {
+      setGuestAuthMode('login-required')
+      setShowGuestAuthModal(true)
+      return false
+    }
+    return true
+  }
+
   // --- Test Functions ---
   async function startTest(test: LocalTest, mode: 'real' | 'practice' = 'real') {
+    // Gate: guests cannot start any test (only handleQuickPractice bypasses this)
+    if (auth.isGuest) {
+      setGuestAuthMode('login-required')
+      setShowGuestAuthModal(true)
+      return
+    }
     const fullTest = await fetchTestById(test.id)
     if (!fullTest) {
       console.error('[App] startTest: Could not fetch test with id:', test.id)
@@ -622,7 +639,8 @@ export default function ExamPrepApp() {
   async function handleQuickPractice() {
     // Check if guest has already used Quick Practice
     if (auth.isGuest && !auth.canGuestUseQuickPractice) {
-      setShowGuestLimitModal(true)
+      setGuestAuthMode('qp-limit')
+      setShowGuestAuthModal(true)
       return
     }
     const allCats = categories
@@ -643,7 +661,14 @@ export default function ExamPrepApp() {
             setSelectedCategory(randomCat)
             setExamTests(tests)
             setCurrentTestMode('practice')
-            startTest(fullTest, 'practice')
+            // Directly set up test (bypass startTest guest gate since this is Quick Practice)
+            setSelectedTest(fullTest)
+            setAnswers({})
+            setMarkedForReview(new Set())
+            setCurrentQuestionIndex(0)
+            setTimeLeft(fullTest.duration * 60)
+            setTestActive(true)
+            navigateTo('test-taking')
             // Mark guest has used Quick Practice
             if (auth.isGuest) {
               auth.markGuestQuickPracticeUsed()
@@ -2494,7 +2519,8 @@ export default function ExamPrepApp() {
                 </CardContent>
               </Card>
               {/* Topic Wise - Navigate to exams with practice mode */}
-              <Card className="border-0 shadow-sm cursor-pointer hover:shadow-md transition-shadow active:scale-[0.97]" onClick={() => {
+              <Card className={`border-0 shadow-sm cursor-pointer hover:shadow-md transition-shadow active:scale-[0.97] ${auth.isGuest ? 'opacity-80' : ''}`} onClick={() => {
+                if (!requireAuth()) return
                 setCurrentTestMode('practice')
                 navigateTo('exams')
               }}>
@@ -2507,7 +2533,8 @@ export default function ExamPrepApp() {
                 </CardContent>
               </Card>
               {/* Bookmarked Questions - Practice bookmarked questions */}
-              <Card className={`border-0 shadow-sm cursor-pointer hover:shadow-md transition-shadow active:scale-[0.97] ${totalBookmarked === 0 ? 'opacity-70' : ''}`} onClick={() => {
+              <Card className={`border-0 shadow-sm cursor-pointer hover:shadow-md transition-shadow active:scale-[0.97] ${totalBookmarked === 0 ? 'opacity-70' : ''} ${auth.isGuest ? 'opacity-80' : ''}`} onClick={() => {
+                if (!requireAuth()) return
                 if (totalBookmarked === 0) {
                   navigateTo('bookmarks')
                   return
@@ -2524,7 +2551,8 @@ export default function ExamPrepApp() {
                 </CardContent>
               </Card>
               {/* Weak Areas - Practice questions from weak categories */}
-              <Card className={`border-0 shadow-sm cursor-pointer hover:shadow-md transition-shadow active:scale-[0.97] ${weakAreas.length === 0 ? 'opacity-70' : ''}`} onClick={() => {
+              <Card className={`border-0 shadow-sm cursor-pointer hover:shadow-md transition-shadow active:scale-[0.97] ${weakAreas.length === 0 ? 'opacity-70' : ''} ${auth.isGuest ? 'opacity-80' : ''}`} onClick={() => {
+                if (!requireAuth()) return
                 if (weakAreas.length === 0) {
                   navigateTo('perf-report')
                   return
@@ -2589,8 +2617,9 @@ export default function ExamPrepApp() {
                 return (
                   <Card
                     key={cat.id}
-                    className="border-0 shadow-sm cursor-pointer hover:shadow-md transition-shadow active:scale-[0.98]"
+                    className={`border-0 shadow-sm cursor-pointer hover:shadow-md transition-shadow active:scale-[0.98] ${auth.isGuest ? 'opacity-80' : ''}`}
                     onClick={() => {
+                      if (!requireAuth()) return
                       setSelectedCategory(cat)
                       setCurrentTestMode('practice')
                       openExam(cat.exams[0], cat, 'practice')
@@ -3020,6 +3049,7 @@ export default function ExamPrepApp() {
 
           {/* Start Practice */}
           <Button className="w-full bg-gradient-to-r from-orange-500 to-red-500 text-white rounded-xl h-12 font-bold" onClick={() => {
+            if (!requireAuth()) return
             if (userExamId) {
               const exam = categories.flatMap(c => c.exams).find(e => e.id === userExamId)
               const cat = categories.find(c => c.exams.some(e => e.id === userExamId))
@@ -4500,25 +4530,31 @@ export default function ExamPrepApp() {
         />
       )}
 
-      {/* Guest Quick Practice Limit Modal */}
-      {showGuestLimitModal && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4" onClick={() => setShowGuestLimitModal(false)}>
+      {/* Guest Auth Modal - Two modes: QP limit & login required */}
+      {showGuestAuthModal && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4" onClick={() => setShowGuestAuthModal(false)}>
           <div className="bg-white rounded-3xl w-full max-w-sm overflow-hidden shadow-2xl" onClick={e => e.stopPropagation()}>
             {/* Header with gradient */}
-            <div className="bg-gradient-to-br from-orange-500 via-red-500 to-pink-500 p-6 text-center relative overflow-hidden">
+            <div className={`p-6 text-center relative overflow-hidden ${guestAuthMode === 'qp-limit' ? 'bg-gradient-to-br from-orange-500 via-red-500 to-pink-500' : 'bg-gradient-to-br from-blue-500 via-indigo-500 to-purple-600'}`}>
               <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -translate-y-1/2 translate-x-1/2" />
               <div className="absolute bottom-0 left-0 w-24 h-24 bg-white/10 rounded-full translate-y-1/2 -translate-x-1/2" />
               <div className="relative">
                 <div className="w-16 h-16 rounded-full bg-white/20 flex items-center justify-center mx-auto mb-3 backdrop-blur">
-                  <Lock className="w-8 h-8 text-white" />
+                  {guestAuthMode === 'qp-limit' ? (
+                    <Zap className="w-8 h-8 text-white" />
+                  ) : (
+                    <Lock className="w-8 h-8 text-white" />
+                  )}
                 </div>
-                <h2 className="text-xl font-bold text-white">{_t('guest.limitTitle')}</h2>
+                <h2 className="text-xl font-bold text-white">
+                  {guestAuthMode === 'qp-limit' ? _t('guest.limitTitle') : _t('guest.loginTitle')}
+                </h2>
               </div>
             </div>
             {/* Body */}
             <div className="p-5">
               <p className="text-gray-600 text-sm text-center leading-relaxed mb-5">
-                {_t('guest.limitSub')}
+                {guestAuthMode === 'qp-limit' ? _t('guest.limitSub') : _t('guest.loginSub')}
               </p>
               {/* Features list */}
               <div className="space-y-3 mb-6">
@@ -4526,44 +4562,52 @@ export default function ExamPrepApp() {
                   <div className="w-8 h-8 rounded-full bg-green-100 flex items-center justify-center flex-shrink-0">
                     <Zap className="w-4 h-4 text-green-600" />
                   </div>
-                  <span className="text-sm font-medium text-green-800">{_t('guest.limitFeature1')}</span>
+                  <span className="text-sm font-medium text-green-800">
+                    {guestAuthMode === 'qp-limit' ? _t('guest.limitFeature1') : _t('guest.loginFeature1')}
+                  </span>
                 </div>
                 <div className="flex items-center gap-3 bg-blue-50 rounded-xl p-3">
                   <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0">
                     <TrendingUp className="w-4 h-4 text-blue-600" />
                   </div>
-                  <span className="text-sm font-medium text-blue-800">{_t('guest.limitFeature2')}</span>
+                  <span className="text-sm font-medium text-blue-800">
+                    {guestAuthMode === 'qp-limit' ? _t('guest.limitFeature2') : _t('guest.loginFeature2')}
+                  </span>
                 </div>
                 <div className="flex items-center gap-3 bg-purple-50 rounded-xl p-3">
                   <div className="w-8 h-8 rounded-full bg-purple-100 flex items-center justify-center flex-shrink-0">
                     <Trophy className="w-4 h-4 text-purple-600" />
                   </div>
-                  <span className="text-sm font-medium text-purple-800">{_t('guest.limitFeature3')}</span>
+                  <span className="text-sm font-medium text-purple-800">
+                    {guestAuthMode === 'qp-limit' ? _t('guest.limitFeature3') : _t('guest.loginFeature3')}
+                  </span>
                 </div>
                 <div className="flex items-center gap-3 bg-amber-50 rounded-xl p-3">
                   <div className="w-8 h-8 rounded-full bg-amber-100 flex items-center justify-center flex-shrink-0">
                     <BookMarked className="w-4 h-4 text-amber-600" />
                   </div>
-                  <span className="text-sm font-medium text-amber-800">{_t('guest.limitFeature4')}</span>
+                  <span className="text-sm font-medium text-amber-800">
+                    {guestAuthMode === 'qp-limit' ? _t('guest.limitFeature4') : _t('guest.loginFeature4')}
+                  </span>
                 </div>
               </div>
               {/* CTA Button */}
               <Button
-                className="w-full bg-gradient-to-r from-orange-500 to-red-500 text-white rounded-xl h-12 font-bold text-base shadow-lg active:scale-[0.97] transition-all"
+                className={`w-full text-white rounded-xl h-12 font-bold text-base shadow-lg active:scale-[0.97] transition-all ${guestAuthMode === 'qp-limit' ? 'bg-gradient-to-r from-orange-500 to-red-500' : 'bg-gradient-to-r from-blue-500 to-purple-600'}`}
                 onClick={() => {
-                  setShowGuestLimitModal(false)
+                  setShowGuestAuthModal(false)
                   setShowLoginModal(true)
                 }}
               >
-                <UserPlus className="w-5 h-5 mr-2" /> {_t('guest.createAccount')}
+                <UserPlus className="w-5 h-5 mr-2" /> {guestAuthMode === 'qp-limit' ? _t('guest.createAccount') : _t('guest.loginBtn')}
               </Button>
               {/* Dismiss */}
               <Button
                 variant="ghost"
                 className="w-full mt-2 text-gray-400 rounded-xl"
-                onClick={() => setShowGuestLimitModal(false)}
+                onClick={() => setShowGuestAuthModal(false)}
               >
-                Maybe later
+                {_t('guest.laterBtn')}
               </Button>
             </div>
           </div>

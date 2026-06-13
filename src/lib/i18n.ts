@@ -334,6 +334,14 @@ const translations: Record<Lang, Record<string, string>> = {
     'guest.limitFeature4': 'Save Bookmarks & History',
     'guest.createAccount': 'Create Free Account',
     'guest.alreadyUsed': 'Already used',
+    'guest.loginTitle': 'Account Required',
+    'guest.loginSub': 'Create a free account to access this feature. It only takes a moment!',
+    'guest.loginFeature1': 'Take Unlimited Tests',
+    'guest.loginFeature2': 'Save Progress & History',
+    'guest.loginFeature3': 'Compete on Leaderboard',
+    'guest.loginFeature4': 'Access All Features',
+    'guest.loginBtn': 'Create Free Account',
+    'guest.laterBtn': 'Maybe later',
 
     // === Share ===
     'share.title': 'MockMaster',
@@ -670,6 +678,14 @@ const translations: Record<Lang, Record<string, string>> = {
     'guest.limitFeature4': 'बुकमार्क और इतिहास सहेजें',
     'guest.createAccount': 'मुफ्त खाता बनाएं',
     'guest.alreadyUsed': 'पहले से उपयोग किया',
+    'guest.loginTitle': 'अकाउंट ज़रूरी है',
+    'guest.loginSub': 'इस सुविधा का उपयोग करने के लिए मुफ्त अकाउंट बनाएं। बस कुछ ही क्षण!',
+    'guest.loginFeature1': 'असीमित टेस्ट दें',
+    'guest.loginFeature2': 'प्रगति और इतिहास सहेजें',
+    'guest.loginFeature3': 'लीडरबोर्ड पर प्रतिस्पर्धा करें',
+    'guest.loginFeature4': 'सभी सुविधाओं का उपयोग करें',
+    'guest.loginBtn': 'मुफ्त अकाउंट बनाएं',
+    'guest.laterBtn': 'बाद में देखें',
 
     // === Share ===
     'share.title': 'MockMaster',
@@ -1006,6 +1022,14 @@ const translations: Record<Lang, Record<string, string>> = {
     'guest.limitFeature4': 'বুকমার্ক ও ইতিহাস সংরক্ষণ করুন',
     'guest.createAccount': 'ফ্রি অ্যাকাউন্ট তৈরি করুন',
     'guest.alreadyUsed': 'ইতিমধ্যে ব্যবহৃত',
+    'guest.loginTitle': 'অ্যাকাউন্ট প্রয়োজন',
+    'guest.loginSub': 'এই ফিচার ব্যবহার করতে ফ্রি অ্যাকাউন্ট তৈরি করুন। মাত্র কয়েক মুহূর্ত!',
+    'guest.loginFeature1': 'সীমাহীন টেস্ট দিন',
+    'guest.loginFeature2': 'অগ্রগতি ও ইতিহাস সংরক্ষণ করুন',
+    'guest.loginFeature3': 'লিডারবোর্ডে প্রতিযোগিতা করুন',
+    'guest.loginFeature4': 'সব ফিচার অ্যাক্সেস করুন',
+    'guest.loginBtn': 'ফ্রি অ্যাকাউন্ট তৈরি করুন',
+    'guest.laterBtn': 'পরে দেখব',
 
     // === Share ===
     'share.title': 'MockMaster',
