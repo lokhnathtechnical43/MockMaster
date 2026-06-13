@@ -1,0 +1,99 @@
+=== Commit Hash Log ===
+847f2e4 Equal width action buttons: Bookmark, Mark, Clear, Skip using grid-cols-4
+f4e8476 Fix NaN error: add fallback values for test properties
+6166091 Fix button layout: Previous(left), Submit&Navigator(center), Save&Next(right)
+0bad8be Rearrange test buttons: Save&Next left, Submit&Navigator center, Previous right
+be14d6b Add backup for v1.1.0-fix
+35062d0 d8502eaf-bba0-49de-b565-f67f8bb3ff92
+4f84d22 Fix PDF share + collapsible Answer Key + back button
+11214ed 76bf0593-1395-4c58-acd7-5a26fb9b9306
+82b4c88 702cd5c0-526c-4ae5-a2d9-dcdaccb18df9
+5396519 Custom app icon: MockMaster logo with orange background for Android
+ce26cb1 8de35064-665f-41fb-a0d8-e838d9c545c4
+702f540 dbbd972f-13c9-453b-9e2d-0dcc072dfbf0
+5ae25d2 242366f9-86db-4ac3-bf24-251f3ea29eb5
+e44a106 59607776-d718-4cd3-a836-35029d065874
+fcea769 96bd5455-7a71-4414-a3e7-add707aa44b7
+67a9beb 9f69b6fb-ac6f-41f7-9f42-1cf8c53512e8
+c75a8a7 79ba852d-8ac6-4b79-993b-ab1cb1598765
+136efc9 8339fc6a-bc6e-49fa-b90e-7ef7dbd49ff5
+8fb8759 Professional exam UI, auto-save to perf report, PDF share feature
+55607b0 Fix notification read state - persist read status in localStorage, merge on reload
+056835f Fix sidebar scroll accidental clicks - touch tracking, pan-y, remove onTouchEnd
+7638ee5 Compact sidebar header - smaller dark area, horizontal profile layout
+4182c03 Premium sidebar profile - My Profile moved to header, premium dark gradient design with avatar, online badge, edit profile button
+4c1a377 fb977ce0-f084-4e49-8b06-7116456ac7bf
+9b2daa9 Splash screen with book-opening animation, logo, premium loading experience
+f658377 Premium Login/Signup page - email verification, forgot password, skip guest, logo, professional design
+99fad88 Premium profile page - personal info fields, remove Settings/Support buttons, edit/save mode, i18n all 3 languages
+d7dba30 Professional sidebar redesign - gradient icons, color-coded sections, premium header with user info
+ff03aa5 style: Professional Exam Categories (gradient cards) and Popular Exams (colored strip, gradient arrows)
+258a652 style: Professional home page - gradient header with greeting+stats, marquee redesign, quick practice CTA, gradient stat cards, category icons
+e67cfea style: Professional test details page - grid info card, marking scheme with icons, max score gradient card
+26b2a2c fix: Fix question display - correct property names (questionText, optionA/B/C/D, subject, correctAnswer as letter) + add 80 realistic exam questions across 8 subjects
+9701d51 style: Colorful professional test buttons - Bookmark amber, Mark purple, Clear red, Skip sky, Previous indigo, Save&Next green, Submit red gradient
+96a76cb feat: Change Next to Save & Next, add Previous button in test UI
+9168f88 Add 6 new working features: Bookmarks, Performance Report, Daily Routine, Previous Papers, Your Exam, bookmark button in test
+50b66e6 Add JDK 17 compile options to build.gradle
+39633d7 Fix TypeError: selectedTest.exam.name and marking fields undefined - use correct LocalTest property names
+e530391 Fix bugs: bestRank calculation, practice page, practice history, FAQ sheet, offline soon badge
+5b8e6ab Clean up: remove internal/AI files from git tracking, update .gitignore
+3832741 Prepare project for GitHub: update .gitignore, add README and .env.example
+57c906f 2566dbb3-e3a3-49dd-bf89-0df00da4df42
+d3465dd df971395-31cc-4b28-b9bb-ba993e15f7e1
+c0b682e ddb23e50-5421-471f-901e-dbdb8076e5e2
+6c5e9f4 95df53f2-7e53-4ab8-88d1-5fa633b52974
+cf389e3 42a225a9-bcac-4a60-a128-cca953b33b56
+f8f4f37 65264b0c-f042-4a1d-9dec-90aa435620df
+c4ba1a7 67f8f54c-503d-47be-9e6d-0e717a165bb1
+1553d7f 45510358-fe51-41da-9641-e7f0524f9c6e
+eec329f d36bd0f9-6534-43d2-ad76-7143c0ff438d
+3adcb7a 2996aa7b-be25-444e-bfd5-de7299cf6c43
+0b730fc 6c8eef07-c73c-46a8-8722-dcb42f553ea3
+1a69e96 d296d8ea-08e7-44f9-ab6a-4f640f4da3a2
+ce6ed65 8315cc3f-5cb9-4061-98a9-86b6734cc6f0
+93ae844 f7927acb-b575-452d-8721-e82f3421ff1f
+6ec7f2e 4d56451b-1703-4a0c-923e-232e83b8ec1a
+8c9ce64 485bfcf8-913c-43c7-a36c-0001ae3626ef
+f6bfb11 dabe9976-30ad-4933-a428-6511da80aa47
+44c8fa1 426ff0fe-c63f-4d2f-985d-b37b26ffd58c
+e69fbba e950180d-3a85-4c1a-8a80-42544940c98f
+46d58d5 889cfeff-19ef-4ef4-be67-a9a277ab6b9e
+1c2c541 4a4c1277-7c92-4129-ae96-6f1e6a6eed94
+eeeadad d3b88ed1-f811-4232-925b-e6fc5330b5bd
+8b37c30 a2187eda-ff9f-4494-9c6b-2b2a36b7c517
+983d594 ca5d9c53-4f7f-4140-acb2-d454afab5c4e
+9b88486 87a6acb6-2320-4d4d-b602-8b5eacc4ab57
+b59d9ba bb301cb9-1a20-4829-9312-683a2f65c014
+d867e6e 4cbe9367-9ff5-4626-962e-5da70df8ec48
+c7cbbe8 1bb19596-7df9-41d4-9a1f-e2b8e597a822
+ccfe915 1efb7377-d938-4b7b-98af-c0ade147f118
+b6054e7 e64f04e5-b41a-46e3-9ed3-ab08ba1059b7
+a60a8d5 46802484-bb14-408b-904a-b78bd3f5b764
+0670222 0ca9611d-8f18-4977-bdd0-163a18b59153
+1bbca07 4e02905e-f59d-4b82-b0f4-15645f7f11e0
+dc2cb32 bffd8d54-56b3-421f-ac10-dc465cb59c06
+38187b6 313db6cf-5c69-40c8-8459-11226c62877a
+1c1e4f7 8a61ddaa-a168-44ed-a93f-5f10f03feb01
+c1cd623 6587cfd0-134b-47ea-900c-bd3ced8707b3
+dcf674f 36a911f0-776c-41a8-b3e9-d9f36b5dbec6
+ce1df7a 3a1bb0c5-9f07-4ea1-9cd9-153f0da01cf3
+d26cd9c 61b53b59-3e62-40ae-9574-99362662c79d
+cd50237 1925b143-0377-46ad-933c-5fc94d6e44c0
+11d80bd 94e5378c-7aff-4093-a19d-d2c2a0387e94
+cff192d fdbb2b91-3d05-4fd3-ab13-841afe5bf3e1
+2a578ee 7756e62b-c287-49b8-8e02-8d2d7a898148
+141b18a 23658fe6-608e-4bc9-9e8a-9460f551a05c
+96fac7a Initial commit
+
+=== Tags ===
+v1.0
+v1.0.0
+v1.0.0-stable
+v1.1.0-fix
+v1.2.0-buttons
+
+=== Current Version ===
+Commit: 847f2e4a158796380023f1e48f5f18b536c8d3c4
+Tag: v1.2.0-stable
+Date: Sat Jun 13 06:51:02 UTC 2026
