@@ -380,3 +380,12 @@
     border-bottom-right-radius: 1.25rem;
   }
 }
+
+/* Screenshot protection - blur on app switch/capture */
+@media (prefers-reduced-motion: no-preference) {
+  .secure-content {
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    user-select: none;
+  }
+}

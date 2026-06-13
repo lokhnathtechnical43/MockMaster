@@ -1416,7 +1416,7 @@ export default function ExamPrepApp() {
     const optionLetters = ['A', 'B', 'C', 'D']
 
     return (
-      <div className="min-h-screen min-h-dvh bg-slate-50 flex flex-col">
+      <div className="min-h-screen min-h-dvh bg-slate-50 flex flex-col" style={{ userSelect: 'none', WebkitUserSelect: 'none' }}>
         {/* === Professional Exam Header === */}
         <div className="bg-white shadow-sm">
           {/* Top Bar: Back | Test Name | Timer */}
@@ -1866,7 +1866,7 @@ export default function ExamPrepApp() {
     const questions = selectedTest.questions
 
     return (
-      <div className="pb-20">
+      <div className="pb-20" style={{ userSelect: 'none', WebkitUserSelect: 'none' }}>
         <div className="bg-gradient-to-r from-orange-500 to-red-500 px-4 pt-[calc(env(safe-area-inset-top,0px)+0.5rem)] pb-8 rounded-b-3xl text-center relative">
           {/* Back Button */}
           <button
@@ -1943,13 +1943,6 @@ export default function ExamPrepApp() {
               onClick={() => openLeaderboard(lastResult.testId)}
             >
               <Trophy className="w-4 h-4 mr-2" /> {_t('results.leaderboard')}
-            </Button>
-            <Button
-              className="flex-1 rounded-xl bg-gradient-to-r from-green-500 to-emerald-600 text-white"
-              onClick={shareAsPDF}
-              disabled={pdfSharing}
-            >
-              {pdfSharing ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Download className="w-4 h-4 mr-2" />} {pdfSharing ? 'Generating...' : _t('results.sharePDF')}
             </Button>
             <Button
               className="flex-1 rounded-xl bg-gradient-to-r from-orange-500 to-red-500 text-white"
