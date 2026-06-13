@@ -1138,37 +1138,10 @@ export default function ExamPrepApp() {
               >
                 <Bell className="w-4 h-4 text-white" />
                 {unreadCount > 0 && (
-                  <span className="absolute -top-1 -right-1 w-4 h-4 bg-yellow-400 rounded-full flex items-center justify-center text-orange-800 text-[8px] font-bold">
+                  <span className="absolute -top-1 -right-1 w-5 h-5 bg-yellow-400 rounded-full flex items-center justify-center text-orange-800 text-[9px] font-bold shadow-lg shadow-yellow-400/40">
                     {unreadCount}
                   </span>
                 )}
-              </button>
-              <button
-                onClick={() => {
-                  const readIds = getReadNotifIds()
-                  setCategories(getLocalCategories())
-                  setAnnouncements(getLocalAnnouncements().map(a => ({ ...a, action: a.action as Page })))
-                  setNotifications(getLocalNotifications().map(n => ({ ...n, read: n.read || readIds.has(n.id) })))
-                  setUpcomingExams(getLocalUpcomingExams())
-                  setDailyTips(getLocalDailyTips())
-                  const papers = getLocalPrevYearPapers()
-                  setPrevPapers(papers)
-                  setSidebarMenu(getLocalSidebarMenu().filter(i => i.visible))
-                  if (isFirestore()) {
-                    getFsCategories().then(c => { if (c.length > 0) setCategories(c) }).catch(() => {})
-                    getFsAnnouncements().then(a => { if (a.length > 0) setAnnouncements(a.map(x => ({ ...x, action: x.action as Page }))) }).catch(() => {})
-                    getFsNotifications().then(n => { if (n.length > 0) setNotifications(n.map(x => ({ ...x, read: x.read || readIds.has(x.id) }))) }).catch(() => {})
-                    getFsUpcomingExams().then(u => { if (u.length > 0) setUpcomingExams(u) }).catch(() => {})
-                    getFsDailyTips().then(t => { if (t.length > 0) setDailyTips(t) }).catch(() => {})
-                    getFsPrevYearPapers().then(p => { if (p.length > 0) setPrevPapers(p) }).catch(() => {})
-                    getFsSidebarMenu().then(s => { if (s.length > 0) setSidebarMenu(s.filter(i => i.visible)) }).catch(() => {})
-                  }
-                }}
-                onTouchEnd={(e) => { e.preventDefault(); e.currentTarget.click() }}
-                className="w-10 h-10 rounded-xl bg-white/15 backdrop-blur flex items-center justify-center active:bg-white/25 transition-colors"
-                style={{ touchAction: 'manipulation', WebkitTapHighlightColor: 'transparent' }}
-              >
-                <RefreshCw className="w-4 h-4 text-white" />
               </button>
             </div>
 
