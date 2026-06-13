@@ -1,12 +1,11 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
 import {
   BookOpen, Trophy, Flame, Zap, Building, Plus,
-  Trash2, RefreshCw
+  Trash2, RefreshCw, Edit3, X, Check, ArrowUp, ArrowDown
 } from 'lucide-react'
 import {
   type Announcement,
@@ -23,6 +22,11 @@ export default function AnnouncementsTab({ announcements, onUpdate }: Announceme
   const [newAnnSubtitle, setNewAnnSubtitle] = useState('')
   const [newAnnGradient, setNewAnnGradient] = useState('from-orange-500 to-red-500')
   const [newAnnImage, setNewAnnImage] = useState('ssc')
+  const [editingIndex, setEditingIndex] = useState<number | null>(null)
+  const [editTitle, setEditTitle] = useState('')
+  const [editSubtitle, setEditSubtitle] = useState('')
+  const [editGradient, setEditGradient] = useState('')
+  const [editImage, setEditImage] = useState('')
 
   const gradients = [
     { label: 'Orange', value: 'from-orange-500 to-red-500' },
@@ -55,7 +59,53 @@ export default function AnnouncementsTab({ announcements, onUpdate }: Announceme
   }
 
   const handleDelete = (index: number) => {
+    if (editingIndex === index) setEditingIndex(null)
     onUpdate(announcements.filter((_, i) => i !== index))
+  }
+
+  const handleEdit = (index: number) => {
+    const a = announcements[index]
+    setEditingIndex(index)
+    setEditTitle(a.title)
+    setEditSubtitle(a.subtitle)
+    setEditGradient(a.gradient)
+    setEditImage(a.image)
+  }
+
+  const handleCancelEdit = () => {
+    setEditingIndex(null)
+  }
+
+  const handleSaveEdit = () => {
+    if (editingIndex === null) return
+    const updated = [...announcements]
+    updated[editingIndex] = {
+      ...updated[editingIndex],
+      title: editTitle,
+      subtitle: editSubtitle,
+      gradient: editGradient,
+      image: editImage,
+    }
+    onUpdate(updated)
+    setEditingIndex(null)
+  }
+
+  const handleMoveUp = (index: number) => {
+    if (index === 0) return
+    const updated = [...announcements]
+    const temp = updated[index]
+    updated[index] = updated[index - 1]
+    updated[index - 1] = temp
+    onUpdate(updated)
+  }
+
+  const handleMoveDown = (index: number) => {
+    if (index === announcements.length - 1) return
+    const updated = [...announcements]
+    const temp = updated[index]
+    updated[index] = updated[index + 1]
+    updated[index + 1] = temp
+    onUpdate(updated)
   }
 
   return (
@@ -156,25 +206,132 @@ export default function AnnouncementsTab({ announcements, onUpdate }: Announceme
             </Card>
           ) : (
             announcements.map((a, i) => (
-              <Card key={a.id} className="border-0 shadow-sm hover:shadow-md transition-shadow">
-                <CardContent className="p-3 flex items-center gap-3">
-                  <div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${a.gradient} flex items-center justify-center flex-shrink-0`}>
-                    {a.image === 'ssc' && <BookOpen className="w-5 h-5 text-white" />}
-                    {a.image === 'banking' && <Building className="w-5 h-5 text-white" />}
-                    {a.image === 'leaderboard' && <Trophy className="w-5 h-5 text-white" />}
-                    {a.image === 'practice' && <Zap className="w-5 h-5 text-white" />}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="font-semibold text-sm truncate">{a.title}</p>
-                    <p className="text-gray-400 text-xs truncate">{a.subtitle}</p>
-                  </div>
-                  <button
-                    onClick={() => handleDelete(i)}
-                    className="w-8 h-8 rounded-lg bg-red-50 hover:bg-red-100 flex items-center justify-center flex-shrink-0 transition-colors"
-                  >
-                    <Trash2 className="w-4 h-4 text-red-400" />
-                  </button>
-                </CardContent>
+              <Card key={a.id} className={`border-0 shadow-sm transition-all ${editingIndex === i ? 'ring-2 ring-orange-300 shadow-md' : 'hover:shadow-md'}`}>
+                {editingIndex === i ? (
+                  /* Edit Mode */
+                  <CardContent className="p-4 space-y-3">
+                    <div className="flex items-center justify-between mb-1">
+                      <h4 className="font-bold text-sm text-orange-600 flex items-center gap-1.5">
+                        <Edit3 className="w-3.5 h-3.5" /> Editing Announcement
+                      </h4>
+                      <div className="flex gap-1.5">
+                        <button
+                          onClick={handleSaveEdit}
+                          disabled={!editTitle || !editSubtitle}
+                          className="w-8 h-8 rounded-lg bg-emerald-50 hover:bg-emerald-100 flex items-center justify-center transition-colors disabled:opacity-40"
+                          title="Save"
+                        >
+                          <Check className="w-4 h-4 text-emerald-600" />
+                        </button>
+                        <button
+                          onClick={handleCancelEdit}
+                          className="w-8 h-8 rounded-lg bg-gray-100 hover:bg-gray-200 flex items-center justify-center transition-colors"
+                          title="Cancel"
+                        >
+                          <X className="w-4 h-4 text-gray-500" />
+                        </button>
+                      </div>
+                    </div>
+                    <input
+                      type="text"
+                      value={editTitle}
+                      onChange={e => setEditTitle(e.target.value)}
+                      placeholder="Title"
+                      className="w-full px-3 py-2.5 rounded-xl border border-orange-200 text-sm focus:outline-none focus:ring-2 focus:ring-orange-300"
+                    />
+                    <input
+                      type="text"
+                      value={editSubtitle}
+                      onChange={e => setEditSubtitle(e.target.value)}
+                      placeholder="Subtitle"
+                      className="w-full px-3 py-2.5 rounded-xl border border-orange-200 text-sm focus:outline-none focus:ring-2 focus:ring-orange-300"
+                    />
+                    <div>
+                      <p className="text-xs text-gray-500 mb-1.5">Gradient Color</p>
+                      <div className="flex gap-2 flex-wrap">
+                        {gradients.map(g => (
+                          <button
+                            key={g.value}
+                            onClick={() => setEditGradient(g.value)}
+                            className={`px-3 py-1.5 rounded-lg text-[11px] font-medium transition-all ${
+                              editGradient === g.value
+                                ? `bg-gradient-to-r ${g.value} text-white shadow-sm`
+                                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                            }`}
+                          >
+                            {g.label}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                    <div>
+                      <p className="text-xs text-gray-500 mb-1.5">Icon</p>
+                      <div className="flex gap-2">
+                        {icons.map(ic => (
+                          <button
+                            key={ic.value}
+                            onClick={() => setEditImage(ic.value)}
+                            className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all ${
+                              editImage === ic.value
+                                ? 'bg-orange-100 text-orange-600 ring-2 ring-orange-300'
+                                : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
+                            }`}
+                          >
+                            {ic.icon}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  </CardContent>
+                ) : (
+                  /* View Mode */
+                  <CardContent className="p-3">
+                    <div className="flex items-center gap-3">
+                      <div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${a.gradient} flex items-center justify-center flex-shrink-0`}>
+                        {a.image === 'ssc' && <BookOpen className="w-5 h-5 text-white" />}
+                        {a.image === 'banking' && <Building className="w-5 h-5 text-white" />}
+                        {a.image === 'leaderboard' && <Trophy className="w-5 h-5 text-white" />}
+                        {a.image === 'practice' && <Zap className="w-5 h-5 text-white" />}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-semibold text-sm truncate">{a.title}</p>
+                        <p className="text-gray-400 text-xs truncate">{a.subtitle}</p>
+                      </div>
+                      <div className="flex items-center gap-1 flex-shrink-0">
+                        <button
+                          onClick={() => handleMoveUp(i)}
+                          disabled={i === 0}
+                          className="w-7 h-7 rounded-lg bg-gray-50 hover:bg-gray-100 flex items-center justify-center transition-colors disabled:opacity-30"
+                          title="Move Up"
+                        >
+                          <ArrowUp className="w-3.5 h-3.5 text-gray-500" />
+                        </button>
+                        <button
+                          onClick={() => handleMoveDown(i)}
+                          disabled={i === announcements.length - 1}
+                          className="w-7 h-7 rounded-lg bg-gray-50 hover:bg-gray-100 flex items-center justify-center transition-colors disabled:opacity-30"
+                          title="Move Down"
+                        >
+                          <ArrowDown className="w-3.5 h-3.5 text-gray-500" />
+                        </button>
+                        <button
+                          onClick={() => handleEdit(i)}
+                          className="w-7 h-7 rounded-lg bg-orange-50 hover:bg-orange-100 flex items-center justify-center transition-colors"
+                          title="Edit"
+                        >
+                          <Edit3 className="w-3.5 h-3.5 text-orange-500" />
+                        </button>
+                        <button
+                          onClick={() => handleDelete(i)}
+                          className="w-7 h-7 rounded-lg bg-red-50 hover:bg-red-100 flex items-center justify-center transition-colors"
+                          title="Delete"
+                        >
+                          <Trash2 className="w-3.5 h-3.5 text-red-400" />
+                        </button>
+                      </div>
+                    </div>
+                  </CardContent>
+                )}
               </Card>
             ))
           )}

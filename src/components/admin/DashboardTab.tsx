@@ -7,7 +7,7 @@ import { Badge } from '@/components/ui/badge'
 import {
   BookOpen, Trophy, Flame, Zap, Building, Bell,
   Users, FileText, Home, Plus, XCircle, AlertTriangle, Gift,
-  CheckCircle2
+  CheckCircle2, Edit3
 } from 'lucide-react'
 import {
   type Announcement, type Notification,
@@ -184,12 +184,32 @@ export default function DashboardTab({ announcements, notifications, allResults,
       {/* Recent Activity */}
       <Card className="border-0 shadow-md">
         <CardContent className="p-4">
-          <h3 className="font-bold text-sm mb-3 flex items-center gap-2">
-            <FileText className="w-4 h-4 text-slate-500" /> Recent Items
-          </h3>
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="font-bold text-sm flex items-center gap-2">
+              <FileText className="w-4 h-4 text-slate-500" /> Recent Items
+            </h3>
+            <div className="flex gap-2">
+              <button
+                onClick={() => onSwitchTab('announcements')}
+                className="text-[11px] text-orange-500 hover:text-orange-700 font-medium flex items-center gap-1 transition-colors"
+              >
+                <Edit3 className="w-3 h-3" /> Edit Announcements
+              </button>
+              <button
+                onClick={() => onSwitchTab('notifications')}
+                className="text-[11px] text-blue-500 hover:text-blue-700 font-medium flex items-center gap-1 transition-colors"
+              >
+                <Edit3 className="w-3 h-3" /> Edit Notifications
+              </button>
+            </div>
+          </div>
           <div className="space-y-2 max-h-96 overflow-y-auto">
             {announcements.slice(0, 3).map(a => (
-              <div key={a.id} className="flex items-center gap-3 p-2.5 rounded-xl bg-gray-50">
+              <div
+                key={a.id}
+                onClick={() => onSwitchTab('announcements')}
+                className="flex items-center gap-3 p-2.5 rounded-xl bg-gray-50 hover:bg-orange-50 transition-colors cursor-pointer"
+              >
                 <div className={`w-8 h-8 rounded-lg bg-gradient-to-br ${a.gradient} flex items-center justify-center flex-shrink-0`}>
                   {a.image === 'ssc' && <BookOpen className="w-4 h-4 text-white" />}
                   {a.image === 'banking' && <Building className="w-4 h-4 text-white" />}
@@ -201,10 +221,15 @@ export default function DashboardTab({ announcements, notifications, allResults,
                   <p className="text-gray-400 text-[10px] truncate">{a.subtitle}</p>
                 </div>
                 <Badge variant="secondary" className="text-[9px]">Announcement</Badge>
+                <Edit3 className="w-3 h-3 text-gray-300" />
               </div>
             ))}
             {notifications.slice(0, 2).map(n => (
-              <div key={n.id} className="flex items-center gap-3 p-2.5 rounded-xl bg-gray-50">
+              <div
+                key={n.id}
+                onClick={() => onSwitchTab('notifications')}
+                className="flex items-center gap-3 p-2.5 rounded-xl bg-gray-50 hover:bg-blue-50 transition-colors cursor-pointer"
+              >
                 <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${
                   n.type === 'update' ? 'bg-blue-100' :
                   n.type === 'alert' ? 'bg-amber-100' :
@@ -219,6 +244,7 @@ export default function DashboardTab({ announcements, notifications, allResults,
                   <p className="text-gray-400 text-[10px] truncate">{n.message}</p>
                 </div>
                 <Badge variant="secondary" className="text-[9px]">{n.type}</Badge>
+                <Edit3 className="w-3 h-3 text-gray-300" />
               </div>
             ))}
             {allResults.length === 0 && announcements.length === 0 && notifications.length === 0 && (
