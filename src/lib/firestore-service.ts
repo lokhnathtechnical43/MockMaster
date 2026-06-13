@@ -20,7 +20,7 @@ import {
   DocumentData,
   QueryConstraint,
 } from 'firebase/firestore'
-import { db, isFirebaseReady } from '@/lib/firebase'
+import { db, isFirebaseReady, auth } from '@/lib/firebase'
 import {
   LocalExamCategory,
   LocalExam,
@@ -1519,21 +1519,39 @@ export async function forceSeedFirestore(): Promise<boolean> {
     return false
   }
   try {
+    // First, check if user has admin role - this validates Firestore rules are working
+    const currentUser = auth?.currentUser
+    if (currentUser) {
+      const userData = await getUser(currentUser.uid)
+      if (!userData || userData.role !== 'admin') {
+        console.error('[Firestore] Seed failed: Current user is not admin. Role:', userData?.role || 'no role')
+        throw new Error('You must be an admin to seed the database. Your role: ' + (userData?.role || 'not set'))
+      }
+      console.log('[Firestore] Admin verified, starting seed...')
+    }
+
     console.log('[Firestore] Force seeding — clearing all collections first...')
 
     // Delete existing data in batches (500 max per batch)
+    // Skip errors on collections that don't exist or can't be accessed
     const collectionNames = Object.values(COLLECTIONS)
     for (const colName of collectionNames) {
-      const snap = await getDocs(collection(db, colName))
-      if (snap.size > 0) {
-        for (let i = 0; i < snap.docs.length; i += 500) {
-          const batch = writeBatch(db)
-          snap.docs.slice(i, i + 500).forEach(d => batch.delete(d.ref))
-          await batch.commit()
+      try {
+        const snap = await getDocs(collection(db, colName))
+        if (snap.size > 0) {
+          for (let i = 0; i < snap.docs.length; i += 500) {
+            const batch = writeBatch(db)
+            snap.docs.slice(i, i + 500).forEach(d => batch.delete(d.ref))
+            await batch.commit()
+          }
+          console.log(`[Firestore] Cleared ${snap.size} docs from ${colName}`)
         }
+      } catch (delErr: any) {
+        console.warn(`[Firestore] Could not clear ${colName}:`, delErr?.message || delErr)
+        // Continue even if delete fails (e.g., collection doesn't exist yet)
       }
     }
-    console.log('[Firestore] All collections cleared.')
+    console.log('[Firestore] All collections cleared (or skipped).')
 
     // ---- Categories + Exams ----
     const catData = [
@@ -1607,6 +1625,7 @@ export async function forceSeedFirestore(): Promise<boolean> {
       }
     }
     if (opCount > 0) await batch.commit()
+    console.log('[Firestore] Categories + Exams seeded.')
 
     // ---- Tests + Questions ----
     const testData: { title: string; examSlug: string; difficulty: string; questions: { q: string; a: string; b: string; c: string; d: string; ans: string; exp: string; sub: string }[] }[] = [
@@ -1834,6 +1853,7 @@ export async function forceSeedFirestore(): Promise<boolean> {
       }
     }
     if (opCount > 0) await batch.commit()
+    console.log('[Firestore] Tests + Questions seeded.')
 
     // ---- Announcements ----
     batch = writeBatch(db)
@@ -1921,6 +1941,7 @@ export async function forceSeedFirestore(): Promise<boolean> {
     }
 
     await batch.commit()
+    console.log('[Firestore] Announcements, Notifications, Upcoming Exams, Tips, Papers, Sidebar seeded.')
 
     // Mark all collections as initialized
     if (typeof window !== 'undefined') {

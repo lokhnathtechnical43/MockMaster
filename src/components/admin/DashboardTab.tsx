@@ -40,12 +40,16 @@ export default function DashboardTab({ announcements, notifications, allResults,
     setSeedResult(null)
     try {
       const success = await forceSeedFirestore()
-      setSeedResult(success ? 'Database seeded successfully! Refreshing...' : 'Failed to seed database.')
       if (success) {
+        setSeedResult('Database seeded successfully! Refreshing...')
         setTimeout(() => window.location.reload(), 1500)
+      } else {
+        setSeedResult('Failed to seed database. Check browser console (F12) for detailed error.')
       }
-    } catch {
-      setSeedResult('Error occurred while seeding.')
+    } catch (e: any) {
+      console.error('[Dashboard] Seed error:', e)
+      const msg = e?.message || 'Unknown error'
+      setSeedResult(`Seed failed: ${msg}. Check console for details.`)
     }
     setSeeding(false)
   }
