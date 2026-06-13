@@ -7,20 +7,25 @@ import {
   Shield, LogOut, Lock, Eye, EyeOff,
   BarChart3, Users, Settings,
   BookOpen, Bell, Flame, PieChart, Calendar,
-  AlertCircle, Loader2
+  AlertCircle, Loader2, Star
 } from 'lucide-react'
 import {
-  type Announcement, type Notification, type UpcomingExam,
-  getAnnouncements, getNotifications, getUpcomingExams,
-  saveAnnouncements, saveNotifications, saveUpcomingExams,
-  DEFAULT_UPCOMING_EXAMS,
+  type Announcement, type Notification, type UpcomingExam, type DailyTip,
+  getAnnouncements, getNotifications, getUpcomingExams, getDailyTips,
+  saveAnnouncements, saveNotifications, saveUpcomingExams, saveDailyTips,
+  DEFAULT_UPCOMING_EXAMS, DEFAULT_DAILY_TIPS,
+  isFsCollectionInitialized, markFsCollectionInitialized,
 } from '@/lib/admin-data'
 import { getResults, type TestResult } from '@/lib/local-data'
 import {
   getAnnouncements as getFsAnnouncements,
   getNotifications as getFsNotifications,
+  getUpcomingExams as getFsUpcomingExams,
+  getDailyTips as getFsDailyTips,
   saveAnnouncements as saveFsAnnouncements,
   saveNotifications as saveFsNotifications,
+  saveUpcomingExams as saveFsUpcomingExams,
+  saveDailyTips as saveFsDailyTips,
   getResults as getFsResults,
   getUseFirestore,
   getUser,
@@ -40,11 +45,12 @@ import AnnouncementsTab from '@/components/admin/AnnouncementsTab'
 import NotificationsTab from '@/components/admin/NotificationsTab'
 import SettingsTab from '@/components/admin/SettingsTab'
 import UpcomingExamsTab from '@/components/admin/UpcomingExamsTab'
+import DailyTipsTab from '@/components/admin/DailyTipsTab'
 
 // Suppress Firebase auth errors in static export mode
 const isClient = typeof window !== 'undefined'
 
-type AdminTab = 'dashboard' | 'exams' | 'users' | 'analytics' | 'announcements' | 'notifications' | 'upcoming' | 'settings'
+type AdminTab = 'dashboard' | 'exams' | 'users' | 'analytics' | 'announcements' | 'notifications' | 'upcoming' | 'dailytips' | 'settings'
 
 type AuthStatus = 'checking' | 'not_logged_in' | 'verifying' | 'authorized' | 'denied'
 
@@ -67,6 +73,10 @@ export default function AdminPanel() {
   const [notifications, setNotifications] = useState<Notification[]>([])
   const [upcomingExams, setUpcomingExams] = useState<UpcomingExam[]>([])
   const [upcomingExamsLoaded, setUpcomingExamsLoaded] = useState(false)
+  const [dailyTips, setDailyTips] = useState<DailyTip[]>([])
+  const [dailyTipsLoaded, setDailyTipsLoaded] = useState(false)
+  const [announcementsLoaded, setAnnouncementsLoaded] = useState(false)
+  const [notificationsLoaded, setNotificationsLoaded] = useState(false)
 
   // --- Check if already logged in as admin ---
   useEffect(() => {
@@ -128,24 +138,56 @@ export default function AdminPanel() {
     async function loadData() {
       if (getUseFirestore()) {
         try {
+          // Load announcements - use Firestore data, even if empty
+          // Only fall back to defaults if Firestore collection was never initialized
           const fsAnn = await getFsAnnouncements()
           if (fsAnn && fsAnn.length > 0) {
             setAnnouncements(fsAnn)
+            markFsCollectionInitialized('announcements')
+          } else if (isFsCollectionInitialized('announcements')) {
+            // Collection was initialized before but now empty = admin deleted all
+            setAnnouncements([])
           } else {
+            // First time - use defaults and save to Firestore
             setAnnouncements(getAnnouncements())
           }
           setAnnouncementsLoaded(true)
 
+          // Load notifications - same logic
           const fsNotif = await getFsNotifications()
           if (fsNotif && fsNotif.length > 0) {
             setNotifications(fsNotif)
+            markFsCollectionInitialized('notifications')
+          } else if (isFsCollectionInitialized('notifications')) {
+            setNotifications([])
           } else {
             setNotifications(getNotifications())
           }
           setNotificationsLoaded(true)
 
-          setUpcomingExams(getUpcomingExams())
+          // Load upcoming exams from Firestore
+          const fsUpcoming = await getFsUpcomingExams()
+          if (fsUpcoming && fsUpcoming.length > 0) {
+            setUpcomingExams(fsUpcoming)
+            markFsCollectionInitialized('upcoming_exams')
+          } else if (isFsCollectionInitialized('upcoming_exams')) {
+            setUpcomingExams([])
+          } else {
+            setUpcomingExams(getUpcomingExams())
+          }
           setUpcomingExamsLoaded(true)
+
+          // Load daily tips from Firestore
+          const fsTips = await getFsDailyTips()
+          if (fsTips && fsTips.length > 0) {
+            setDailyTips(fsTips)
+            markFsCollectionInitialized('daily_tips')
+          } else if (isFsCollectionInitialized('daily_tips')) {
+            setDailyTips([])
+          } else {
+            setDailyTips(getDailyTips())
+          }
+          setDailyTipsLoaded(true)
 
           const fsResults = await getFsResults()
           setAllResults(fsResults as TestResult[] || getResults())
@@ -154,19 +196,23 @@ export default function AdminPanel() {
           setAnnouncements(getAnnouncements())
           setNotifications(getNotifications())
           setAllResults(getResults())
+          setUpcomingExams(getUpcomingExams())
+          setDailyTips(getDailyTips())
           setAnnouncementsLoaded(true)
           setNotificationsLoaded(true)
-          setUpcomingExams(getUpcomingExams())
           setUpcomingExamsLoaded(true)
+          setDailyTipsLoaded(true)
         }
       } else {
         setAnnouncements(getAnnouncements())
         setNotifications(getNotifications())
         setAllResults(getResults())
         setUpcomingExams(getUpcomingExams())
+        setDailyTips(getDailyTips())
         setAnnouncementsLoaded(true)
         setNotificationsLoaded(true)
         setUpcomingExamsLoaded(true)
+        setDailyTipsLoaded(true)
       }
     }
     loadData()
@@ -191,15 +237,18 @@ export default function AdminPanel() {
 
   // Save data when it changes (both local + Firestore)
   // Always save - even empty lists (so deletes persist)
-  const [announcementsLoaded, setAnnouncementsLoaded] = useState(false)
-  const [notificationsLoaded, setNotificationsLoaded] = useState(false)
+  // Note: announcementsLoaded, notificationsLoaded, upcomingExamsLoaded, dailyTipsLoaded
+  // are defined above with the data states
 
   useEffect(() => {
     if (!announcementsLoaded) return
     saveAnnouncements(announcements)
     if (getUseFirestore()) {
       saveFsAnnouncements(announcements)
-        .then(() => console.log('[Admin] Announcements saved to Firestore:', announcements.length))
+        .then(() => {
+          console.log('[Admin] Announcements saved to Firestore:', announcements.length)
+          markFsCollectionInitialized('announcements')
+        })
         .catch(e => console.warn('[Admin] Firestore save announcements failed:', e))
     }
   }, [announcements, announcementsLoaded])
@@ -209,7 +258,10 @@ export default function AdminPanel() {
     saveNotifications(notifications)
     if (getUseFirestore()) {
       saveFsNotifications(notifications)
-        .then(() => console.log('[Admin] Notifications saved to Firestore:', notifications.length))
+        .then(() => {
+          console.log('[Admin] Notifications saved to Firestore:', notifications.length)
+          markFsCollectionInitialized('notifications')
+        })
         .catch(e => console.warn('[Admin] Firestore save notifications failed:', e))
     }
   }, [notifications, notificationsLoaded])
@@ -217,7 +269,28 @@ export default function AdminPanel() {
   useEffect(() => {
     if (!upcomingExamsLoaded) return
     saveUpcomingExams(upcomingExams)
+    if (getUseFirestore()) {
+      saveFsUpcomingExams(upcomingExams)
+        .then(() => {
+          console.log('[Admin] Upcoming exams saved to Firestore:', upcomingExams.length)
+          markFsCollectionInitialized('upcoming_exams')
+        })
+        .catch(e => console.warn('[Admin] Firestore save upcoming exams failed:', e))
+    }
   }, [upcomingExams, upcomingExamsLoaded])
+
+  useEffect(() => {
+    if (!dailyTipsLoaded) return
+    saveDailyTips(dailyTips)
+    if (getUseFirestore()) {
+      saveFsDailyTips(dailyTips)
+        .then(() => {
+          console.log('[Admin] Daily tips saved to Firestore:', dailyTips.length)
+          markFsCollectionInitialized('daily_tips')
+        })
+        .catch(e => console.warn('[Admin] Firestore save daily tips failed:', e))
+    }
+  }, [dailyTips, dailyTipsLoaded])
 
   // --- Firebase Auth Login ---
   const handleLogin = async () => {
@@ -435,6 +508,7 @@ export default function AdminPanel() {
     { id: 'announcements', icon: Flame, label: 'Announce' },
     { id: 'notifications', icon: Bell, label: 'Notify' },
     { id: 'upcoming', icon: Calendar, label: 'Upcoming' },
+    { id: 'dailytips', icon: Star, label: 'Tips' },
     { id: 'settings', icon: Settings, label: 'Settings' },
   ]
 
@@ -523,6 +597,13 @@ export default function AdminPanel() {
           <UpcomingExamsTab
             exams={upcomingExams}
             onUpdate={setUpcomingExams}
+          />
+        )}
+
+        {adminTab === 'dailytips' && (
+          <DailyTipsTab
+            tips={dailyTips}
+            onUpdate={setDailyTips}
           />
         )}
 

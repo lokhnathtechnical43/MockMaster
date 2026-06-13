@@ -27,11 +27,18 @@ export interface UpcomingExam {
   statusType: 'open' | 'coming' | 'admit' | 'closed'
 }
 
+export interface DailyTip {
+  id: string
+  text: string
+}
+
 export const STORAGE_KEYS = {
   announcements: 'examprep_announcements',
   notifications: 'examprep_notifications',
   readNotifs: 'examprep_read_notifications',
   upcomingExams: 'examprep_upcoming_exams',
+  dailyTips: 'examprep_daily_tips',
+  fsInitialized: 'examprep_firestore_initialized',
 } as const
 
 export const DEFAULT_ANNOUNCEMENTS: Announcement[] = [
@@ -51,6 +58,14 @@ export const DEFAULT_UPCOMING_EXAMS: UpcomingExam[] = [
   { id: '1', name: 'SSC CGL 2025 Tier-I', date: 'Jul 2025', status: 'Registration Open', statusType: 'open' },
   { id: '2', name: 'IBPS PO 2025 Prelims', date: 'Aug 2025', status: 'Coming Soon', statusType: 'coming' },
   { id: '3', name: 'RRB NTPC CBT-2', date: 'Sep 2025', status: 'Admit Card Soon', statusType: 'admit' },
+]
+
+export const DEFAULT_DAILY_TIPS: DailyTip[] = [
+  { id: '1', text: 'Solve at least 50 questions daily from different topics. Consistency beats intensity in exam preparation!' },
+  { id: '2', text: 'Review your mistakes regularly. Understanding why you got something wrong is more valuable than getting it right.' },
+  { id: '3', text: 'Practice time management. Set a timer for each mock test to simulate real exam conditions.' },
+  { id: '4', text: 'Focus on weak areas first. Spend 70% of your study time on topics you find difficult.' },
+  { id: '5', text: 'Take short breaks every 45 minutes. Your brain consolidates information during rest periods.' },
 ]
 
 // Client-side helpers (for static/Capacitor app)
@@ -99,6 +114,21 @@ export function saveUpcomingExams(exams: UpcomingExam[]): void {
   localStorage.setItem(STORAGE_KEYS.upcomingExams, JSON.stringify(exams))
 }
 
+export function getDailyTips(): DailyTip[] {
+  if (typeof window === 'undefined') return DEFAULT_DAILY_TIPS
+  try {
+    const stored = localStorage.getItem(STORAGE_KEYS.dailyTips)
+    return stored ? JSON.parse(stored) : DEFAULT_DAILY_TIPS
+  } catch {
+    return DEFAULT_DAILY_TIPS
+  }
+}
+
+export function saveDailyTips(tips: DailyTip[]): void {
+  if (typeof window === 'undefined') return
+  localStorage.setItem(STORAGE_KEYS.dailyTips, JSON.stringify(tips))
+}
+
 // Track which notification IDs the user has read (persists across refreshes)
 export function getReadNotifIds(): Set<string> {
   if (typeof window === 'undefined') return new Set()
@@ -122,4 +152,26 @@ export function markAllNotifsAsRead(ids: string[]): void {
   const existing = getReadNotifIds()
   ids.forEach(id => existing.add(id))
   localStorage.setItem(STORAGE_KEYS.readNotifs, JSON.stringify([...existing]))
+}
+
+// Track which Firestore collections have been initialized
+export function isFsCollectionInitialized(collection: string): boolean {
+  if (typeof window === 'undefined') return false
+  try {
+    const stored = localStorage.getItem(STORAGE_KEYS.fsInitialized)
+    const initialized: Record<string, boolean> = stored ? JSON.parse(stored) : {}
+    return initialized[collection] === true
+  } catch {
+    return false
+  }
+}
+
+export function markFsCollectionInitialized(collection: string): void {
+  if (typeof window === 'undefined') return
+  try {
+    const stored = localStorage.getItem(STORAGE_KEYS.fsInitialized)
+    const initialized: Record<string, boolean> = stored ? JSON.parse(stored) : {}
+    initialized[collection] = true
+    localStorage.setItem(STORAGE_KEYS.fsInitialized, JSON.stringify(initialized))
+  } catch {}
 }

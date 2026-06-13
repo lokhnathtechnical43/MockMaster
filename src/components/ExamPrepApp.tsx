@@ -31,6 +31,7 @@ import {
   getTestById as getFsTestById, saveResult as saveFsResult,
   getLeaderboard as getFsLeaderboard, getUseFirestore,
   getAnnouncements as getFsAnnouncements, getNotifications as getFsNotifications,
+  getUpcomingExams as getFsUpcomingExams, getDailyTips as getFsDailyTips,
   getResults as getFsResults, updateUserTestStats,
 } from '@/lib/firestore-service'
 import { useFirebaseAuth } from '@/lib/use-firebase-auth'
@@ -39,7 +40,7 @@ import { App } from '@capacitor/app'
 import { Share } from '@capacitor/share'
 import { Filesystem, Directory } from '@capacitor/filesystem'
 import jsPDF from 'jspdf'
-import { getAnnouncements as getLocalAnnouncements, getNotifications as getLocalNotifications, getReadNotifIds, markNotifAsRead, markAllNotifsAsRead, getUpcomingExams, type UpcomingExam } from '@/lib/admin-data'
+import { getAnnouncements as getLocalAnnouncements, getNotifications as getLocalNotifications, getUpcomingExams as getLocalUpcomingExams, getDailyTips as getLocalDailyTips, getReadNotifIds, markNotifAsRead, markAllNotifsAsRead, type UpcomingExam, type DailyTip } from '@/lib/admin-data'
 import { t, type Lang } from '@/lib/i18n'
 
 // ===== Types =====
@@ -268,6 +269,7 @@ export default function ExamPrepApp() {
   >([])
   const [activeAnnouncement, setActiveAnnouncement] = useState(0)
   const [upcomingExams, setUpcomingExams] = useState<UpcomingExam[]>([])
+  const [dailyTips, setDailyTips] = useState<DailyTip[]>([])
 
 
 
@@ -278,22 +280,29 @@ export default function ExamPrepApp() {
         const cats = await fetchCategories()
         setCategories(cats)
         const readIds = getReadNotifIds()
-        // Load upcoming exams from localStorage (admin-controllable)
-        setUpcomingExams(getUpcomingExams())
         if (isFirestore()) {
+          // Load ALL admin data from Firestore
           const anns = await getFsAnnouncements()
           setAnnouncements(anns.map(a => ({ ...a, action: a.action as Page })))
           const notifs = await getFsNotifications()
           setNotifications(notifs.map(n => ({ ...n, read: n.read || readIds.has(n.id) })))
+          const upcoming = await getFsUpcomingExams()
+          setUpcomingExams(upcoming)
+          const tips = await getFsDailyTips()
+          setDailyTips(tips)
         } else {
+          // Fallback to localStorage
           setAnnouncements(getLocalAnnouncements().map(a => ({ ...a, action: a.action as Page })))
           setNotifications(getLocalNotifications().map(n => ({ ...n, read: n.read || readIds.has(n.id) })))
+          setUpcomingExams(getLocalUpcomingExams())
+          setDailyTips(getLocalDailyTips())
         }
       } catch (e) {
         console.error('Data load failed, using local fallback:', e)
         const readIds = getReadNotifIds()
         setCategories(getLocalCategories())
-        setUpcomingExams(getUpcomingExams())
+        setUpcomingExams(getLocalUpcomingExams())
+        setDailyTips(getLocalDailyTips())
         setAnnouncements(getLocalAnnouncements().map(a => ({ ...a, action: a.action as Page })))
         setNotifications(getLocalNotifications().map(n => ({ ...n, read: n.read || readIds.has(n.id) })))
       }
@@ -301,18 +310,35 @@ export default function ExamPrepApp() {
     loadData()
   }, [])
 
-  // --- Listen for data changes (localStorage updates) ---
+  // --- Listen for data changes (localStorage updates + Firestore refresh) ---
   useEffect(() => {
-    const handleStorageChange = () => {
+    const handleDataRefresh = async () => {
       const readIds = getReadNotifIds()
-      setAnnouncements(getLocalAnnouncements().map(a => ({ ...a, action: a.action as Page })))
-      setNotifications(getLocalNotifications().map(n => ({ ...n, read: n.read || readIds.has(n.id) })))
-      setUpcomingExams(getUpcomingExams())
+      if (isFirestore()) {
+        // Refresh from Firestore periodically
+        try {
+          const anns = await getFsAnnouncements()
+          setAnnouncements(anns.map(a => ({ ...a, action: a.action as Page })))
+          const notifs = await getFsNotifications()
+          setNotifications(notifs.map(n => ({ ...n, read: n.read || readIds.has(n.id) })))
+          const upcoming = await getFsUpcomingExams()
+          setUpcomingExams(upcoming)
+          const tips = await getFsDailyTips()
+          setDailyTips(tips)
+        } catch (e) {
+          // Silent fail - keep existing data
+        }
+      } else {
+        setAnnouncements(getLocalAnnouncements().map(a => ({ ...a, action: a.action as Page })))
+        setNotifications(getLocalNotifications().map(n => ({ ...n, read: n.read || readIds.has(n.id) })))
+        setUpcomingExams(getLocalUpcomingExams())
+        setDailyTips(getLocalDailyTips())
+      }
     }
-    window.addEventListener('storage', handleStorageChange)
-    const interval = setInterval(handleStorageChange, 5000)
+    window.addEventListener('storage', handleDataRefresh)
+    const interval = setInterval(handleDataRefresh, 30000) // Refresh every 30 seconds from Firestore
     return () => {
-      window.removeEventListener('storage', handleStorageChange)
+      window.removeEventListener('storage', handleDataRefresh)
       clearInterval(interval)
     }
   }, [])
@@ -1075,16 +1101,33 @@ export default function ExamPrepApp() {
               </div>
               <h2 className="font-bold text-lg">{_t('home.dailyTips')}</h2>
             </div>
-            <Card className="border-0 shadow-md overflow-hidden">
-              <div className="bg-gradient-to-r from-amber-50 to-orange-50 p-4">
-                <div className="flex items-start gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-400 to-orange-400 flex items-center justify-center flex-shrink-0 shadow-sm">
-                    <Star className="w-5 h-5 text-white" />
+            <div className="space-y-2">
+              {dailyTips.length > 0 ? (
+                dailyTips.slice(0, 3).map((tip, i) => (
+                  <Card key={tip.id || i} className="border-0 shadow-md overflow-hidden">
+                    <div className="bg-gradient-to-r from-amber-50 to-orange-50 p-4">
+                      <div className="flex items-start gap-3">
+                        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-400 to-orange-400 flex items-center justify-center flex-shrink-0 shadow-sm">
+                          <Star className="w-5 h-5 text-white" />
+                        </div>
+                        <p className="text-sm text-gray-700 leading-relaxed pt-1">{tip.text}</p>
+                      </div>
+                    </div>
+                  </Card>
+                ))
+              ) : (
+                <Card className="border-0 shadow-md overflow-hidden">
+                  <div className="bg-gradient-to-r from-amber-50 to-orange-50 p-4">
+                    <div className="flex items-start gap-3">
+                      <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-400 to-orange-400 flex items-center justify-center flex-shrink-0 shadow-sm">
+                        <Star className="w-5 h-5 text-white" />
+                      </div>
+                      <p className="text-sm text-gray-700 leading-relaxed pt-1">{_t('home.dailyTip')}</p>
+                    </div>
                   </div>
-                  <p className="text-sm text-gray-700 leading-relaxed pt-1">{_t('home.dailyTip')}</p>
-                </div>
-              </div>
-            </Card>
+                </Card>
+              )}
+            </div>
           </div>
 
           {/* Upcoming Exams Section */}

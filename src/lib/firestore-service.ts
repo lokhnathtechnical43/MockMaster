@@ -38,12 +38,20 @@ import {
 import {
   Announcement,
   Notification,
+  UpcomingExam,
+  DailyTip,
   getAnnouncements as getLocalAnnouncements,
   getNotifications as getLocalNotifications,
+  getUpcomingExams as getLocalUpcomingExams,
+  getDailyTips as getLocalDailyTips,
   saveAnnouncements as saveLocalAnnouncements,
   saveNotifications as saveLocalNotifications,
+  saveUpcomingExams as saveLocalUpcomingExams,
+  saveDailyTips as saveLocalDailyTips,
   DEFAULT_ANNOUNCEMENTS,
   DEFAULT_NOTIFICATIONS,
+  DEFAULT_UPCOMING_EXAMS,
+  DEFAULT_DAILY_TIPS,
 } from '@/lib/admin-data'
 
 // ============================================================
@@ -74,6 +82,8 @@ const COLLECTIONS = {
   users: 'users',
   announcements: 'announcements',
   notifications: 'notifications',
+  upcoming_exams: 'upcoming_exams',
+  daily_tips: 'daily_tips',
 } as const
 
 // ============================================================
@@ -1266,11 +1276,119 @@ export async function seedFirestoreIfEmpty(): Promise<boolean> {
       batch.set(notifRef, { ...notif, id: notifRef.id })
     }
 
+    // Seed default upcoming exams
+    for (const exam of DEFAULT_UPCOMING_EXAMS) {
+      const examRef = doc(collection(db, COLLECTIONS.upcoming_exams))
+      batch.set(examRef, { ...exam, id: examRef.id })
+    }
+
+    // Seed default daily tips
+    for (const tip of DEFAULT_DAILY_TIPS) {
+      const tipRef = doc(collection(db, COLLECTIONS.daily_tips))
+      batch.set(tipRef, { ...tip, id: tipRef.id })
+    }
+
     await batch.commit()
     console.log('[Firestore] Database seeded successfully')
     return true
   } catch (error) {
     console.error('[Firestore] Seed error:', error)
     return false
+  }
+}
+
+// ============================================================
+// Upcoming Exam CRUD
+// ============================================================
+
+/**
+ * Get all upcoming exams from Firestore (with localStorage fallback).
+ */
+export async function getUpcomingExams(): Promise<UpcomingExam[]> {
+  return firestoreOperation(
+    async () => {
+      const snap = await getDocs(collection(db, COLLECTIONS.upcoming_exams))
+      if (snap.empty) return []
+      return snap.docs.map((d) => ({ id: d.id, ...d.data() } as UpcomingExam))
+    },
+    () => getLocalUpcomingExams()
+  )
+}
+
+/**
+ * Save (overwrite) the upcoming exams collection.
+ * Uses a batch to clear existing docs and write new ones.
+ */
+export async function saveUpcomingExams(
+  data: UpcomingExam[]
+): Promise<void> {
+  if (!useFirestore) {
+    saveLocalUpcomingExams(data)
+    return
+  }
+  try {
+    const batch = writeBatch(db)
+    // Delete existing
+    const existing = await getDocs(collection(db, COLLECTIONS.upcoming_exams))
+    existing.docs.forEach((d) => batch.delete(d.ref))
+    // Add new
+    for (const item of data) {
+      const docRef = doc(collection(db, COLLECTIONS.upcoming_exams))
+      batch.set(docRef, { ...item, id: docRef.id })
+    }
+    await batch.commit()
+    // Also persist locally for offline access
+    saveLocalUpcomingExams(data)
+  } catch (error) {
+    console.error('[Firestore] saveUpcomingExams error, saving locally:', error)
+    saveLocalUpcomingExams(data)
+  }
+}
+
+// ============================================================
+// Daily Tips CRUD
+// ============================================================
+
+/**
+ * Get all daily tips from Firestore (with localStorage fallback).
+ */
+export async function getDailyTips(): Promise<DailyTip[]> {
+  return firestoreOperation(
+    async () => {
+      const snap = await getDocs(collection(db, COLLECTIONS.daily_tips))
+      if (snap.empty) return []
+      return snap.docs.map((d) => ({ id: d.id, ...d.data() } as DailyTip))
+    },
+    () => getLocalDailyTips()
+  )
+}
+
+/**
+ * Save (overwrite) the daily tips collection.
+ * Uses a batch to clear existing docs and write new ones.
+ */
+export async function saveDailyTips(
+  data: DailyTip[]
+): Promise<void> {
+  if (!useFirestore) {
+    saveLocalDailyTips(data)
+    return
+  }
+  try {
+    const batch = writeBatch(db)
+    // Delete existing
+    const existing = await getDocs(collection(db, COLLECTIONS.daily_tips))
+    existing.docs.forEach((d) => batch.delete(d.ref))
+    // Add new
+    for (const item of data) {
+      const docRef = doc(collection(db, COLLECTIONS.daily_tips))
+      batch.set(docRef, { ...item, id: docRef.id })
+    }
+    await batch.commit()
+    // Also persist locally for offline access
+    saveLocalDailyTips(data)
+  } catch (error) {
+    console.error('[Firestore] saveDailyTips error, saving locally:', error)
+    saveLocalDailyTips(data)
   }
 }
