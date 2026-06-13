@@ -1590,16 +1590,16 @@ export default function ExamPrepApp() {
               <SkipForward className="w-3.5 h-3.5 mr-0.5" /> {_t('testTaking.skip')}
             </Button>
           </div>
-          {/* Row 2: Save & Next (Left) | Submit & Navigator (Center) | Previous (Right) */}
+          {/* Row 2: Previous (Left) | Submit & Navigator (Center) | Save & Next (Right) */}
           <div className="px-2 pb-2 flex items-center gap-2">
-            {/* Left: Save & Next */}
+            {/* Left: Previous */}
             <Button
               size="sm"
-              className="rounded-lg flex-1 h-9 font-bold text-sm bg-gradient-to-r from-green-500 to-emerald-600 text-white border-0 hover:from-green-600 hover:to-emerald-700 transition-all active:scale-95 disabled:opacity-40"
-              disabled={currentQuestionIndex === questions.length - 1}
-              onClick={() => setCurrentQuestionIndex(prev => prev + 1)}
+              className="rounded-lg flex-1 h-9 font-bold text-sm bg-gradient-to-r from-blue-500 to-indigo-600 text-white border-0 hover:from-blue-600 hover:to-indigo-700 transition-all active:scale-95 disabled:opacity-40"
+              disabled={currentQuestionIndex === 0}
+              onClick={() => setCurrentQuestionIndex(prev => prev - 1)}
             >
-              {_t('testTaking.saveNext')} <ChevronRight className="w-4 h-4 ml-1" />
+              <ChevronLeft className="w-4 h-4 mr-1" /> {_t('testTaking.previous')}
             </Button>
             {/* Center: Submit Test & Question Navigator */}
             <div className="flex items-center gap-2 flex-shrink-0">
@@ -1618,14 +1618,14 @@ export default function ExamPrepApp() {
                 {_t('testTaking.submit')}
               </Button>
             </div>
-            {/* Right: Previous */}
+            {/* Right: Save & Next */}
             <Button
               size="sm"
-              className="rounded-lg flex-1 h-9 font-bold text-sm bg-gradient-to-r from-blue-500 to-indigo-600 text-white border-0 hover:from-blue-600 hover:to-indigo-700 transition-all active:scale-95 disabled:opacity-40"
-              disabled={currentQuestionIndex === 0}
-              onClick={() => setCurrentQuestionIndex(prev => prev - 1)}
+              className="rounded-lg flex-1 h-9 font-bold text-sm bg-gradient-to-r from-green-500 to-emerald-600 text-white border-0 hover:from-green-600 hover:to-emerald-700 transition-all active:scale-95 disabled:opacity-40"
+              disabled={currentQuestionIndex === questions.length - 1}
+              onClick={() => setCurrentQuestionIndex(prev => prev + 1)}
             >
-              <ChevronLeft className="w-4 h-4 mr-1" /> {_t('testTaking.previous')}
+              {_t('testTaking.saveNext')} <ChevronRight className="w-4 h-4 ml-1" />
             </Button>
           </div>
         </div>
