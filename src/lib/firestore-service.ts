@@ -20,6 +20,8 @@ import {
   WriteBatch,
   DocumentData,
   QueryConstraint,
+  onSnapshot,
+  Unsubscribe,
 } from 'firebase/firestore'
 import { db, isFirebaseReady, auth } from '@/lib/firebase'
 import {
@@ -2534,5 +2536,223 @@ export async function saveSidebarMenu(
   } catch (error) {
     console.error('[Firestore] saveSidebarMenu error, saving locally:', error)
     saveLocalSidebarMenu(data)
+  }
+}
+
+// ============================================================
+// Real-Time Listeners (onSnapshot)
+// These subscribe to Firestore collections and call the callback
+// whenever data changes — providing instant updates to users.
+// ============================================================
+
+/**
+ * Subscribe to categories collection changes in real-time.
+ * Returns an unsubscribe function.
+ */
+export function onCategoriesChange(
+  callback: (cats: LocalExamCategory[]) => void
+): Unsubscribe | null {
+  if (!useFirestore || !isFirebaseReady()) return null
+  try {
+    return onSnapshot(collection(db, COLLECTIONS.categories), (snap) => {
+      if (snap.empty) return
+      const cats = snap.docs.map(d => ({ id: d.id, ...d.data() } as FirestoreExamCategory))
+      // Merge with exams from local or Firestore
+      const exams = lsGetExamsFromLocal()
+      const merged: LocalExamCategory[] = cats.map(c => ({
+        ...c,
+        exams: exams.filter(e => e.categoryId === c.id)
+      }))
+      callback(merged)
+    }, (err) => {
+      console.warn('[Firestore] onCategoriesChange error:', err)
+    })
+  } catch (e) {
+    console.warn('[Firestore] onCategoriesChange setup failed:', e)
+    return null
+  }
+}
+
+/**
+ * Subscribe to announcements collection changes in real-time.
+ */
+export function onAnnouncementsChange(
+  callback: (data: Announcement[]) => void
+): Unsubscribe | null {
+  if (!useFirestore || !isFirebaseReady()) return null
+  try {
+    return onSnapshot(collection(db, COLLECTIONS.announcements), (snap) => {
+      const data = snap.empty ? [] : snap.docs.map(d => ({ id: d.id, ...d.data() } as Announcement))
+      callback(data)
+      // Also persist locally for offline
+      if (data.length > 0) saveLocalAnnouncements(data)
+    }, (err) => {
+      console.warn('[Firestore] onAnnouncementsChange error:', err)
+    })
+  } catch (e) {
+    console.warn('[Firestore] onAnnouncementsChange setup failed:', e)
+    return null
+  }
+}
+
+/**
+ * Subscribe to notifications collection changes in real-time.
+ */
+export function onNotificationsChange(
+  callback: (data: Notification[]) => void
+): Unsubscribe | null {
+  if (!useFirestore || !isFirebaseReady()) return null
+  try {
+    return onSnapshot(collection(db, COLLECTIONS.notifications), (snap) => {
+      const data = snap.empty ? [] : snap.docs.map(d => ({ id: d.id, ...d.data() } as Notification))
+      callback(data)
+      if (data.length > 0) saveLocalNotifications(data)
+    }, (err) => {
+      console.warn('[Firestore] onNotificationsChange error:', err)
+    })
+  } catch (e) {
+    console.warn('[Firestore] onNotificationsChange setup failed:', e)
+    return null
+  }
+}
+
+/**
+ * Subscribe to upcoming exams collection changes in real-time.
+ */
+export function onUpcomingExamsChange(
+  callback: (data: UpcomingExam[]) => void
+): Unsubscribe | null {
+  if (!useFirestore || !isFirebaseReady()) return null
+  try {
+    return onSnapshot(collection(db, COLLECTIONS.upcoming_exams), (snap) => {
+      const data = snap.empty ? [] : snap.docs.map(d => ({ id: d.id, ...d.data() } as UpcomingExam))
+      callback(data)
+      if (data.length > 0) saveLocalUpcomingExams(data)
+    }, (err) => {
+      console.warn('[Firestore] onUpcomingExamsChange error:', err)
+    })
+  } catch (e) {
+    console.warn('[Firestore] onUpcomingExamsChange setup failed:', e)
+    return null
+  }
+}
+
+/**
+ * Subscribe to daily tips collection changes in real-time.
+ */
+export function onDailyTipsChange(
+  callback: (data: DailyTip[]) => void
+): Unsubscribe | null {
+  if (!useFirestore || !isFirebaseReady()) return null
+  try {
+    return onSnapshot(collection(db, COLLECTIONS.daily_tips), (snap) => {
+      const data = snap.empty ? [] : snap.docs.map(d => ({ id: d.id, ...d.data() } as DailyTip))
+      callback(data)
+      if (data.length > 0) saveLocalDailyTips(data)
+    }, (err) => {
+      console.warn('[Firestore] onDailyTipsChange error:', err)
+    })
+  } catch (e) {
+    console.warn('[Firestore] onDailyTipsChange setup failed:', e)
+    return null
+  }
+}
+
+/**
+ * Subscribe to prev year papers collection changes in real-time.
+ */
+export function onPrevYearPapersChange(
+  callback: (data: PrevYearPaper[]) => void
+): Unsubscribe | null {
+  if (!useFirestore || !isFirebaseReady()) return null
+  try {
+    return onSnapshot(collection(db, COLLECTIONS.prev_year_papers), (snap) => {
+      const data = snap.empty ? [] : snap.docs.map(d => ({ id: d.id, ...d.data() } as PrevYearPaper))
+      callback(data)
+      if (data.length > 0) saveLocalPrevYearPapers(data)
+    }, (err) => {
+      console.warn('[Firestore] onPrevYearPapersChange error:', err)
+    })
+  } catch (e) {
+    console.warn('[Firestore] onPrevYearPapersChange setup failed:', e)
+    return null
+  }
+}
+
+/**
+ * Subscribe to sidebar menu collection changes in real-time.
+ */
+export function onSidebarMenuChange(
+  callback: (data: SidebarMenuItem[]) => void
+): Unsubscribe | null {
+  if (!useFirestore || !isFirebaseReady()) return null
+  try {
+    return onSnapshot(collection(db, COLLECTIONS.sidebar_menu), (snap) => {
+      const data = snap.empty ? [] : snap.docs.map(d => ({ id: d.id, ...d.data() } as SidebarMenuItem))
+      callback(data)
+      if (data.length > 0) saveLocalSidebarMenu(data)
+    }, (err) => {
+      console.warn('[Firestore] onSidebarMenuChange error:', err)
+    })
+  } catch (e) {
+    console.warn('[Firestore] onSidebarMenuChange setup failed:', e)
+    return null
+  }
+}
+
+/** Helper: read exams from localStorage (used by onCategoriesChange) */
+function lsGetExamsFromLocal(): LocalExam[] {
+  if (typeof window === 'undefined') return []
+  try {
+    const stored = localStorage.getItem('examprep_local_exams')
+    if (!stored) return []
+    const parsed = JSON.parse(stored)
+    return Array.isArray(parsed) ? parsed : []
+  } catch { return [] }
+}
+
+/**
+ * Subscribe to ALL real-time listeners at once.
+ * Returns a single unsubscribe function that cleans up all listeners.
+ */
+export function subscribeToAllRealTime(
+  callbacks: {
+    onCategories?: (cats: LocalExamCategory[]) => void
+    onAnnouncements?: (data: Announcement[]) => void
+    onNotifications?: (data: Notification[]) => void
+    onUpcomingExams?: (data: UpcomingExam[]) => void
+    onDailyTips?: (data: DailyTip[]) => void
+    onPrevYearPapers?: (data: PrevYearPaper[]) => void
+    onSidebarMenu?: (data: SidebarMenuItem[]) => void
+  }
+): () => void {
+  const unsubscribers: (Unsubscribe | null)[] = []
+
+  if (callbacks.onCategories) {
+    unsubscribers.push(onCategoriesChange(callbacks.onCategories))
+  }
+  if (callbacks.onAnnouncements) {
+    unsubscribers.push(onAnnouncementsChange(callbacks.onAnnouncements))
+  }
+  if (callbacks.onNotifications) {
+    unsubscribers.push(onNotificationsChange(callbacks.onNotifications))
+  }
+  if (callbacks.onUpcomingExams) {
+    unsubscribers.push(onUpcomingExamsChange(callbacks.onUpcomingExams))
+  }
+  if (callbacks.onDailyTips) {
+    unsubscribers.push(onDailyTipsChange(callbacks.onDailyTips))
+  }
+  if (callbacks.onPrevYearPapers) {
+    unsubscribers.push(onPrevYearPapersChange(callbacks.onPrevYearPapers))
+  }
+  if (callbacks.onSidebarMenu) {
+    unsubscribers.push(onSidebarMenuChange(callbacks.onSidebarMenu))
+  }
+
+  return () => {
+    unsubscribers.forEach(unsub => {
+      if (unsub) unsub()
+    })
   }
 }

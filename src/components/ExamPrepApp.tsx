@@ -35,6 +35,7 @@ import {
   getUpcomingExams as getFsUpcomingExams, getDailyTips as getFsDailyTips,
   getPrevYearPapers as getFsPrevYearPapers, getSidebarMenu as getFsSidebarMenu,
   getResults as getFsResults, updateUserTestStats,
+  subscribeToAllRealTime,
 } from '@/lib/firestore-service'
 import { useFirebaseAuth } from '@/lib/use-firebase-auth'
 import LoginModal from '@/components/LoginModal'
@@ -440,11 +441,31 @@ export default function ExamPrepApp() {
           .catch(() => {})
       }
     }
+
+    // --- Real-time Firestore listeners (instant updates) ---
+    const readIds = getReadNotifIds()
+    const unsubscribeRealTime = subscribeToAllRealTime({
+      onCategories: (cats) => setCategories(cats),
+      onAnnouncements: (anns) => setAnnouncements(anns.map(a => ({ ...a, action: a.action as Page }))),
+      onNotifications: (notifs) => setNotifications(notifs.map(n => ({ ...n, read: n.read || readIds.has(n.id) }))),
+      onUpcomingExams: (upcoming) => setUpcomingExams(upcoming),
+      onDailyTips: (tips) => setDailyTips(tips),
+      onPrevYearPapers: (papers) => {
+        setPrevPapers(papers)
+        if (papers.length > 0) {
+          const years = [...new Set(papers.map(p => p.year))].sort((a, b) => Number(b) - Number(a))
+          setSelectedPaperYear(years[0] || '')
+        }
+      },
+      onSidebarMenu: (items) => setSidebarMenu(items.filter(i => i.visible)),
+    })
+
     window.addEventListener('storage', handleDataRefresh)
-    const interval = setInterval(handleDataRefresh, 30000) // Refresh every 30 seconds
+    const interval = setInterval(handleDataRefresh, 10000) // Refresh every 10 seconds (was 30)
     return () => {
       window.removeEventListener('storage', handleDataRefresh)
       clearInterval(interval)
+      if (unsubscribeRealTime) unsubscribeRealTime()
     }
   }, [])
 
@@ -1121,6 +1142,33 @@ export default function ExamPrepApp() {
                     {unreadCount}
                   </span>
                 )}
+              </button>
+              <button
+                onClick={() => {
+                  const readIds = getReadNotifIds()
+                  setCategories(getLocalCategories())
+                  setAnnouncements(getLocalAnnouncements().map(a => ({ ...a, action: a.action as Page })))
+                  setNotifications(getLocalNotifications().map(n => ({ ...n, read: n.read || readIds.has(n.id) })))
+                  setUpcomingExams(getLocalUpcomingExams())
+                  setDailyTips(getLocalDailyTips())
+                  const papers = getLocalPrevYearPapers()
+                  setPrevPapers(papers)
+                  setSidebarMenu(getLocalSidebarMenu().filter(i => i.visible))
+                  if (isFirestore()) {
+                    getFsCategories().then(c => { if (c.length > 0) setCategories(c) }).catch(() => {})
+                    getFsAnnouncements().then(a => { if (a.length > 0) setAnnouncements(a.map(x => ({ ...x, action: x.action as Page }))) }).catch(() => {})
+                    getFsNotifications().then(n => { if (n.length > 0) setNotifications(n.map(x => ({ ...x, read: x.read || readIds.has(x.id) }))) }).catch(() => {})
+                    getFsUpcomingExams().then(u => { if (u.length > 0) setUpcomingExams(u) }).catch(() => {})
+                    getFsDailyTips().then(t => { if (t.length > 0) setDailyTips(t) }).catch(() => {})
+                    getFsPrevYearPapers().then(p => { if (p.length > 0) setPrevPapers(p) }).catch(() => {})
+                    getFsSidebarMenu().then(s => { if (s.length > 0) setSidebarMenu(s.filter(i => i.visible)) }).catch(() => {})
+                  }
+                }}
+                onTouchEnd={(e) => { e.preventDefault(); e.currentTarget.click() }}
+                className="w-10 h-10 rounded-xl bg-white/15 backdrop-blur flex items-center justify-center active:bg-white/25 transition-colors"
+                style={{ touchAction: 'manipulation', WebkitTapHighlightColor: 'transparent' }}
+              >
+                <RefreshCw className="w-4 h-4 text-white" />
               </button>
             </div>
 
