@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">MockMaster</string>
+    <string name="title_activity_main">MockMaster</string>
+    <string name="package_name">com.mockmaster.app</string>
+    <string name="custom_url_scheme">com.mockmaster.app</string>
+</resources>
