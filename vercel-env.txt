@@ -1,0 +1,12 @@
+# ============================================
+# MockMaster - Vercel Environment Variables
+# Copy each line and add in Vercel Dashboard
+# Project Settings → Environment Variables
+# ============================================
+
+NEXT_PUBLIC_FIREBASE_API_KEY=AIzaSyDk1bk9PV0vjjoeQnNAyMrZkV1wiV6tYgA
+NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=mockmaster-9fcb0.firebaseapp.com
+NEXT_PUBLIC_FIREBASE_PROJECT_ID=mockmaster-9fcb0
+NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=mockmaster-9fcb0.firebasestorage.app
+NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=985613238246
+NEXT_PUBLIC_FIREBASE_APP_ID=1:985613238246:web:c538bd3218279fe727e027
