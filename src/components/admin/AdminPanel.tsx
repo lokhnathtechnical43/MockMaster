@@ -32,6 +32,9 @@ import {
   User
 } from 'firebase/auth'
 
+// Suppress Firebase auth errors in static export mode
+const isClient = typeof window !== 'undefined'
+
 type AdminTab = 'dashboard' | 'exams' | 'users' | 'analytics' | 'announcements' | 'notifications' | 'settings'
 
 type AuthStatus = 'checking' | 'not_logged_in' | 'verifying' | 'authorized' | 'denied'
@@ -56,13 +59,18 @@ export default function AdminPanel() {
 
   // --- Check if already logged in as admin ---
   useEffect(() => {
+    if (!isClient) return
+
     if (!auth || !isFirebaseReady()) {
       console.warn('[Admin] Firebase not ready, showing login form')
       setAuthStatus('not_logged_in')
       return
     }
 
+    let cancelled = false
+
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      if (cancelled) return
       if (user) {
         setFirebaseUser(user)
         setAuthStatus('verifying')
@@ -70,6 +78,7 @@ export default function AdminPanel() {
         // Check if user has admin role in Firestore
         try {
           const userData = await getUser(user.uid)
+          if (cancelled) return
           console.log('[Admin] User data from Firestore:', userData)
           if (userData && userData.role === 'admin') {
             console.log('[Admin] Access granted - admin role confirmed')
@@ -79,6 +88,7 @@ export default function AdminPanel() {
             setAuthStatus('denied')
           }
         } catch (e: any) {
+          if (cancelled) return
           console.error('[Admin] Failed to check admin role:', e?.message ?? e)
           console.error('[Admin] This might be a Firestore rules issue. Make sure rules are deployed.')
           setAuthStatus('denied')
@@ -87,9 +97,17 @@ export default function AdminPanel() {
         setFirebaseUser(null)
         setAuthStatus('not_logged_in')
       }
+    }, (error) => {
+      console.error('[Admin] onAuthStateChanged error:', error)
+      if (!cancelled) {
+        setAuthStatus('not_logged_in')
+      }
     })
 
-    return () => unsubscribe()
+    return () => {
+      cancelled = true
+      unsubscribe()
+    }
   }, [])
 
   // --- Load data when authorized ---

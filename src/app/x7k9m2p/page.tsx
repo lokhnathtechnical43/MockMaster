@@ -1,7 +1,63 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, Component } from 'react'
 import dynamic from 'next/dynamic'
+import React from 'react'
+
+// Error Boundary to catch and display runtime errors
+class AdminErrorBoundary extends Component<
+  { children: React.ReactNode },
+  { hasError: boolean; error: string; errorInfo: string }
+> {
+  constructor(props: { children: React.ReactNode }) {
+    super(props)
+    this.state = { hasError: false, error: '', errorInfo: '' }
+  }
+
+  static getDerivedStateFromError(error: any) {
+    return {
+      hasError: true,
+      error: error?.message || String(error),
+      errorInfo: error?.stack || ''
+    }
+  }
+
+  componentDidCatch(error: any, errorInfo: any) {
+    console.error('[Admin Error Boundary]', error, errorInfo)
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="min-h-screen min-h-dvh flex items-center justify-center bg-slate-50 p-4">
+          <div className="max-w-md w-full bg-white rounded-2xl shadow-xl p-6">
+            <div className="w-14 h-14 bg-red-50 rounded-2xl flex items-center justify-center mx-auto mb-4">
+              <span className="text-red-500 text-2xl">!</span>
+            </div>
+            <h2 className="font-bold text-lg text-center mb-2">Something went wrong</h2>
+            <p className="text-gray-500 text-sm text-center mb-4">An error occurred while loading the admin panel.</p>
+            <div className="bg-red-50 rounded-xl p-3 mb-4 max-h-48 overflow-y-auto">
+              <p className="text-red-600 text-xs font-mono break-all">{this.state.error}</p>
+              {this.state.errorInfo && (
+                <pre className="text-red-400 text-[10px] font-mono mt-2 whitespace-pre-wrap">{this.state.errorInfo}</pre>
+              )}
+            </div>
+            <button
+              onClick={() => {
+                this.setState({ hasError: false, error: '', errorInfo: '' })
+                window.location.reload()
+              }}
+              className="w-full py-3 bg-slate-800 text-white rounded-xl font-semibold text-sm hover:bg-slate-900 transition-colors"
+            >
+              Retry
+            </button>
+          </div>
+        </div>
+      )
+    }
+    return this.props.children
+  }
+}
 
 const AdminPanel = dynamic(() => import('@/components/admin/AdminPanel'), {
   ssr: false,
@@ -56,5 +112,9 @@ export default function SystemPage() {
     )
   }
 
-  return <AdminPanel />
+  return (
+    <AdminErrorBoundary>
+      <AdminPanel />
+    </AdminErrorBoundary>
+  )
 }
