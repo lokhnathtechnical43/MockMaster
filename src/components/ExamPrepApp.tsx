@@ -547,6 +547,134 @@ export default function ExamPrepApp() {
     }
   }, [handleBackButton])
 
+  // --- Content Protection: Block copy, screenshot, print on test pages ---
+  const [secureBlurActive, setSecureBlurActive] = useState(false)
+
+  useEffect(() => {
+    // Only protect when test is active or on results page
+    const isSecurePage = testActive || currentPage === 'test-taking' || currentPage === 'results'
+    if (!isSecurePage) return
+
+    // Block keyboard shortcuts: Ctrl+C, Ctrl+P, Ctrl+S, Ctrl+A, PrintScreen, F12
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Ctrl+C (copy)
+      if ((e.ctrlKey || e.metaKey) && e.key === 'c') {
+        e.preventDefault()
+        return false
+      }
+      // Ctrl+A (select all)
+      if ((e.ctrlKey || e.metaKey) && e.key === 'a') {
+        e.preventDefault()
+        return false
+      }
+      // Ctrl+P (print)
+      if ((e.ctrlKey || e.metaKey) && e.key === 'p') {
+        e.preventDefault()
+        return false
+      }
+      // Ctrl+S (save)
+      if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+        e.preventDefault()
+        return false
+      }
+      // Ctrl+U (view source)
+      if ((e.ctrlKey || e.metaKey) && e.key === 'u') {
+        e.preventDefault()
+        return false
+      }
+      // PrintScreen
+      if (e.key === 'PrintScreen') {
+        e.preventDefault()
+        // Clear clipboard
+        navigator.clipboard?.writeText('').catch(() => {})
+        return false
+      }
+      // F12 (dev tools)
+      if (e.key === 'F12') {
+        e.preventDefault()
+        return false
+      }
+      // Ctrl+Shift+I (dev tools)
+      if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'I') {
+        e.preventDefault()
+        return false
+      }
+      // Ctrl+Shift+J (console)
+      if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'J') {
+        e.preventDefault()
+        return false
+      }
+      // Ctrl+Shift+C (inspect element)
+      if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'C') {
+        e.preventDefault()
+        return false
+      }
+    }
+
+    // Block copy/cut events
+    const handleCopy = (e: Event) => {
+      e.preventDefault()
+      return false
+    }
+
+    const handleCut = (e: Event) => {
+      e.preventDefault()
+      return false
+    }
+
+    // Block right-click
+    const handleContextMenu = (e: MouseEvent) => {
+      e.preventDefault()
+      return false
+    }
+
+    // Blur on visibility change (anti-screenshot when switching apps)
+    const handleVisibilityChange = () => {
+      if (document.hidden) {
+        setSecureBlurActive(true)
+      } else {
+        // Small delay before removing blur (in case of quick screenshot)
+        setTimeout(() => setSecureBlurActive(false), 500)
+      }
+    }
+
+    // Blur on window blur (Alt+Tab, etc.)
+    const handleWindowBlur = () => {
+      setSecureBlurActive(true)
+    }
+    const handleWindowFocus = () => {
+      setTimeout(() => setSecureBlurActive(false), 500)
+    }
+
+    // Block print via CSS media
+    const style = document.createElement('style')
+    style.id = 'secure-print-style'
+    style.textContent = '@media print { body * { display: none !important; } body::after { content: "Printing is not allowed"; display: block; text-align: center; padding: 50px; font-size: 24px; font-weight: bold; } }'
+    document.head.appendChild(style)
+
+    // Add event listeners
+    document.addEventListener('keydown', handleKeyDown)
+    document.addEventListener('copy', handleCopy)
+    document.addEventListener('cut', handleCut)
+    document.addEventListener('contextmenu', handleContextMenu)
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+    window.addEventListener('blur', handleWindowBlur)
+    window.addEventListener('focus', handleWindowFocus)
+
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown)
+      document.removeEventListener('copy', handleCopy)
+      document.removeEventListener('cut', handleCut)
+      document.removeEventListener('contextmenu', handleContextMenu)
+      document.removeEventListener('visibilitychange', handleVisibilityChange)
+      window.removeEventListener('blur', handleWindowBlur)
+      window.removeEventListener('focus', handleWindowFocus)
+      // Remove print style
+      const printStyle = document.getElementById('secure-print-style')
+      if (printStyle) printStyle.remove()
+    }
+  }, [testActive, currentPage])
+
   // Browser popstate (for web/PWA)
   useEffect(() => {
     const handlePopState = () => {
@@ -1741,7 +1869,7 @@ export default function ExamPrepApp() {
     const optionLetters = ['A', 'B', 'C', 'D']
 
     return (
-      <div className="min-h-screen min-h-dvh bg-slate-50 flex flex-col" style={{ userSelect: 'none', WebkitUserSelect: 'none' }}>
+      <div className="min-h-screen min-h-dvh bg-slate-50 flex flex-col secure-content" style={{ userSelect: 'none', WebkitUserSelect: 'none' }} onContextMenu={e => e.preventDefault()}>
         {/* === Professional Exam Header === */}
         <div className="bg-white shadow-sm">
           {/* Top Bar: Back | Test Name | Timer */}
@@ -1801,7 +1929,9 @@ export default function ExamPrepApp() {
         <ScrollArea className="flex-1">
           <div className="p-4 pb-2">
             {/* Question Card with Badge */}
-            <div className="bg-white rounded-xl p-5 shadow-sm border border-gray-100">
+            <div className="bg-white rounded-xl p-5 shadow-sm border border-gray-100 relative overflow-hidden">
+              {/* Watermark for copy protection */}
+              <div className="watermark-overlay" />
               <div className="flex items-start gap-3">
                 {/* Question Number Badge */}
                 <div className="flex flex-col items-center gap-1 flex-shrink-0">
@@ -2232,7 +2362,7 @@ export default function ExamPrepApp() {
     const questions = selectedTest.questions
 
     return (
-      <div className="pb-20" style={{ userSelect: 'none', WebkitUserSelect: 'none' }}>
+      <div className="pb-20 secure-content" style={{ userSelect: 'none', WebkitUserSelect: 'none' }} onContextMenu={e => e.preventDefault()}>
         <div className="bg-gradient-to-r from-orange-500 to-red-500 px-4 pt-[calc(env(safe-area-inset-top,0px)+0.5rem)] pb-8 rounded-b-3xl text-center relative">
           {/* Back Button */}
           <button
@@ -2338,8 +2468,10 @@ export default function ExamPrepApp() {
                 const isSkipped = !userAnswer
 
                 return (
-                  <Card key={q.id} className="border-0 shadow-sm">
-                    <CardContent className="p-4">
+                  <Card key={q.id} className="border-0 shadow-sm relative overflow-hidden secure-content" onContextMenu={e => e.preventDefault()}>
+                    {/* Watermark for copy protection */}
+                    <div className="watermark-overlay" />
+                    <CardContent className="p-4 relative z-10">
                       <div className="flex items-start gap-2 mb-2">
                         <span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 ${
                           isCorrect ? 'bg-emerald-100 text-emerald-700' :
@@ -4613,6 +4745,17 @@ export default function ExamPrepApp() {
           </div>
         </div>
       )}
+
+      {/* Secure Blur Overlay - Appears when user tries to screenshot or switches app during test */}
+      <div className={`secure-blur-overlay ${secureBlurActive ? 'active' : ''}`}>
+        <div className="blur-message">
+          <div className="lock-icon">
+            <Shield className="w-8 h-8 text-white" />
+          </div>
+          <h3>Content Protected</h3>
+          <p>Screenshots are not allowed during the test</p>
+        </div>
+      </div>
     </div>
   )
 }
