@@ -31,6 +31,7 @@ import {
   getTestById as getFsTestById, saveResult as saveFsResult,
   getLeaderboard as getFsLeaderboard, getUseFirestore,
   getAnnouncements as getFsAnnouncements, getNotifications as getFsNotifications,
+  getResults as getFsResults, updateUserTestStats,
 } from '@/lib/firestore-service'
 import { useFirebaseAuth } from '@/lib/use-firebase-auth'
 import LoginModal from '@/components/LoginModal'
@@ -154,6 +155,7 @@ export default function ExamPrepApp() {
   const [showQuestionNav, setShowQuestionNav] = useState(false)
   const [showSideMenu, setShowSideMenu] = useState(false)
   const [showNotificationPanel, setShowNotificationPanel] = useState(false)
+  const [userStats, setUserStats] = useState({ testsTaken: 0, avgScore: 0, bestRank: 0 })
   const [showExitConfirm, setShowExitConfirm] = useState(false)
   const [showExamPageWarning, setShowExamPageWarning] = useState(false)
   const [showAnswerKey, setShowAnswerKey] = useState(false)
@@ -190,6 +192,15 @@ export default function ExamPrepApp() {
       setCurrentPage('home')
     }
   }, [auth.isLoggedIn])
+
+  // Refresh user stats when auth changes or after test completion
+  useEffect(() => {
+    if (auth.isLoggedIn) {
+      getUserStats().then(setUserStats)
+    } else {
+      setUserStats({ testsTaken: 0, avgScore: 0, bestRank: 0 })
+    }
+  }, [auth.isLoggedIn, auth.getUserId(), lastResult])
 
   // Splash screen auto-dismiss after animation
   useEffect(() => {
@@ -525,20 +536,30 @@ export default function ExamPrepApp() {
 
     setLastResult(result)
 
-    // Auto-save to performance report
-    try {
-      const perfData = localStorage.getItem('examprep_results')
-      const perfResults: any[] = perfData ? JSON.parse(perfData) : []
-      perfResults.push({
-        ...result,
-        testName: test.title,
-        examName: selectedExam?.name || '',
-        correctAnswers: correctCount,
-        wrongAnswers: wrongCount,
-        skipped: skippedCount,
-      })
-      localStorage.setItem('examprep_results', JSON.stringify(perfResults))
-    } catch (e) {}
+    // Save to localStorage for local stats/leaderboard (only if not already saved by storeResult)
+    if (!isFirestore()) {
+      // In local mode, storeResult already saves to localStorage, so skip duplicate
+    } else {
+      // In Firestore mode, also save to localStorage for offline access and leaderboard
+      try {
+        const perfData = localStorage.getItem('examprep_results')
+        const perfResults: any[] = perfData ? JSON.parse(perfData) : []
+        perfResults.push({
+          ...result,
+          testName: test.title,
+          examName: selectedExam?.name || '',
+          totalQuestions,
+        })
+        localStorage.setItem('examprep_results', JSON.stringify(perfResults))
+      } catch (e) {}
+    }
+
+    // Update Firestore user test stats
+    if (isFirestore() && auth.getUserId()) {
+      updateUserTestStats(auth.getUserId()!, score).catch(e =>
+        console.warn('[Test] updateUserTestStats failed:', e)
+      )
+    }
 
     navigateTo('results')
   }
@@ -565,26 +586,63 @@ export default function ExamPrepApp() {
   }
 
   // --- Stats from localStorage ---
-  function getUserStats() {
+  async function getUserStats() {
     try {
-      const data = localStorage.getItem('examprep_results')
-      if (!data) return { testsTaken: 0, avgScore: 0, bestRank: 0 }
-      const results: TestResult[] = JSON.parse(data)
+      let results: TestResult[] = []
       const userId = auth.getUserId()
-      const userResults = userId ? results.filter((r: TestResult) => r.userId === userId) : results
-      const testsTaken = userResults.length
-      const avgScore = testsTaken > 0 ? Math.round(userResults.reduce((sum: number, r: TestResult) => sum + (r.score / r.totalQuestions) * 100, 0) / testsTaken) : 0
+
+      // Try Firestore first when enabled
+      if (isFirestore() && userId) {
+        try {
+          const fsResults = await getFsResults(undefined, userId)
+          if (fsResults && fsResults.length > 0) {
+            results = fsResults.map((r: any) => ({
+              ...r,
+              totalQuestions: r.totalQuestions || (r.maxScore > 0 ? Math.round(r.maxScore / 1) : r.correctCount + r.wrongCount + r.skippedCount),
+              userName: r.userName || r.userId || '',
+            }))
+          }
+        } catch (e) {
+          console.warn('[Stats] Firestore fetch failed, falling back to local:', e)
+        }
+      }
+
+      // Fallback to localStorage
+      if (results.length === 0) {
+        const data = localStorage.getItem('examprep_results')
+        if (data) {
+          results = JSON.parse(data)
+          if (userId) {
+            results = results.filter((r: TestResult) => r.userId === userId)
+          }
+        }
+      }
+
+      const testsTaken = results.length
+      const avgScore = testsTaken > 0 ? Math.round(results.reduce((sum: number, r: TestResult) => sum + (r.score / (r.totalQuestions || r.correctCount + r.wrongCount + r.skippedCount || 1)) * 100, 0) / testsTaken) : 0
       // Calculate best rank from leaderboard data across all tests the user has taken
       let bestRank = 0
       if (userId && testsTaken > 0) {
-        const allResults: TestResult[] = JSON.parse(data)
-        const userTestIds = [...new Set(userResults.map((r: TestResult) => r.testId))]
+        // For rank calculation, we need all results (not just user's)
+        let allResults: TestResult[] = []
+        if (isFirestore()) {
+          try {
+            allResults = await getFsResults() as TestResult[]
+          } catch (e) {
+            const data = localStorage.getItem('examprep_results')
+            if (data) allResults = JSON.parse(data)
+          }
+        } else {
+          const data = localStorage.getItem('examprep_results')
+          if (data) allResults = JSON.parse(data)
+        }
+        const userTestIds = [...new Set(results.map((r: TestResult) => r.testId))]
         let bestFound = Infinity
         for (const testId of userTestIds) {
           const testResults = allResults.filter((r: TestResult) => r.testId === testId)
           testResults.sort((a: TestResult, b: TestResult) => {
-            const scoreA = a.score / a.totalQuestions
-            const scoreB = b.score / b.totalQuestions
+            const scoreA = a.score / (a.totalQuestions || a.correctCount + a.wrongCount + a.skippedCount || 1)
+            const scoreB = b.score / (b.totalQuestions || b.correctCount + b.wrongCount + b.skippedCount || 1)
             if (scoreB !== scoreA) return scoreB - scoreA
             return a.timeTaken - b.timeTaken
           })
@@ -642,7 +700,7 @@ export default function ExamPrepApp() {
 
   // ===== RENDER: Home Page =====
   function renderHome() {
-    const stats = getUserStats()
+    const stats = userStats
     const totalTestsAvailable = categories.reduce((sum, c) => sum + c.exams.length, 0)
     const greetings = [_t('home.goodMorning'), _t('home.goodAfternoon'), _t('home.goodEvening')]
     const hour = new Date().getHours()
@@ -2348,10 +2406,10 @@ export default function ExamPrepApp() {
 
   // ===== RENDER: Performance Report =====
   function renderPerfReport() {
-    const stats = getUserStats()
+    const stats = userStats
     let results: TestResult[] = []
     try {
-      const stored = localStorage.getItem('mockmaster_results')
+      const stored = localStorage.getItem('examprep_results')
       if (stored) results = JSON.parse(stored)
       const userId = auth.getUserId()
       if (userId) results = results.filter((r: TestResult) => r.userId === userId)
@@ -2361,9 +2419,9 @@ export default function ExamPrepApp() {
     const totalTests = results.length
     const avgScore = stats.avgScore
     const avgTime = totalTests > 0 ? Math.round(results.reduce((s, r) => s + r.timeTaken, 0) / totalTests / 60) : 0
-    const avgAccuracy = totalTests > 0 ? Math.round(results.reduce((s, r) => s + (r.correctAnswers / r.totalQuestions) * 100, 0) / totalTests) : 0
+    const avgAccuracy = totalTests > 0 ? Math.round(results.reduce((s, r) => s + ((r.correctCount || (r as any).correctAnswers || 0) / ((r.totalQuestions || (r as any).totalQuestions) || 1)) * 100, 0) / totalTests) : 0
     const last5 = results.slice(-5).reverse()
-    const scoreTrend = last5.map(r => Math.round((r.score / r.totalQuestions) * 100))
+    const scoreTrend = last5.map(r => Math.round((r.score / (r.totalQuestions || (r as any).totalQuestions || 1)) * 100))
 
     // Subject-wise performance
     const examPerformance: Record<string, { count: number; avgPct: number }> = {}
@@ -2803,7 +2861,7 @@ export default function ExamPrepApp() {
     )
   }
   function renderProfile() {
-    const stats = getUserStats()
+    const stats = userStats
     const userDisplay = auth.getUserDisplay()
     const userEmail = auth.getUserEmail()
     const isEmailUser = !auth.isGuest && auth.isLoggedIn

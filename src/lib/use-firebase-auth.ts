@@ -12,6 +12,7 @@ import {
   sendPasswordResetEmail as firebaseSendPasswordResetEmail,
   User
 } from 'firebase/auth'
+import { ensureUserDocument } from '@/lib/firestore-service'
 
 interface AuthState {
   user: User | null
@@ -56,6 +57,15 @@ export function useFirebaseAuth() {
     try {
       const unsubscribe = onAuthStateChanged(auth, (user) => {
         setAuthState({ user, loading: false })
+        // Ensure Firestore user document exists when user signs in
+        if (user && user.emailVerified) {
+          ensureUserDocument({
+            uid: user.uid,
+            name: user.displayName || 'User',
+            email: user.email || '',
+            photoURL: user.photoURL || undefined,
+          }).catch(err => console.warn('[Auth] ensureUserDocument failed:', err))
+        }
       })
       return () => unsubscribe()
     } catch (error) {
@@ -82,6 +92,15 @@ export function useFirebaseAuth() {
         await firebaseSignOut(auth)
         setLoginLoading(false)
         return
+      }
+      // Ensure Firestore user document exists
+      if (credential.user) {
+        await ensureUserDocument({
+          uid: credential.user.uid,
+          name: credential.user.displayName || 'User',
+          email: credential.user.email || '',
+          photoURL: credential.user.photoURL || undefined,
+        })
       }
       // Clear local guest if email login succeeds
       localStorage.removeItem(GUEST_USER_KEY)
@@ -118,6 +137,13 @@ export function useFirebaseAuth() {
       // Set display name
       if (credential.user) {
         await updateProfile(credential.user, { displayName: name })
+        // Create Firestore user document immediately
+        await ensureUserDocument({
+          uid: credential.user.uid,
+          name: name,
+          email: email,
+          photoURL: credential.user.photoURL || undefined,
+        })
         // Send email verification
         try {
           await firebaseSendEmailVerification(credential.user, {

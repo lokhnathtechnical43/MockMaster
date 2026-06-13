@@ -51,7 +51,7 @@ import {
 // ============================================================
 
 /** Global flag to toggle Firestore vs local fallback */
-let useFirestore = false
+let useFirestore = isFirebaseReady() // Auto-enable when Firebase is configured
 
 export function setUseFirestore(value: boolean) {
   useFirestore = value
@@ -854,6 +854,71 @@ export async function deleteUser(userId: string): Promise<void> {
   } catch (error) {
     console.error('[Firestore] deleteUser error:', error)
     throw error
+  }
+}
+
+/**
+ * Ensure a Firestore user document exists for the given Firebase Auth user.
+ * Creates the document if it doesn't exist, updates lastActive if it does.
+ * Called automatically on signup and login.
+ */
+export async function ensureUserDocument(params: {
+  uid: string
+  name: string
+  email: string
+  photoURL?: string
+}): Promise<void> {
+  if (!useFirestore || !isFirebaseReady() || !db) return
+  try {
+    const userDocRef = doc(db, COLLECTIONS.users, params.uid)
+    const userDoc = await getDoc(userDocRef)
+    if (!userDoc.exists()) {
+      // Create new user document
+      await setDoc(userDocRef, {
+        id: params.uid,
+        name: params.name || 'User',
+        email: params.email || '',
+        phone: '',
+        photoURL: params.photoURL || '',
+        role: 'user',
+        testsCompleted: 0,
+        totalScore: 0,
+        createdAt: serverTimestamp(),
+        lastActive: serverTimestamp(),
+      })
+      console.log('[Firestore] Created user document for:', params.uid)
+    } else {
+      // Update lastActive timestamp
+      await setDoc(userDocRef, {
+        lastActive: serverTimestamp(),
+        name: params.name || userDoc.data().name || 'User',
+        email: params.email || userDoc.data().email || '',
+      }, { merge: true })
+    }
+  } catch (error) {
+    console.error('[Firestore] ensureUserDocument error:', error)
+  }
+}
+
+/**
+ * Update user's test stats in Firestore (testsCompleted, totalScore).
+ * Called after each test completion.
+ */
+export async function updateUserTestStats(userId: string, score: number): Promise<void> {
+  if (!useFirestore || !isFirebaseReady() || !db) return
+  try {
+    const userDocRef = doc(db, COLLECTIONS.users, userId)
+    const userDoc = await getDoc(userDocRef)
+    if (userDoc.exists()) {
+      const data = userDoc.data()
+      await setDoc(userDocRef, {
+        testsCompleted: (data.testsCompleted || 0) + 1,
+        totalScore: (data.totalScore || 0) + score,
+        lastActive: serverTimestamp(),
+      }, { merge: true })
+    }
+  } catch (error) {
+    console.error('[Firestore] updateUserTestStats error:', error)
   }
 }
 
