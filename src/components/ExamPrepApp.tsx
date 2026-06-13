@@ -155,6 +155,8 @@ export default function ExamPrepApp() {
   // --- Page / Navigation ---
   const [currentPage, setCurrentPage] = useState<Page>('home')
   const pageHistoryRef = useRef<Page[]>([])
+  const scrollPositionsRef = useRef<Map<Page, number>>(new Map())
+  const currentPageRef = useRef<Page>('home')
 
   // --- Data ---
   const [categories, setCategories] = useState<LocalExamCategory[]>([])
@@ -224,6 +226,7 @@ export default function ExamPrepApp() {
   useEffect(() => {
     if (auth.isLoggedIn && showLoginModal) {
       setShowLoginModal(false)
+      scrollPositionsRef.current.set(currentPage, window.scrollY)
       setCurrentPage('home')
     }
   }, [auth.isLoggedIn])
@@ -442,18 +445,22 @@ export default function ExamPrepApp() {
 
   // --- Navigation ---
   const navigateTo = useCallback((page: Page) => {
+    // Save scroll position of current page before leaving
+    scrollPositionsRef.current.set(currentPage, window.scrollY)
     pageHistoryRef.current.push(currentPage)
     setCurrentPage(page)
   }, [currentPage])
 
   const goBack = useCallback(() => {
+    // Save scroll position of current page before leaving
+    scrollPositionsRef.current.set(currentPage, window.scrollY)
     const prev = pageHistoryRef.current.pop()
     if (prev) {
       setCurrentPage(prev)
     } else {
       setCurrentPage('home')
     }
-  }, [])
+  }, [currentPage])
 
   // --- Handle mobile back button (Capacitor + Browser) ---
   const handleBackButton = useCallback(() => {
@@ -526,6 +533,7 @@ export default function ExamPrepApp() {
     if (pageHistoryRef.current.length > 0) {
       goBack()
     } else {
+      scrollPositionsRef.current.set(currentPage, window.scrollY)
       setCurrentPage('home')
     }
   }, [currentPage, testActive, showBackConfirm, showExitConfirm, showExamPageWarning, showSideMenu, showQuestionNav, showLoginModal, showLanguageSheet, showAboutSheet, goBack])
@@ -562,6 +570,22 @@ export default function ExamPrepApp() {
   // Push state on navigation so browser back button fires popstate
   useEffect(() => {
     window.history.pushState(null, '')
+  }, [currentPage])
+
+  // --- Restore scroll position on page change ---
+  useEffect(() => {
+    // When page changes, restore saved scroll position
+    const savedY = scrollPositionsRef.current.get(currentPage)
+    if (savedY !== undefined) {
+      // Use requestAnimationFrame to ensure DOM has rendered
+      requestAnimationFrame(() => {
+        window.scrollTo(0, savedY!)
+      })
+    } else {
+      // New page (not visited before) - scroll to top
+      window.scrollTo(0, 0)
+    }
+    currentPageRef.current = currentPage
   }, [currentPage])
 
   // --- Timer ---
@@ -776,6 +800,8 @@ export default function ExamPrepApp() {
 
   // --- Bottom nav handler ---
   function handleBottomNav(page: Page) {
+    // Save scroll position of current page before leaving
+    scrollPositionsRef.current.set(currentPage, window.scrollY)
     pageHistoryRef.current = []
     setCurrentPage(page)
   }
@@ -2088,7 +2114,7 @@ export default function ExamPrepApp() {
         <div className="bg-gradient-to-r from-orange-500 to-red-500 px-4 pt-[calc(env(safe-area-inset-top,0px)+0.5rem)] pb-8 rounded-b-3xl text-center relative">
           {/* Back Button */}
           <button
-            onClick={() => { pageHistoryRef.current = []; setCurrentPage('home') }}
+            onClick={() => { scrollPositionsRef.current.set(currentPage, window.scrollY); pageHistoryRef.current = []; setCurrentPage('home') }}
             className="absolute left-4 top-[calc(env(safe-area-inset-top,0px)+0.5rem)] w-9 h-9 rounded-lg bg-white/15 backdrop-blur flex items-center justify-center active:bg-white/25 transition-colors"
             style={{ touchAction: 'manipulation', WebkitTapHighlightColor: 'transparent' }}
           >
@@ -2240,7 +2266,7 @@ export default function ExamPrepApp() {
 
           <Button
             className="w-full rounded-xl bg-gradient-to-r from-orange-500 to-red-500 text-white"
-            onClick={() => { pageHistoryRef.current = []; setCurrentPage('home') }}
+            onClick={() => { scrollPositionsRef.current.set(currentPage, window.scrollY); pageHistoryRef.current = []; setCurrentPage('home') }}
           >
             <Home className="w-4 h-4 mr-2" /> {_t('results.backHome')}
           </Button>
@@ -3536,7 +3562,7 @@ export default function ExamPrepApp() {
           <div className="grid grid-cols-2 gap-3">
             <Card
               className="border-0 shadow-lg cursor-pointer hover:shadow-xl transition-all active:scale-[0.97] overflow-hidden"
-              onClick={() => { pageHistoryRef.current.push(currentPage); setCurrentPage('exams') }}
+              onClick={() => { scrollPositionsRef.current.set(currentPage, window.scrollY); pageHistoryRef.current.push(currentPage); setCurrentPage('exams') }}
             >
               <CardContent className="p-4">
                 <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-blue-400 to-indigo-500 flex items-center justify-center mb-2.5 shadow-sm">
@@ -3548,7 +3574,7 @@ export default function ExamPrepApp() {
             </Card>
             <Card
               className="border-0 shadow-lg cursor-pointer hover:shadow-xl transition-all active:scale-[0.97] overflow-hidden"
-              onClick={() => { pageHistoryRef.current.push(currentPage); setCurrentPage('leaderboard') }}
+              onClick={() => { scrollPositionsRef.current.set(currentPage, window.scrollY); pageHistoryRef.current.push(currentPage); setCurrentPage('leaderboard') }}
             >
               <CardContent className="p-4">
                 <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center mb-2.5 shadow-sm">
@@ -3996,6 +4022,7 @@ export default function ExamPrepApp() {
                   if (pageHistoryRef.current.length > 0) {
                     goBack()
                   } else {
+                    scrollPositionsRef.current.set(currentPage, window.scrollY)
                     setCurrentPage('home')
                   }
                 }}
