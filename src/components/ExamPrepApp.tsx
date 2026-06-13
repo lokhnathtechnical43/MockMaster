@@ -1549,14 +1549,6 @@ export default function ExamPrepApp() {
           <div className="px-2 pt-2 pb-1 flex items-center gap-1.5 overflow-x-auto">
             <Button
               size="sm"
-              className="rounded-lg h-8 px-2.5 text-xs font-semibold bg-gray-100 text-gray-700 border-0 hover:bg-gray-200 transition-all active:scale-95 flex-shrink-0 disabled:opacity-40"
-              disabled={currentQuestionIndex === 0}
-              onClick={() => setCurrentQuestionIndex(prev => prev - 1)}
-            >
-              <ChevronLeft className="w-3.5 h-3.5 mr-0.5" /> {_t('testTaking.previous')}
-            </Button>
-            <Button
-              size="sm"
               className={`rounded-lg h-8 px-2.5 text-xs font-semibold border-0 transition-all active:scale-95 flex-shrink-0 ${
                 bookmarkedQs.includes(question.id)
                   ? 'bg-amber-500 text-white hover:bg-amber-600'
@@ -1598,8 +1590,9 @@ export default function ExamPrepApp() {
               <SkipForward className="w-3.5 h-3.5 mr-0.5" /> {_t('testTaking.skip')}
             </Button>
           </div>
-          {/* Row 2: Save & Next + Submit */}
+          {/* Row 2: Save & Next (Left) | Submit & Navigator (Center) | Previous (Right) */}
           <div className="px-2 pb-2 flex items-center gap-2">
+            {/* Left: Save & Next */}
             <Button
               size="sm"
               className="rounded-lg flex-1 h-9 font-bold text-sm bg-gradient-to-r from-green-500 to-emerald-600 text-white border-0 hover:from-green-600 hover:to-emerald-700 transition-all active:scale-95 disabled:opacity-40"
@@ -1608,19 +1601,31 @@ export default function ExamPrepApp() {
             >
               {_t('testTaking.saveNext')} <ChevronRight className="w-4 h-4 ml-1" />
             </Button>
-            <button
-              onClick={() => setShowQuestionNav(true)}
-              className="h-9 px-3 rounded-lg bg-slate-100 hover:bg-slate-200 text-gray-600 text-xs font-semibold transition-colors flex items-center gap-1 flex-shrink-0"
-            >
-              <BookMarked className="w-3.5 h-3.5" />
-              {questions.length}
-            </button>
+            {/* Center: Submit Test & Question Navigator */}
+            <div className="flex items-center gap-2 flex-shrink-0">
+              <button
+                onClick={() => setShowQuestionNav(true)}
+                className="h-9 px-3 rounded-lg bg-slate-100 hover:bg-slate-200 text-gray-600 text-xs font-semibold transition-colors flex items-center gap-1"
+              >
+                <BookMarked className="w-3.5 h-3.5" />
+                {questions.length}
+              </button>
+              <Button
+                size="sm"
+                className="rounded-lg h-9 px-4 font-bold text-sm bg-gradient-to-r from-red-500 to-rose-600 text-white border-0 hover:from-red-600 hover:to-rose-700 transition-all active:scale-95 flex-shrink-0"
+                onClick={handleFinishTest}
+              >
+                {_t('testTaking.submit')}
+              </Button>
+            </div>
+            {/* Right: Previous */}
             <Button
               size="sm"
-              className="rounded-lg h-9 px-4 font-bold text-sm bg-gradient-to-r from-red-500 to-rose-600 text-white border-0 hover:from-red-600 hover:to-rose-700 transition-all active:scale-95 flex-shrink-0"
-              onClick={handleFinishTest}
+              className="rounded-lg flex-1 h-9 font-bold text-sm bg-gradient-to-r from-blue-500 to-indigo-600 text-white border-0 hover:from-blue-600 hover:to-indigo-700 transition-all active:scale-95 disabled:opacity-40"
+              disabled={currentQuestionIndex === 0}
+              onClick={() => setCurrentQuestionIndex(prev => prev - 1)}
             >
-              {_t('testTaking.submit')}
+              <ChevronLeft className="w-4 h-4 mr-1" /> {_t('testTaking.previous')}
             </Button>
           </div>
         </div>
