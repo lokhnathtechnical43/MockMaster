@@ -957,7 +957,7 @@ export async function getAnnouncements(): Promise<Announcement[]> {
   return firestoreOperation(
     async () => {
       const snap = await getDocs(collection(db, COLLECTIONS.announcements))
-      if (snap.empty) return DEFAULT_ANNOUNCEMENTS
+      if (snap.empty) return [] // Return empty - don't auto-fill with defaults
       return snap.docs.map((d) => ({ id: d.id, ...d.data() } as Announcement))
     },
     () => getLocalAnnouncements()
@@ -1005,7 +1005,7 @@ export async function getNotifications(): Promise<Notification[]> {
   return firestoreOperation(
     async () => {
       const snap = await getDocs(collection(db, COLLECTIONS.notifications))
-      if (snap.empty) return DEFAULT_NOTIFICATIONS
+      if (snap.empty) return [] // Return empty - don't auto-fill with defaults
       return snap.docs.map((d) => ({ id: d.id, ...d.data() } as Notification))
     },
     () => getLocalNotifications()

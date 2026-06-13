@@ -39,7 +39,7 @@ import { App } from '@capacitor/app'
 import { Share } from '@capacitor/share'
 import { Filesystem, Directory } from '@capacitor/filesystem'
 import jsPDF from 'jspdf'
-import { getAnnouncements as getLocalAnnouncements, getNotifications as getLocalNotifications, getReadNotifIds, markNotifAsRead, markAllNotifsAsRead } from '@/lib/admin-data'
+import { getAnnouncements as getLocalAnnouncements, getNotifications as getLocalNotifications, getReadNotifIds, markNotifAsRead, markAllNotifsAsRead, getUpcomingExams, type UpcomingExam } from '@/lib/admin-data'
 import { t, type Lang } from '@/lib/i18n'
 
 // ===== Types =====
@@ -267,6 +267,7 @@ export default function ExamPrepApp() {
     { id: string; image: string; title: string; subtitle: string; action: Page; gradient: string }[]
   >([])
   const [activeAnnouncement, setActiveAnnouncement] = useState(0)
+  const [upcomingExams, setUpcomingExams] = useState<UpcomingExam[]>([])
 
 
 
@@ -277,6 +278,8 @@ export default function ExamPrepApp() {
         const cats = await fetchCategories()
         setCategories(cats)
         const readIds = getReadNotifIds()
+        // Load upcoming exams from localStorage (admin-controllable)
+        setUpcomingExams(getUpcomingExams())
         if (isFirestore()) {
           const anns = await getFsAnnouncements()
           setAnnouncements(anns.map(a => ({ ...a, action: a.action as Page })))
@@ -290,6 +293,7 @@ export default function ExamPrepApp() {
         console.error('Data load failed, using local fallback:', e)
         const readIds = getReadNotifIds()
         setCategories(getLocalCategories())
+        setUpcomingExams(getUpcomingExams())
         setAnnouncements(getLocalAnnouncements().map(a => ({ ...a, action: a.action as Page })))
         setNotifications(getLocalNotifications().map(n => ({ ...n, read: n.read || readIds.has(n.id) })))
       }
@@ -303,6 +307,7 @@ export default function ExamPrepApp() {
       const readIds = getReadNotifIds()
       setAnnouncements(getLocalAnnouncements().map(a => ({ ...a, action: a.action as Page })))
       setNotifications(getLocalNotifications().map(n => ({ ...n, read: n.read || readIds.has(n.id) })))
+      setUpcomingExams(getUpcomingExams())
     }
     window.addEventListener('storage', handleStorageChange)
     const interval = setInterval(handleStorageChange, 5000)
@@ -1091,11 +1096,7 @@ export default function ExamPrepApp() {
               <h2 className="font-bold text-lg">{_t('home.upcomingExams')}</h2>
             </div>
             <div className="space-y-2">
-              {[
-                { name: _t('upcoming.sscCgl'), date: _t('upcoming.sscCglDate'), status: _t('upcoming.sscCglStatus'), statusType: 'open' },
-                { name: _t('upcoming.ibpsPo'), date: _t('upcoming.ibpsPoDate'), status: _t('upcoming.ibpsPoStatus'), statusType: 'coming' },
-                { name: _t('upcoming.rrbNtpc'), date: _t('upcoming.rrbNtpcDate'), status: _t('upcoming.rrbNtpcStatus'), statusType: 'admit' },
-              ].map((exam, i) => (
+              {upcomingExams.length > 0 ? upcomingExams.map((exam, i) => (
                 <Card key={i} className="border-0 shadow-sm overflow-hidden">
                   <CardContent className="p-0">
                     <div className="flex items-center gap-3 p-3">
@@ -1109,14 +1110,22 @@ export default function ExamPrepApp() {
                       <Badge className={`text-[10px] font-bold border-0 ${
                         exam.statusType === 'open' ? 'bg-emerald-100 text-emerald-700' :
                         exam.statusType === 'admit' ? 'bg-amber-100 text-amber-700' :
-                        'bg-gray-100 text-gray-600'
+                        exam.statusType === 'closed' ? 'bg-gray-100 text-gray-600' :
+                        'bg-blue-100 text-blue-700'
                       }`}>
                         {exam.status}
                       </Badge>
                     </div>
                   </CardContent>
                 </Card>
-              ))}
+              )) : (
+                <Card className="border-0 shadow-sm">
+                  <CardContent className="p-4 text-center">
+                    <Calendar className="w-8 h-8 text-gray-300 mx-auto mb-2" />
+                    <p className="text-gray-400 text-xs">No upcoming exams announced yet</p>
+                  </CardContent>
+                </Card>
+              )}
             </div>
           </div>
 

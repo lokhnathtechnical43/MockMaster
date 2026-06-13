@@ -6,13 +6,14 @@ import { Card, CardContent } from '@/components/ui/card'
 import {
   Shield, LogOut, Lock, Eye, EyeOff,
   BarChart3, Users, Settings,
-  BookOpen, Bell, Flame, PieChart,
+  BookOpen, Bell, Flame, PieChart, Calendar,
   AlertCircle, Loader2
 } from 'lucide-react'
 import {
-  type Announcement, type Notification,
-  getAnnouncements, getNotifications,
-  saveAnnouncements, saveNotifications,
+  type Announcement, type Notification, type UpcomingExam,
+  getAnnouncements, getNotifications, getUpcomingExams,
+  saveAnnouncements, saveNotifications, saveUpcomingExams,
+  DEFAULT_UPCOMING_EXAMS,
 } from '@/lib/admin-data'
 import { getResults, type TestResult } from '@/lib/local-data'
 import {
@@ -38,11 +39,12 @@ import AnalyticsTab from '@/components/admin/AnalyticsTab'
 import AnnouncementsTab from '@/components/admin/AnnouncementsTab'
 import NotificationsTab from '@/components/admin/NotificationsTab'
 import SettingsTab from '@/components/admin/SettingsTab'
+import UpcomingExamsTab from '@/components/admin/UpcomingExamsTab'
 
 // Suppress Firebase auth errors in static export mode
 const isClient = typeof window !== 'undefined'
 
-type AdminTab = 'dashboard' | 'exams' | 'users' | 'analytics' | 'announcements' | 'notifications' | 'settings'
+type AdminTab = 'dashboard' | 'exams' | 'users' | 'analytics' | 'announcements' | 'notifications' | 'upcoming' | 'settings'
 
 type AuthStatus = 'checking' | 'not_logged_in' | 'verifying' | 'authorized' | 'denied'
 
@@ -63,6 +65,8 @@ export default function AdminPanel() {
   const [allResults, setAllResults] = useState<TestResult[]>([])
   const [announcements, setAnnouncements] = useState<Announcement[]>([])
   const [notifications, setNotifications] = useState<Notification[]>([])
+  const [upcomingExams, setUpcomingExams] = useState<UpcomingExam[]>([])
+  const [upcomingExamsLoaded, setUpcomingExamsLoaded] = useState(false)
 
   // --- Check if already logged in as admin ---
   useEffect(() => {
@@ -140,6 +144,9 @@ export default function AdminPanel() {
           }
           setNotificationsLoaded(true)
 
+          setUpcomingExams(getUpcomingExams())
+          setUpcomingExamsLoaded(true)
+
           const fsResults = await getFsResults()
           setAllResults(fsResults as TestResult[] || getResults())
         } catch (e) {
@@ -149,13 +156,17 @@ export default function AdminPanel() {
           setAllResults(getResults())
           setAnnouncementsLoaded(true)
           setNotificationsLoaded(true)
+          setUpcomingExams(getUpcomingExams())
+          setUpcomingExamsLoaded(true)
         }
       } else {
         setAnnouncements(getAnnouncements())
         setNotifications(getNotifications())
         setAllResults(getResults())
+        setUpcomingExams(getUpcomingExams())
         setAnnouncementsLoaded(true)
         setNotificationsLoaded(true)
+        setUpcomingExamsLoaded(true)
       }
     }
     loadData()
@@ -202,6 +213,11 @@ export default function AdminPanel() {
         .catch(e => console.warn('[Admin] Firestore save notifications failed:', e))
     }
   }, [notifications, notificationsLoaded])
+
+  useEffect(() => {
+    if (!upcomingExamsLoaded) return
+    saveUpcomingExams(upcomingExams)
+  }, [upcomingExams, upcomingExamsLoaded])
 
   // --- Firebase Auth Login ---
   const handleLogin = async () => {
@@ -418,6 +434,7 @@ export default function AdminPanel() {
     { id: 'analytics', icon: PieChart, label: 'Analytics' },
     { id: 'announcements', icon: Flame, label: 'Announce' },
     { id: 'notifications', icon: Bell, label: 'Notify' },
+    { id: 'upcoming', icon: Calendar, label: 'Upcoming' },
     { id: 'settings', icon: Settings, label: 'Settings' },
   ]
 
@@ -499,6 +516,13 @@ export default function AdminPanel() {
           <NotificationsTab
             notifications={notifications}
             onUpdate={setNotifications}
+          />
+        )}
+
+        {adminTab === 'upcoming' && (
+          <UpcomingExamsTab
+            exams={upcomingExams}
+            onUpdate={setUpcomingExams}
           />
         )}
 

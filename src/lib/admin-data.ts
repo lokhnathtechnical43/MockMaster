@@ -19,10 +19,19 @@ export interface Notification {
   type: 'update' | 'alert' | 'info'
 }
 
+export interface UpcomingExam {
+  id: string
+  name: string
+  date: string
+  status: string
+  statusType: 'open' | 'coming' | 'admit' | 'closed'
+}
+
 export const STORAGE_KEYS = {
   announcements: 'examprep_announcements',
   notifications: 'examprep_notifications',
   readNotifs: 'examprep_read_notifications',
+  upcomingExams: 'examprep_upcoming_exams',
 } as const
 
 export const DEFAULT_ANNOUNCEMENTS: Announcement[] = [
@@ -36,6 +45,12 @@ export const DEFAULT_NOTIFICATIONS: Notification[] = [
   { id: '1', title: 'Welcome to MockMaster!', message: 'Start your exam preparation journey today. Explore all available tests and practice mock exams.', time: 'Just now', read: false, type: 'info' },
   { id: '2', title: 'New SSC CGL Test Available', message: 'A new mock test for SSC CGL 2025 has been added. Try it now and check your preparation level!', time: '2h ago', read: false, type: 'update' },
   { id: '3', title: 'Weekly Maintenance Notice', message: 'App maintenance scheduled this Sunday 2AM-4AM. Some features may be temporarily unavailable.', time: '1d ago', read: true, type: 'alert' },
+]
+
+export const DEFAULT_UPCOMING_EXAMS: UpcomingExam[] = [
+  { id: '1', name: 'SSC CGL 2025 Tier-I', date: 'Jul 2025', status: 'Registration Open', statusType: 'open' },
+  { id: '2', name: 'IBPS PO 2025 Prelims', date: 'Aug 2025', status: 'Coming Soon', statusType: 'coming' },
+  { id: '3', name: 'RRB NTPC CBT-2', date: 'Sep 2025', status: 'Admit Card Soon', statusType: 'admit' },
 ]
 
 // Client-side helpers (for static/Capacitor app)
@@ -59,6 +74,16 @@ export function getNotifications(): Notification[] {
   }
 }
 
+export function getUpcomingExams(): UpcomingExam[] {
+  if (typeof window === 'undefined') return DEFAULT_UPCOMING_EXAMS
+  try {
+    const stored = localStorage.getItem(STORAGE_KEYS.upcomingExams)
+    return stored ? JSON.parse(stored) : DEFAULT_UPCOMING_EXAMS
+  } catch {
+    return DEFAULT_UPCOMING_EXAMS
+  }
+}
+
 export function saveAnnouncements(announcements: Announcement[]): void {
   if (typeof window === 'undefined') return
   localStorage.setItem(STORAGE_KEYS.announcements, JSON.stringify(announcements))
@@ -67,6 +92,11 @@ export function saveAnnouncements(announcements: Announcement[]): void {
 export function saveNotifications(notifications: Notification[]): void {
   if (typeof window === 'undefined') return
   localStorage.setItem(STORAGE_KEYS.notifications, JSON.stringify(notifications))
+}
+
+export function saveUpcomingExams(exams: UpcomingExam[]): void {
+  if (typeof window === 'undefined') return
+  localStorage.setItem(STORAGE_KEYS.upcomingExams, JSON.stringify(exams))
 }
 
 // Track which notification IDs the user has read (persists across refreshes)
