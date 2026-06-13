@@ -8,6 +8,7 @@ service cloud.firestore {
     }
 
     // Helper: Check if user is admin (stored in users collection)
+    // Uses get() which evaluates server-side - does NOT require client read permission
     function isAdmin() {
       return isAuth() &&
         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
@@ -49,18 +50,19 @@ service cloud.firestore {
     // Results - Users can read/write own results, admin can read all
     // ===========================
     match /results/{resultId} {
-      allow read: if isAuth() && (resource.data.userId == request.auth.uid || isAdmin());
+      allow read: if isAuth();
       allow create: if isAuth() && request.resource.data.userId == request.auth.uid;
-      allow update, delete: if isAdmin();
+      allow update: if isAuth() && (resource.data.userId == request.auth.uid || isAdmin());
+      allow delete: if isAdmin();
     }
 
     // ===========================
-    // Users - Users can read/write own profile, admin can read all
+    // Users - Authenticated users can read, users can create/update own profile, admin can do everything
     // ===========================
     match /users/{userId} {
-      allow read: if isAuth() && (userId == request.auth.uid || isAdmin());
+      allow read: if isAuth();
       allow create: if isAuth() && userId == request.auth.uid;
-      allow update: if isAuth() && userId == request.auth.uid;
+      allow update: if isAuth() && (userId == request.auth.uid || isAdmin());
       allow delete: if isAdmin();
     }
 

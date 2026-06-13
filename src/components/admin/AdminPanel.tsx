@@ -57,6 +57,7 @@ export default function AdminPanel() {
   // --- Check if already logged in as admin ---
   useEffect(() => {
     if (!auth || !isFirebaseReady()) {
+      console.warn('[Admin] Firebase not ready, showing login form')
       setAuthStatus('not_logged_in')
       return
     }
@@ -65,16 +66,21 @@ export default function AdminPanel() {
       if (user) {
         setFirebaseUser(user)
         setAuthStatus('verifying')
+        console.log('[Admin] User detected:', user.uid, user.email)
         // Check if user has admin role in Firestore
         try {
           const userData = await getUser(user.uid)
+          console.log('[Admin] User data from Firestore:', userData)
           if (userData && userData.role === 'admin') {
+            console.log('[Admin] Access granted - admin role confirmed')
             setAuthStatus('authorized')
           } else {
+            console.warn('[Admin] Access denied - role is:', userData?.role ?? 'no role field', 'userData:', userData)
             setAuthStatus('denied')
           }
-        } catch (e) {
-          console.error('[Admin] Failed to check admin role:', e)
+        } catch (e: any) {
+          console.error('[Admin] Failed to check admin role:', e?.message ?? e)
+          console.error('[Admin] This might be a Firestore rules issue. Make sure rules are deployed.')
           setAuthStatus('denied')
         }
       } else {
@@ -180,28 +186,31 @@ export default function AdminPanel() {
       setAuthStatus('verifying')
 
       const userData = await getUser(credential.user.uid)
+      console.log('[Admin] Login - User data from Firestore:', userData)
       if (userData && userData.role === 'admin') {
+        console.log('[Admin] Login success - admin role confirmed')
         setAuthStatus('authorized')
         setAdminEmail('')
         setAdminPassword('')
       } else {
+        console.warn('[Admin] Login denied - role:', userData?.role ?? 'no role field')
         setAuthStatus('denied')
         // Sign out non-admin user immediately
         await firebaseSignOut(auth)
-        setLoginError('Access denied. You do not have admin privileges.')
+        setLoginError('Access denied. Your role is: ' + (userData?.role ?? 'not set') + '. Make sure you have admin role in Firestore users collection.')
       }
     } catch (err: any) {
       console.error('[Admin] Login error:', err)
       if (err.code === 'auth/user-not-found') {
-        setLoginError('No account found with this email.')
+        setLoginError('No account found with this email. Create user in Firebase Console → Authentication first.')
       } else if (err.code === 'auth/wrong-password' || err.code === 'auth/invalid-credential') {
-        setLoginError('Incorrect password.')
+        setLoginError('Incorrect password. Check credentials in Firebase Console → Authentication.')
       } else if (err.code === 'auth/invalid-email') {
         setLoginError('Invalid email address.')
       } else if (err.code === 'auth/too-many-requests') {
         setLoginError('Too many failed attempts. Try again later.')
       } else {
-        setLoginError('Login failed. Please try again.')
+        setLoginError('Login failed: ' + (err?.message || 'Unknown error') + '. Check if Firebase is configured correctly.')
       }
       setAuthStatus('not_logged_in')
     }

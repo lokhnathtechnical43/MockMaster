@@ -806,11 +806,34 @@ export async function getLeaderboard(testId: string): Promise<TestResult[]> {
  */
 export async function getUser(userId: string): Promise<FirestoreUser | null> {
   try {
+    if (!db) {
+      console.error('[Firestore] getUser: db is not initialized')
+      return null
+    }
     const userDoc = await getDoc(doc(db, COLLECTIONS.users, userId))
-    if (!userDoc.exists()) return null
-    return { id: userDoc.id, ...userDoc.data() } as FirestoreUser
-  } catch (error) {
-    console.error('[Firestore] getUser error:', error)
+    if (!userDoc.exists()) {
+      console.warn('[Firestore] getUser: No document found for UID:', userId)
+      return null
+    }
+    const data = userDoc.data()
+    console.log('[Firestore] getUser: Raw document data for', userId, ':', data)
+    // Return with defaults for missing fields - role is the critical field
+    return {
+      id: userDoc.id,
+      name: data.name || data.displayName || '',
+      email: data.email || '',
+      phone: data.phone || '',
+      photoURL: data.photoURL || '',
+      role: data.role || 'user', // Default to 'user' if role field is missing
+      testsCompleted: data.testsCompleted || 0,
+      totalScore: data.totalScore || 0,
+      createdAt: data.createdAt || new Date().toISOString(),
+      lastActive: data.lastActive || new Date().toISOString(),
+    } as FirestoreUser
+  } catch (error: any) {
+    console.error('[Firestore] getUser error:', error?.message ?? error)
+    console.error('[Firestore] This could be a Firestore security rules issue.')
+    console.error('[Firestore] Make sure rules allow authenticated users to read their own document in users collection.')
     return null
   }
 }
