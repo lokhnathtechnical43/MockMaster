@@ -122,7 +122,7 @@ export function useFirebaseAuth() {
         try {
           await firebaseSendEmailVerification(credential.user, {
             url: window.location.origin,
-            handleCodeInApp: true,
+            handleCodeInApp: false,
           })
           setVerifySent(true)
         } catch (verifyErr) {
@@ -161,7 +161,7 @@ export function useFirebaseAuth() {
     try {
       await firebaseSendPasswordResetEmail(auth, email, {
         url: window.location.origin,
-        handleCodeInApp: true,
+        handleCodeInApp: false,
       })
       setResetSent(true)
     } catch (err: any) {
@@ -189,7 +189,7 @@ export function useFirebaseAuth() {
     try {
       await firebaseSendEmailVerification(authState.user, {
         url: window.location.origin,
-        handleCodeInApp: true,
+        handleCodeInApp: false,
       })
       setVerifySent(true)
     } catch (err: any) {
@@ -213,7 +213,7 @@ export function useFirebaseAuth() {
       if (credential.user) {
         await firebaseSendEmailVerification(credential.user, {
           url: window.location.origin,
-          handleCodeInApp: true,
+          handleCodeInApp: false,
         })
         // Sign out after sending verification
         await firebaseSignOut(auth)
