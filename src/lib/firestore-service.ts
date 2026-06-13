@@ -150,6 +150,7 @@ export interface FirestoreTestResult {
   totalQuestions: number
   answers: Record<string, string>
   createdAt: string | Timestamp
+  mode?: 'real' | 'practice'  // Whether this was a real exam or practice session
 }
 
 export interface FirestoreUser {

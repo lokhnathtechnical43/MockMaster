@@ -23,7 +23,6 @@ export const STORAGE_KEYS = {
   announcements: 'examprep_announcements',
   notifications: 'examprep_notifications',
   readNotifs: 'examprep_read_notifications',
-  adminAuth: 'examprep_admin_auth',
 } as const
 
 export const DEFAULT_ANNOUNCEMENTS: Announcement[] = [

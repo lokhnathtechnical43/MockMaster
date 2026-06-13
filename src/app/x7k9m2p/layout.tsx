@@ -1,12 +1,12 @@
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Admin Panel - MockMaster",
-  description: "Admin panel for managing MockMaster content",
-  robots: "noindex, nofollow", // Don't index admin pages
+  title: "System",
+  description: "System management",
+  robots: "noindex, nofollow",
 };
 
-export default function AdminLayout({
+export default function SystemLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;

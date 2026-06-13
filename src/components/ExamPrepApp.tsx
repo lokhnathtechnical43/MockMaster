@@ -157,6 +157,7 @@ export default function ExamPrepApp() {
   const [showNotificationPanel, setShowNotificationPanel] = useState(false)
   const [userStats, setUserStats] = useState({ testsTaken: 0, avgScore: 0, bestRank: 0 })
   const [showExitConfirm, setShowExitConfirm] = useState(false)
+  const [currentTestMode, setCurrentTestMode] = useState<'real' | 'practice'>('real') // Track if current test is real or practice
   const [showExamPageWarning, setShowExamPageWarning] = useState(false)
   const [showAnswerKey, setShowAnswerKey] = useState(false)
   const [pdfSharing, setPdfSharing] = useState(false)
@@ -255,21 +256,21 @@ export default function ExamPrepApp() {
   const lng = selectedLanguage
   const _t = (key: string) => t(key, lng)
 
-  // --- Notifications (loaded from shared admin storage) ---
+  // --- Notifications ---
   const [notifications, setNotifications] = useState<
     { id: string; title: string; message: string; time: string; read: boolean; type: 'update' | 'alert' | 'info' }[]
   >([])
   const unreadCount = notifications.filter(n => !n.read).length
 
-  // --- Announcements (loaded from shared admin storage) ---
+  // --- Announcements ---
   const [announcements, setAnnouncements] = useState<
     { id: string; image: string; title: string; subtitle: string; action: Page; gradient: string }[]
   >([])
   const [activeAnnouncement, setActiveAnnouncement] = useState(0)
 
-  // (Admin state removed - admin panel is now at /admin route)
 
-  // --- Load categories + admin data on mount ---
+
+  // --- Load categories + data on mount ---
   useEffect(() => {
     const loadData = async () => {
       try {
@@ -296,7 +297,7 @@ export default function ExamPrepApp() {
     loadData()
   }, [])
 
-  // --- Listen for admin data changes (when admin panel updates localStorage) ---
+  // --- Listen for data changes (localStorage updates) ---
   useEffect(() => {
     const handleStorageChange = () => {
       const readIds = getReadNotifIds()
@@ -480,7 +481,7 @@ export default function ExamPrepApp() {
   }, [testActive])
 
   // --- Test Functions ---
-  async function startTest(test: LocalTest) {
+  async function startTest(test: LocalTest, mode: 'real' | 'practice' = 'real') {
     const fullTest = await fetchTestById(test.id)
     if (!fullTest) return
     setSelectedTest(fullTest)
@@ -489,6 +490,7 @@ export default function ExamPrepApp() {
     setCurrentQuestionIndex(0)
     setTimeLeft(fullTest.duration * 60)
     setTestActive(true)
+    setCurrentTestMode(mode)
     navigateTo('test-taking')
   }
 
@@ -532,6 +534,7 @@ export default function ExamPrepApp() {
       timeTaken,
       totalQuestions,
       answers,
+      mode: currentTestMode,
     })
 
     setLastResult(result)
@@ -549,6 +552,7 @@ export default function ExamPrepApp() {
           testName: test.title,
           examName: selectedExam?.name || '',
           totalQuestions,
+          mode: currentTestMode,
         })
         localStorage.setItem('examprep_results', JSON.stringify(perfResults))
       } catch (e) {}
@@ -585,7 +589,7 @@ export default function ExamPrepApp() {
     })
   }
 
-  // --- Stats from localStorage ---
+  // --- Stats from localStorage (only REAL exams, not practice) ---
   async function getUserStats() {
     try {
       let results: TestResult[] = []
@@ -618,9 +622,12 @@ export default function ExamPrepApp() {
         }
       }
 
-      const testsTaken = results.length
-      const avgScore = testsTaken > 0 ? Math.round(results.reduce((sum: number, r: TestResult) => sum + (r.score / (r.totalQuestions || r.correctCount + r.wrongCount + r.skippedCount || 1)) * 100, 0) / testsTaken) : 0
-      // Calculate best rank from leaderboard data across all tests the user has taken
+      // Filter: only count REAL exams for home page stats (not practice)
+      const realExamResults = results.filter((r: TestResult) => !r.mode || r.mode === 'real')
+
+      const testsTaken = realExamResults.length
+      const avgScore = testsTaken > 0 ? Math.round(realExamResults.reduce((sum: number, r: TestResult) => sum + (r.score / (r.totalQuestions || r.correctCount + r.wrongCount + r.skippedCount || 1)) * 100, 0) / testsTaken) : 0
+      // Calculate best rank from leaderboard data across all REAL tests the user has taken
       let bestRank = 0
       if (userId && testsTaken > 0) {
         // For rank calculation, we need all results (not just user's)
@@ -636,7 +643,7 @@ export default function ExamPrepApp() {
           const data = localStorage.getItem('examprep_results')
           if (data) allResults = JSON.parse(data)
         }
-        const userTestIds = [...new Set(results.map((r: TestResult) => r.testId))]
+        const userTestIds = [...new Set(realExamResults.map((r: TestResult) => r.testId))]
         let bestFound = Infinity
         for (const testId of userTestIds) {
           const testResults = allResults.filter((r: TestResult) => r.testId === testId)
@@ -664,9 +671,10 @@ export default function ExamPrepApp() {
   }
 
   // --- Exam select handler ---
-  async function openExam(exam: LocalExam, category: LocalExamCategory) {
+  async function openExam(exam: LocalExam, category: LocalExamCategory, mode: 'real' | 'practice' = 'real') {
     setSelectedExam(exam)
     setSelectedCategory(category)
+    setCurrentTestMode(mode)
     const tests = await fetchTestsByExam(exam.id)
     setExamTests(tests)
     navigateTo('tests')
@@ -760,15 +768,15 @@ export default function ExamPrepApp() {
               </div>
               <div className="flex items-center gap-1.5">
                 <div className="bg-white/15 backdrop-blur rounded-xl px-3 py-2 text-center">
-                  <p className="text-white font-extrabold text-lg leading-none">{stats.testsTaken}</p>
+                  <p className="text-white font-extrabold text-lg leading-none">{stats.testsTaken || '-'}</p>
                   <p className="text-white/70 text-[9px] mt-0.5">{_t('home.testsDone')}</p>
                 </div>
                 <div className="bg-white/15 backdrop-blur rounded-xl px-3 py-2 text-center">
-                  <p className="text-white font-extrabold text-lg leading-none">{stats.avgScore}%</p>
+                  <p className="text-white font-extrabold text-lg leading-none">{stats.avgScore ? `${stats.avgScore}%` : '-'}</p>
                   <p className="text-white/70 text-[9px] mt-0.5">{_t('home.accuracy')}</p>
                 </div>
                 <div className="bg-white/15 backdrop-blur rounded-xl px-3 py-2 text-center">
-                  <p className="text-white font-extrabold text-lg leading-none">#{stats.bestRank}</p>
+                  <p className="text-white font-extrabold text-lg leading-none">{stats.bestRank ? `#${stats.bestRank}` : '-'}</p>
                   <p className="text-white/70 text-[9px] mt-0.5">{_t('home.bestRank')}</p>
                 </div>
               </div>
@@ -1128,7 +1136,7 @@ export default function ExamPrepApp() {
                       <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-orange-400 to-red-400 flex items-center justify-center mx-auto mb-2 shadow-sm">
                         <Flame className="w-5 h-5 text-white" />
                       </div>
-                      <p className="font-extrabold text-2xl text-gray-800">{stats.testsTaken}</p>
+                      <p className="font-extrabold text-2xl text-gray-800">{stats.testsTaken || '-'}</p>
                       <p className="text-gray-400 text-[10px] font-medium mt-0.5">{_t('home.testsDone')}</p>
                     </div>
                   </CardContent>
@@ -1139,7 +1147,7 @@ export default function ExamPrepApp() {
                       <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-emerald-400 to-green-400 flex items-center justify-center mx-auto mb-2 shadow-sm">
                         <Target className="w-5 h-5 text-white" />
                       </div>
-                      <p className="font-extrabold text-2xl text-gray-800">{stats.avgScore}%</p>
+                      <p className="font-extrabold text-2xl text-gray-800">{stats.avgScore ? `${stats.avgScore}%` : '-'}</p>
                       <p className="text-gray-400 text-[10px] font-medium mt-0.5">{_t('home.accuracy')}</p>
                     </div>
                   </CardContent>
@@ -1150,7 +1158,7 @@ export default function ExamPrepApp() {
                       <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-blue-400 to-indigo-400 flex items-center justify-center mx-auto mb-2 shadow-sm">
                         <Award className="w-5 h-5 text-white" />
                       </div>
-                      <p className="font-extrabold text-2xl text-gray-800">#{stats.bestRank}</p>
+                      <p className="font-extrabold text-2xl text-gray-800">{stats.bestRank ? `#${stats.bestRank}` : '-'}</p>
                       <p className="text-gray-400 text-[10px] font-medium mt-0.5">{_t('home.bestRank')}</p>
                     </div>
                   </CardContent>
@@ -2169,7 +2177,7 @@ export default function ExamPrepApp() {
                 if (allExams.length > 0) {
                   const randomExam = allExams[Math.floor(Math.random() * allExams.length)]
                   const randomCat = allCats.find(c => c.exams.some(e => e.id === randomExam.id))!
-                  openExam(randomExam, randomCat)
+                  openExam(randomExam, randomCat, 'practice')
                 }
               }}>
                 <CardContent className="p-4 text-center">
@@ -2228,6 +2236,7 @@ export default function ExamPrepApp() {
                     className="border-0 shadow-sm cursor-pointer hover:shadow-md transition-shadow"
                     onClick={() => {
                       setSelectedCategory(cat)
+                      setCurrentTestMode('practice')
                       handleBottomNav('exams')
                     }}
                   >
@@ -2929,15 +2938,15 @@ export default function ExamPrepApp() {
             {/* Stats Row */}
             <div className="mt-5 pt-4 border-t border-white/10 grid grid-cols-3 gap-2">
               <div className="text-center">
-                <p className="text-white font-extrabold text-xl">{stats.testsTaken}</p>
+                <p className="text-white font-extrabold text-xl">{stats.testsTaken || '-'}</p>
                 <p className="text-white/40 text-[9px] font-semibold uppercase tracking-widest">{_t('profile.tests')}</p>
               </div>
               <div className="text-center border-x border-white/10">
-                <p className="text-white font-extrabold text-xl">{stats.avgScore}%</p>
+                <p className="text-white font-extrabold text-xl">{stats.avgScore ? `${stats.avgScore}%` : '-'}</p>
                 <p className="text-white/40 text-[9px] font-semibold uppercase tracking-widest">{_t('profile.avgScore')}</p>
               </div>
               <div className="text-center">
-                <p className="text-white font-extrabold text-xl">#{stats.bestRank}</p>
+                <p className="text-white font-extrabold text-xl">{stats.bestRank ? `#${stats.bestRank}` : '-'}</p>
                 <p className="text-white/40 text-[9px] font-semibold uppercase tracking-widest">{_t('profile.bestRank')}</p>
               </div>
             </div>
