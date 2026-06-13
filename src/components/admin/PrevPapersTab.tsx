@@ -1,12 +1,12 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import {
   FileText, Plus, Trash2, RefreshCw, Edit3, X, Check,
-  ArrowUp, ArrowDown, ChevronDown, ChevronRight, HelpCircle, ListChecks, Upload
+  ArrowUp, ArrowDown, ChevronDown, ChevronRight, HelpCircle, ListChecks, Upload, FileUp
 } from 'lucide-react'
 import {
   type PrevYearPaper, type PaperQuestion,
@@ -54,6 +54,7 @@ export default function PrevPapersTab({ papers, onUpdate }: PrevPapersTabProps) 
   // Bulk import states
   const [showBulkImport, setShowBulkImport] = useState<string | null>(null) // paperId
   const [bulkText, setBulkText] = useState('')
+  const fileInputRef = useRef<HTMLInputElement | null>(null)
 
   // Get unique years sorted descending
   const years = [...new Set(papers.map(p => p.year))].sort((a, b) => Number(b) - Number(a))
@@ -291,6 +292,29 @@ export default function PrevPapersTab({ papers, onUpdate }: PrevPapersTabProps) 
     } catch (e) {
       console.error('Bulk import failed:', e)
     }
+  }
+
+  // Handle file upload for bulk import
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    const reader = new FileReader()
+    reader.onload = (event) => {
+      const text = event.target?.result as string
+      if (text) {
+        // Skip header line if it looks like a header (contains "Question|OptionA" etc.)
+        const lines = text.trim().split('\n')
+        const filteredLines = lines.filter(line => {
+          const lowerLine = line.toLowerCase().trim()
+          // Skip header-like lines
+          return lowerLine && !lowerLine.startsWith('question|option') && !lowerLine.startsWith('question\toption')
+        })
+        setBulkText(filteredLines.join('\n'))
+      }
+    }
+    reader.readAsText(file)
+    // Reset input so same file can be re-uploaded
+    if (fileInputRef.current) fileInputRef.current.value = ''
   }
 
   // Parse bulk text to show preview count
@@ -533,6 +557,24 @@ export default function PrevPapersTab({ papers, onUpdate }: PrevPapersTabProps) 
                                 <p>What is the capital of India?|Mumbai|New Delhi|Kolkata|Chennai|B|New Delhi is the capital of India</p>
                                 <p>Who wrote Ramayana?|Vyasa|Valmiki|Tulsidas|Kalidas|B</p>
                               </div>
+                              <div className="flex gap-2">
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  className="rounded-xl text-xs border-purple-200 text-purple-600 hover:bg-purple-50 h-7 flex-shrink-0"
+                                  onClick={() => fileInputRef.current?.click()}
+                                >
+                                  <FileUp className="w-3 h-3 mr-1" /> Load from File (.txt)
+                                </Button>
+                                <input
+                                  ref={fileInputRef}
+                                  type="file"
+                                  accept=".txt,.csv"
+                                  className="hidden"
+                                  onChange={handleFileUpload}
+                                />
+                                <span className="text-[10px] text-gray-400 self-center">or paste manually below</span>
+                              </div>
                               <textarea
                                 value={bulkText}
                                 onChange={e => setBulkText(e.target.value)}
@@ -559,7 +601,7 @@ export default function PrevPapersTab({ papers, onUpdate }: PrevPapersTabProps) 
                                     size="sm"
                                     variant="outline"
                                     className="rounded-xl h-8 text-xs"
-                                    onClick={() => setShowBulkImport(null)}
+                                    onClick={() => { setShowBulkImport(null); setBulkText('') }}
                                   >
                                     Cancel
                                   </Button>
