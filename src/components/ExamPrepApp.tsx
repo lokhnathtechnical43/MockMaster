@@ -1545,11 +1545,11 @@ export default function ExamPrepApp() {
 
         {/* === Bottom Action Bar (Professional Compact) === */}
         <div className="bg-white border-t border-gray-200 shadow-[0_-2px_10px_rgba(0,0,0,0.05)]">
-          {/* Row 1: Action Buttons */}
-          <div className="px-2 pt-2 pb-1 flex items-center gap-1.5 overflow-x-auto">
+          {/* Row 1: Action Buttons - Equal Width */}
+          <div className="px-2 pt-2 pb-1 grid grid-cols-4 gap-1.5">
             <Button
               size="sm"
-              className={`rounded-lg h-8 px-2.5 text-xs font-semibold border-0 transition-all active:scale-95 flex-shrink-0 ${
+              className={`rounded-lg h-8 text-xs font-semibold border-0 transition-all active:scale-95 ${
                 bookmarkedQs.includes(question.id)
                   ? 'bg-amber-500 text-white hover:bg-amber-600'
                   : 'bg-amber-50 text-amber-700 hover:bg-amber-100'
@@ -1561,7 +1561,7 @@ export default function ExamPrepApp() {
             </Button>
             <Button
               size="sm"
-              className={`rounded-lg h-8 px-2.5 text-xs font-semibold border-0 transition-all active:scale-95 flex-shrink-0 ${
+              className={`rounded-lg h-8 text-xs font-semibold border-0 transition-all active:scale-95 ${
                 markedForReview.has(question.id)
                   ? 'bg-purple-600 text-white hover:bg-purple-700'
                   : 'bg-purple-50 text-purple-700 hover:bg-purple-100'
@@ -1573,14 +1573,14 @@ export default function ExamPrepApp() {
             </Button>
             <Button
               size="sm"
-              className="rounded-lg h-8 px-2.5 text-xs font-semibold bg-red-50 text-red-600 border-0 hover:bg-red-100 transition-all active:scale-95 flex-shrink-0"
+              className="rounded-lg h-8 text-xs font-semibold bg-red-50 text-red-600 border-0 hover:bg-red-100 transition-all active:scale-95"
               onClick={() => clearAnswer(question.id)}
             >
               <RefreshCw className="w-3.5 h-3.5 mr-0.5" /> {_t('testTaking.clear')}
             </Button>
             <Button
               size="sm"
-              className="rounded-lg h-8 px-2.5 text-xs font-semibold bg-sky-50 text-sky-700 border-0 hover:bg-sky-100 transition-all active:scale-95 flex-shrink-0"
+              className="rounded-lg h-8 text-xs font-semibold bg-sky-50 text-sky-700 border-0 hover:bg-sky-100 transition-all active:scale-95"
               onClick={() => {
                 if (currentQuestionIndex < questions.length - 1) {
                   setCurrentQuestionIndex(prev => prev + 1)
