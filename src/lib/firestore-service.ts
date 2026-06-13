@@ -1059,6 +1059,79 @@ export async function ensureUserDocument(params: {
 }
 
 /**
+ * Auto-assign admin role to the first user if no admin exists yet.
+ * This solves the chicken-and-egg problem where the first user needs admin access
+ * but can't set their own role without already being admin.
+ * Returns true if admin role was assigned, false otherwise.
+ */
+export async function ensureFirstUserAsAdmin(uid: string, email: string): Promise<boolean> {
+  if (!useFirestore || !isFirebaseReady() || !db) return false
+  try {
+    // Check if any admin already exists
+    const adminQuery = query(collection(db, COLLECTIONS.users), where('role', '==', 'admin'), limit(1))
+    const adminSnap = await getDocs(adminQuery)
+
+    if (!adminSnap.empty) {
+      console.log('[Firestore] Admin already exists, skipping auto-admin')
+      return false
+    }
+
+    // No admin exists — check if users collection is empty or has very few users
+    const usersSnap = await getDocs(query(collection(db, COLLECTIONS.users), limit(5)))
+    const userCount = usersSnap.size
+
+    // If there are 0 or 1 users (which would be this user), make them admin
+    if (userCount <= 1) {
+      const userDocRef = doc(db, COLLECTIONS.users, uid)
+      const userDoc = await getDoc(userDocRef)
+
+      if (userDoc.exists()) {
+        // Update existing user to admin
+        await setDoc(userDocRef, { role: 'admin' }, { merge: true })
+        console.log('[Firestore] ✅ Auto-assigned admin role to first user:', uid, email)
+      } else {
+        // Create user document with admin role
+        await setDoc(userDocRef, {
+          id: uid,
+          name: email.split('@')[0] || 'Admin',
+          email: email || '',
+          phone: '',
+          photoURL: '',
+          role: 'admin',
+          testsCompleted: 0,
+          totalScore: 0,
+          createdAt: serverTimestamp(),
+          lastActive: serverTimestamp(),
+        })
+        console.log('[Firestore] ✅ Created first user as admin:', uid, email)
+      }
+      return true
+    }
+
+    console.log('[Firestore] Multiple users exist but no admin — manual setup required')
+    return false
+  } catch (error) {
+    console.error('[Firestore] ensureFirstUserAsAdmin error:', error)
+    return false
+  }
+}
+
+/**
+ * Manually set a user's role (admin only operation).
+ * Can also be used from the admin panel to promote/demote users.
+ */
+export async function setUserRole(userId: string, role: 'user' | 'admin'): Promise<void> {
+  if (!db) throw new Error('Firestore not initialized')
+  try {
+    await setDoc(doc(db, COLLECTIONS.users, userId), { role }, { merge: true })
+    console.log('[Firestore] Updated role for', userId, 'to', role)
+  } catch (error) {
+    console.error('[Firestore] setUserRole error:', error)
+    throw error
+  }
+}
+
+/**
  * Update user's test stats in Firestore (testsCompleted, totalScore).
  * Called after each test completion.
  */

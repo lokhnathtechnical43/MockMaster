@@ -35,6 +35,8 @@ import {
   getResults as getFsResults,
   getUseFirestore,
   getUser,
+  ensureFirstUserAsAdmin,
+  setUserRole,
 } from '@/lib/firestore-service'
 import { auth, isFirebaseReady } from '@/lib/firebase'
 import {
@@ -112,15 +114,24 @@ export default function AdminPanel() {
         console.log('[Admin] User detected:', user.uid, user.email)
         // Check if user has admin role in Firestore
         try {
-          const userData = await getUser(user.uid)
+          let userData = await getUser(user.uid)
           if (cancelled) return
           console.log('[Admin] User data from Firestore:', userData)
+
           if (userData && userData.role === 'admin') {
             console.log('[Admin] Access granted - admin role confirmed')
             setAuthStatus('authorized')
           } else {
-            console.warn('[Admin] Access denied - role is:', userData?.role ?? 'no role field', 'userData:', userData)
-            setAuthStatus('denied')
+            // Try auto-admin: if no admin exists yet, make this user the admin
+            console.warn('[Admin] Role is not admin:', userData?.role ?? 'no user doc', '— trying auto-admin setup')
+            const becameAdmin = await ensureFirstUserAsAdmin(user.uid, user.email || '')
+            if (becameAdmin) {
+              console.log('[Admin] ✅ Auto-admin assigned! Access granted.')
+              setAuthStatus('authorized')
+            } else {
+              console.warn('[Admin] Access denied - role is:', userData?.role ?? 'not set', 'and auto-admin not applicable')
+              setAuthStatus('denied')
+            }
           }
         } catch (e: any) {
           if (cancelled) return
@@ -360,7 +371,7 @@ export default function AdminPanel() {
       setFirebaseUser(credential.user)
       setAuthStatus('verifying')
 
-      const userData = await getUser(credential.user.uid)
+      let userData = await getUser(credential.user.uid)
       console.log('[Admin] Login - User data from Firestore:', userData)
       if (userData && userData.role === 'admin') {
         console.log('[Admin] Login success - admin role confirmed')
@@ -368,11 +379,21 @@ export default function AdminPanel() {
         setAdminEmail('')
         setAdminPassword('')
       } else {
-        console.warn('[Admin] Login denied - role:', userData?.role ?? 'no role field')
-        setAuthStatus('denied')
-        // Sign out non-admin user immediately
-        await firebaseSignOut(auth)
-        setLoginError('Access denied. Your role is: ' + (userData?.role ?? 'not set') + '. Make sure you have admin role in Firestore users collection.')
+        // Try auto-admin: if no admin exists yet, make this user the admin
+        console.warn('[Admin] Login - role not admin, trying auto-admin setup')
+        const becameAdmin = await ensureFirstUserAsAdmin(credential.user.uid, credential.user.email || '')
+        if (becameAdmin) {
+          console.log('[Admin] ✅ Auto-admin assigned on login! Access granted.')
+          setAuthStatus('authorized')
+          setAdminEmail('')
+          setAdminPassword('')
+        } else {
+          console.warn('[Admin] Login denied - role:', userData?.role ?? 'no role field')
+          setAuthStatus('denied')
+          // Sign out non-admin user immediately
+          await firebaseSignOut(auth)
+          setLoginError('Access denied. Your role is: ' + (userData?.role ?? 'not set') + '. Make sure you have admin role in Firestore users collection.')
+        }
       }
     } catch (err: any) {
       console.error('[Admin] Login error:', err)
