@@ -32,6 +32,8 @@ import {
   saveUpcomingExams as saveFsUpcomingExams,
   getResults as getFsResults,
   getUseFirestore,
+  savePageImagesToFirestore,
+  getPageImagesFromFirestore,
 } from '@/lib/firestore-service'
 import { isFirebaseReady } from '@/lib/firebase'
 import { getResults as getLocalResults, type TestResult } from '@/lib/local-data'
@@ -80,18 +82,20 @@ export default function AdminPanel() {
     const loadAdminData = async () => {
       try {
         if (getUseFirestore() && isFirebaseReady()) {
-          const [anns, notifs, tips, uExams, results] = await Promise.all([
+          const [anns, notifs, tips, uExams, results, pImages] = await Promise.all([
             getFsAnnouncements(),
             getFsNotifications(),
             getFsDailyTips(),
             getFsUpcomingExams(),
             getFsResults(),
+            getPageImagesFromFirestore(),
           ])
           setAnnouncements(anns)
           setNotifications(notifs)
           setDailyTips(tips)
           setUpcomingExams(uExams)
           setAllResults(results)
+          if (pImages.length > 0) setPageImages(pImages)
         } else {
           setAnnouncements(getLocalAnnouncements())
           setNotifications(getLocalNotifications())
@@ -129,54 +133,51 @@ export default function AdminPanel() {
 
   // Save announcements to Firestore + localStorage when changed
   useEffect(() => {
-    if (announcements.length > 0) {
-      saveLocalAnnouncements(announcements) // local backup
-      if (getUseFirestore() && isFirebaseReady()) {
-        saveFsAnnouncements(announcements).catch(e =>
-          console.error('[Admin] Failed to save announcements to Firestore:', e)
-        )
-      }
+    saveLocalAnnouncements(announcements)
+    if (getUseFirestore() && isFirebaseReady() && announcements.length >= 0) {
+      saveFsAnnouncements(announcements).catch(e =>
+        console.error('[Admin] Failed to save announcements to Firestore:', e)
+      )
     }
   }, [announcements])
 
   // Save notifications to Firestore + localStorage when changed
   useEffect(() => {
-    if (notifications.length > 0) {
-      saveLocalNotifications(notifications) // local backup
-      if (getUseFirestore() && isFirebaseReady()) {
-        saveFsNotifications(notifications).catch(e =>
-          console.error('[Admin] Failed to save notifications to Firestore:', e)
-        )
-      }
+    saveLocalNotifications(notifications)
+    if (getUseFirestore() && isFirebaseReady() && notifications.length >= 0) {
+      saveFsNotifications(notifications).catch(e =>
+        console.error('[Admin] Failed to save notifications to Firestore:', e)
+      )
     }
   }, [notifications])
 
   // Save daily tips to Firestore + localStorage when changed
   useEffect(() => {
-    if (dailyTips.length > 0) {
-      saveLocalDailyTips(dailyTips) // local backup
-      if (getUseFirestore() && isFirebaseReady()) {
-        saveFsDailyTips(dailyTips).catch(e =>
-          console.error('[Admin] Failed to save daily tips to Firestore:', e)
-        )
-      }
+    saveLocalDailyTips(dailyTips)
+    if (getUseFirestore() && isFirebaseReady() && dailyTips.length >= 0) {
+      saveFsDailyTips(dailyTips).catch(e =>
+        console.error('[Admin] Failed to save daily tips to Firestore:', e)
+      )
     }
   }, [dailyTips])
 
-  // Save page images to localStorage when changed
+  // Save page images to localStorage + Firestore when changed
   useEffect(() => {
     saveLocalPageImages(pageImages)
+    if (getUseFirestore() && isFirebaseReady()) {
+      savePageImagesToFirestore(pageImages).catch(e =>
+        console.error('[Admin] Failed to save page images to Firestore:', e)
+      )
+    }
   }, [pageImages])
 
   // Save upcoming exams to Firestore + localStorage when changed
   useEffect(() => {
-    if (upcomingExams.length > 0) {
-      saveLocalUpcomingExams(upcomingExams)
-      if (getUseFirestore() && isFirebaseReady()) {
-        saveFsUpcomingExams(upcomingExams).catch(e =>
-          console.error('[Admin] Failed to save upcoming exams to Firestore:', e)
-        )
-      }
+    saveLocalUpcomingExams(upcomingExams)
+    if (getUseFirestore() && isFirebaseReady() && upcomingExams.length >= 0) {
+      saveFsUpcomingExams(upcomingExams).catch(e =>
+        console.error('[Admin] Failed to save upcoming exams to Firestore:', e)
+      )
     }
   }, [upcomingExams])
 

@@ -84,6 +84,7 @@ const COLLECTIONS = {
   notifications: 'notifications',
   dailyTips: 'daily_tips',
   upcomingExams: 'upcoming_exams',
+  pageImages: 'page_images',
 } as const
 
 // ============================================================
@@ -171,7 +172,7 @@ export interface FirestoreUser {
   email: string
   phone: string
   photoURL: string
-  role: 'user' | 'admin'
+  role: 'user' | 'admin' | 'banned'
   testsCompleted: number
   totalScore: number
   createdAt: string | Timestamp
@@ -371,7 +372,11 @@ export async function getExams(categoryId?: string): Promise<LocalExam[]> {
     () => {
       const cats = getLocalCategories()
       const allExams = cats.flatMap((c) => c.exams)
-      if (categoryId) return allExams // Local data has exams nested; filter is approximate
+      if (categoryId) {
+        // Filter by category: match category id from parent
+        const cat = cats.find(c => c.id === categoryId)
+        return cat ? cat.exams : []
+      }
       return allExams
     }
   )
@@ -675,15 +680,15 @@ export async function addBatchQuestions(
       const firestoreQ: FirestoreQuestion = {
         id: docRef.id,
         questionText: qData.questionText,
-        questionImage: qData.questionImage,
+        questionImage: qData.questionImage ?? null,
         optionA: qData.optionA,
         optionB: qData.optionB,
         optionC: qData.optionC,
         optionD: qData.optionD,
         correctAnswer: qData.correctAnswer,
-        explanation: qData.explanation,
-        subject: qData.subject,
-        order: qData.order,
+        explanation: qData.explanation ?? null,
+        subject: qData.subject ?? null,
+        order: qData.order ?? 0,
         testId,
       }
       batch.set(docRef, firestoreQ)
@@ -739,7 +744,11 @@ export async function getResults(
         } as TestResult
       })
     },
-    () => getLocalResults(testId)
+    () => {
+      const allResults = getLocalResults()
+      if (testId) return allResults.filter((r: TestResult) => r.testId === testId)
+      return allResults
+    }
   )
 }
 
@@ -1087,9 +1096,16 @@ export async function getDashboardStats(): Promise<DashboardStats> {
     let totalScore = 0
     const recentActivity: FirestoreTestResult[] = []
 
+    // Calculate percentage-based average score
+    let totalScorePercent = 0
+    let scoredResults = 0
+
     resultsSnap.docs.forEach((d) => {
       const r = d.data() as FirestoreTestResult
-      totalScore += r.score
+      if (r.maxScore > 0) {
+        totalScorePercent += (r.score / r.maxScore) * 100
+        scoredResults++
+      }
       if (recentActivity.length < 10) {
         recentActivity.push({
           ...r,
@@ -1102,7 +1118,7 @@ export async function getDashboardStats(): Promise<DashboardStats> {
       }
     })
 
-    const avgScore = totalResults > 0 ? Math.round(totalScore / totalResults) : 0
+    const avgScore = scoredResults > 0 ? Math.round(totalScorePercent / scoredResults) : 0
 
     return { totalUsers, totalTests, totalResults, avgScore, recentActivity }
   } catch (error) {
@@ -1204,99 +1220,128 @@ export async function seedFirestoreIfEmpty(): Promise<boolean> {
     const catSnap = await getDocs(collection(db, COLLECTIONS.categories))
     if (catSnap.size > 0) return false // Already seeded
 
-    const batch = writeBatch(db)
     const localCategories = getLocalCategories()
+    let opCount = 0
+    let batch = writeBatch(db)
 
-    for (const cat of localCategories) {
-      // Add category document
-      const catRef = doc(collection(db, COLLECTIONS.categories))
-      batch.set(catRef, {
-        name: cat.name,
-        slug: cat.slug,
-        icon: cat.icon,
-        description: cat.description,
-        order: cat.order,
-      })
-
-      // Add exam documents for this category
-      for (const exam of cat.exams) {
-        const examRef = doc(collection(db, COLLECTIONS.exams))
-        batch.set(examRef, {
-          name: exam.name,
-          slug: exam.slug,
-          description: exam.description,
-          totalQuestions: exam.totalQuestions,
-          duration: exam.duration,
-          markingScheme: exam.markingScheme,
-          order: exam.order,
-          testCount: exam.testCount,
-          categoryId: catRef.id,
-        })
+    const commitIfNeeded = async () => {
+      if (opCount >= 450) {
+        await batch.commit()
+        batch = writeBatch(db)
+        opCount = 0
       }
     }
 
-    // Add all tests
+    for (const cat of localCategories) {
+      const catRef = doc(collection(db, COLLECTIONS.categories))
+      batch.set(catRef, {
+        name: cat.name, slug: cat.slug, icon: cat.icon,
+        description: cat.description, order: cat.order,
+      })
+      opCount++
+
+      for (const exam of cat.exams) {
+        const examRef = doc(collection(db, COLLECTIONS.exams))
+        batch.set(examRef, {
+          name: exam.name, slug: exam.slug, description: exam.description,
+          totalQuestions: exam.totalQuestions, duration: exam.duration,
+          markingScheme: exam.markingScheme, order: exam.order,
+          testCount: exam.testCount, categoryId: catRef.id,
+        })
+        opCount++
+      }
+      await commitIfNeeded()
+    }
+
     for (const test of ALL_TESTS) {
       const testRef = doc(collection(db, COLLECTIONS.tests))
       batch.set(testRef, {
-        title: test.title,
-        slug: test.slug,
-        description: test.description,
-        totalQuestions: test.totalQuestions,
-        duration: test.duration,
-        markingCorrect: test.markingCorrect,
-        markingWrong: test.markingWrong,
-        markingSkipped: test.markingSkipped,
-        difficulty: test.difficulty,
-        isFree: test.isFree,
-        isLive: test.isLive,
-        examId: test.exam.id,
-        examName: test.exam.name,
-        examSlug: test.exam.slug,
+        title: test.title, slug: test.slug, description: test.description,
+        totalQuestions: test.totalQuestions, duration: test.duration,
+        markingCorrect: test.markingCorrect, markingWrong: test.markingWrong,
+        markingSkipped: test.markingSkipped, difficulty: test.difficulty,
+        isFree: test.isFree, isLive: test.isLive,
+        examId: test.exam.id, examName: test.exam.name, examSlug: test.exam.slug,
       })
+      opCount++
 
-      // Add questions for this test
       for (const q of test.questions) {
         const qRef = doc(collection(db, COLLECTIONS.questions))
         batch.set(qRef, {
-          questionText: q.questionText,
-          questionImage: q.questionImage,
-          optionA: q.optionA,
-          optionB: q.optionB,
-          optionC: q.optionC,
-          optionD: q.optionD,
-          correctAnswer: q.correctAnswer,
-          explanation: q.explanation,
-          subject: q.subject,
-          order: q.order,
-          testId: testRef.id,
+          questionText: q.questionText, questionImage: q.questionImage,
+          optionA: q.optionA, optionB: q.optionB, optionC: q.optionC, optionD: q.optionD,
+          correctAnswer: q.correctAnswer, explanation: q.explanation,
+          subject: q.subject, order: q.order, testId: testRef.id,
         })
+        opCount++
       }
+      await commitIfNeeded()
     }
 
     // Seed default announcements
     for (const ann of DEFAULT_ANNOUNCEMENTS) {
       const annRef = doc(collection(db, COLLECTIONS.announcements))
       batch.set(annRef, { ...ann, id: annRef.id })
+      opCount++
+      await commitIfNeeded()
     }
 
     // Seed default notifications
     for (const notif of DEFAULT_NOTIFICATIONS) {
       const notifRef = doc(collection(db, COLLECTIONS.notifications))
       batch.set(notifRef, { ...notif, id: notifRef.id })
+      opCount++
+      await commitIfNeeded()
     }
 
     // Seed default daily tips
     for (const tip of DEFAULT_DAILY_TIPS) {
       const tipRef = doc(collection(db, COLLECTIONS.dailyTips))
       batch.set(tipRef, { ...tip, id: tipRef.id })
+      opCount++
+      await commitIfNeeded()
     }
 
-    await batch.commit()
+    // Commit any remaining operations
+    if (opCount > 0) await batch.commit()
     console.log('[Firestore] Database seeded successfully')
     return true
   } catch (error) {
     console.error('[Firestore] Seed error:', error)
     return false
+  }
+}
+
+// ============================================================
+// Page Images Firestore sync
+// ============================================================
+
+/**
+ * Save page images to Firestore (overwrites the single document).
+ */
+export async function savePageImagesToFirestore(images: { id: string; label: string; page: string; section: string; imageUrl: string; updatedAt: string }[]): Promise<void> {
+  if (!useFirestore || !isFirebaseReady() || !db) return
+  try {
+    // Store as a single document with all images
+    await setDoc(doc(db, COLLECTIONS.pageImages, 'all'), { images, updatedAt: serverTimestamp() })
+  } catch (error) {
+    console.error('[Firestore] savePageImages error:', error)
+  }
+}
+
+/**
+ * Load page images from Firestore.
+ */
+export async function getPageImagesFromFirestore(): Promise<{ id: string; label: string; page: string; section: string; imageUrl: string; updatedAt: string }[]> {
+  if (!useFirestore || !isFirebaseReady() || !db) return []
+  try {
+    const snap = await getDoc(doc(db, COLLECTIONS.pageImages, 'all'))
+    if (snap.exists()) {
+      return snap.data().images || []
+    }
+    return []
+  } catch (error) {
+    console.error('[Firestore] getPageImages error:', error)
+    return []
   }
 }

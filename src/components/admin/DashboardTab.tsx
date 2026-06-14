@@ -13,7 +13,7 @@ import {
   type Announcement, type Notification,
   DEFAULT_ANNOUNCEMENTS, DEFAULT_NOTIFICATIONS
 } from '@/lib/admin-data'
-import { type TestResult } from '@/lib/local-data'
+import { type TestResult, getCategories } from '@/lib/local-data'
 import { getDashboardStats, type DashboardStats } from '@/lib/firestore-service'
 import Link from 'next/link'
 
@@ -85,7 +85,7 @@ export default function DashboardTab({ announcements, notifications, allResults,
                 <BookOpen className="w-5 h-5 text-white" />
               </div>
               <div>
-                <p className="text-2xl font-bold text-emerald-600">21+</p>
+                <p className="text-2xl font-bold text-emerald-600">{(() => { try { return getCategories().reduce((sum, c) => sum + c.exams.length, 0); } catch { return '21+' } })()}</p>
                 <p className="text-emerald-500/70 text-xs">Exams</p>
               </div>
             </div>

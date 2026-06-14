@@ -341,7 +341,7 @@ export default function SettingsTab() {
                 <><Lock className="w-4 h-4 mr-1" /> Change Password</>
               )}
             </Button>
-            <p className="text-gray-400 text-[10px]">Default password: admin123</p>
+            <p className="text-gray-400 text-[10px]">Change from default for security</p>
           </div>
         </CardContent>
       </Card>

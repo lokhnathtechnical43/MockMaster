@@ -36,7 +36,7 @@ import {
 import { useFirebaseAuth } from '@/lib/use-firebase-auth'
 import LoginModal from '@/components/LoginModal'
 import { App } from '@capacitor/app'
-import { getAnnouncements as getLocalAnnouncements, getNotifications as getLocalNotifications, getDailyTips as getLocalDailyTips, type DailyTip, getPageImage, getActiveUpcomingExams, type UpcomingExam } from '@/lib/admin-data'
+import { getAnnouncements as getLocalAnnouncements, getNotifications as getLocalNotifications, getDailyTips as getLocalDailyTips, type DailyTip, getPageImage, getActiveUpcomingExams, type UpcomingExam, getPageImages as getPageImagesAdmin, saveNotifications as saveLocalNotifications } from '@/lib/admin-data'
 import { t, type Lang } from '@/lib/i18n'
 
 // ===== Types =====
@@ -135,6 +135,9 @@ export default function ExamPrepApp() {
   const [timeLeft, setTimeLeft] = useState(0)
   const [testActive, setTestActive] = useState(false)
   const timerRef = useRef<NodeJS.Timeout | null>(null)
+  const answersRef = useRef<Record<string, string>>({})
+  const selectedTestRef = useRef<LocalTest | null>(null)
+  const timeLeftRef = useRef(0)
   const carouselRef = useRef<HTMLDivElement | null>(null)
   const carouselTimerRef = useRef<NodeJS.Timeout | null>(null)
 
@@ -151,7 +154,6 @@ export default function ExamPrepApp() {
   const [showLanguageSheet, setShowLanguageSheet] = useState(false)
   const [showAboutSheet, setShowAboutSheet] = useState(false)
   const [showHelpSheet, setShowHelpSheet] = useState(false)
-  const [showOfflineSheet, setShowOfflineSheet] = useState(false)
   const [selectedLanguage, setSelectedLanguage] = useState<Lang>('en')
   const [showQuestionNav, setShowQuestionNav] = useState(false)
   const [showSideMenu, setShowSideMenu] = useState(false)
@@ -194,7 +196,7 @@ export default function ExamPrepApp() {
   }
   function canGuestPractice(): boolean {
     if (auth.isLoggedIn && !auth.isGuest) return true
-    return guestPracticeCount < 1
+    return guestPracticeCount < 3
   }
 
   // --- Guest Auth Guard ---
@@ -225,8 +227,7 @@ export default function ExamPrepApp() {
   // Helper to load page images into a lookup map
   function loadPageImages() {
     try {
-      const { getPageImages } = require('@/lib/admin-data')
-      const images = getPageImages()
+      const images = getPageImagesAdmin()
       const map: Record<string, string> = {}
       images.forEach((img: { id: string; imageUrl: string }) => {
         map[img.id] = img.imageUrl
@@ -458,6 +459,11 @@ export default function ExamPrepApp() {
     window.history.pushState(null, '')
   }, [currentPage])
 
+  // Keep refs in sync with latest state
+  useEffect(() => { answersRef.current = answers }, [answers])
+  useEffect(() => { selectedTestRef.current = selectedTest }, [selectedTest])
+  useEffect(() => { timeLeftRef.current = timeLeft }, [timeLeft])
+
   // --- Timer ---
   useEffect(() => {
     if (testActive && timeLeft > 0) {
@@ -465,7 +471,43 @@ export default function ExamPrepApp() {
         setTimeLeft(prev => {
           if (prev <= 1) {
             clearInterval(timerRef.current!)
-            handleFinishTest()
+            // Use refs to get latest values instead of stale closure
+            const currentAnswers = answersRef.current
+            const currentTest = selectedTestRef.current
+            const currentTimeLeft = prev
+            if (currentTest) {
+              const totalQuestions = currentTest.questions.length
+              let correctCount = 0
+              let wrongCount = 0
+              let skippedCount = 0
+              currentTest.questions.forEach(q => {
+                const userAnswer = currentAnswers[q.id]
+                if (!userAnswer) skippedCount++
+                else if (userAnswer === q.correctAnswer) correctCount++
+                else wrongCount++
+              })
+              const score = correctCount * currentTest.markingCorrect - wrongCount * Math.abs(currentTest.markingWrong)
+              const maxScore = totalQuestions * currentTest.markingCorrect
+              const timeTaken = currentTest.duration * 60 - currentTimeLeft
+              storeResult({
+                testId: currentTest.id,
+                testName: currentTest.title,
+                examName: currentTest.exam.name,
+                userId: auth.getUserId() || 'anonymous',
+                correctCount,
+                wrongCount,
+                skippedCount,
+                score,
+                maxScore,
+                timeTaken,
+                totalQuestions,
+                answers: currentAnswers,
+              }).then(result => {
+                setLastResult(result)
+                setTestActive(false)
+                setCurrentPage('results')
+              })
+            }
             return 0
           }
           return prev - 1
@@ -567,7 +609,19 @@ export default function ExamPrepApp() {
       const userResults = userId ? results.filter((r: TestResult) => r.userId === userId) : results
       const testsTaken = userResults.length
       const avgScore = testsTaken > 0 ? Math.round(userResults.reduce((sum: number, r: TestResult) => sum + (r.score / r.maxScore) * 100, 0) / testsTaken) : 0
-      const bestRank = 1 // simplified
+      // Calculate best rank from leaderboard data across all tests taken by user
+      let bestRank = 0
+      if (testsTaken > 0) {
+        const allData: TestResult[] = JSON.parse(data)
+        const uniqueTests = [...new Set(userResults.map(r => r.testId))]
+        uniqueTests.forEach(testId => {
+          const testResults = allData
+            .filter(r => r.testId === testId)
+            .sort((a, b) => b.score - a.score || a.timeTaken - b.timeTaken)
+          const rank = testResults.findIndex(r => r.userId === userId) + 1
+          if (rank > 0 && (bestRank === 0 || rank < bestRank)) bestRank = rank
+        })
+      }
       return { testsTaken, avgScore, bestRank }
     } catch {
       return { testsTaken: 0, avgScore: 0, bestRank: 0 }
@@ -712,7 +766,14 @@ export default function ExamPrepApp() {
                 <div className="flex items-center gap-2">
                   {unreadCount > 0 && (
                     <button
-                      onClick={() => setNotifications(prev => prev.map(n => ({ ...n, read: true })))}
+                      onClick={() => {
+                        const updated = notifications.map(n => ({ ...n, read: true }))
+                        setNotifications(updated)
+                        // Persist read status to localStorage
+                        try {
+                          saveLocalNotifications(updated)
+                        } catch {}
+                      }}
                       className="text-[11px] text-orange-500 font-semibold hover:text-orange-600"
                     >
                       {_t('home.markAllRead')}
@@ -739,7 +800,14 @@ export default function ExamPrepApp() {
                     <div
                       key={notification.id}
                       onClick={() => {
-                        setNotifications(prev => prev.map(n => n.id === notification.id ? { ...n, read: true } : n))
+                        setNotifications(prev => {
+                          const updated = prev.map(n => n.id === notification.id ? { ...n, read: true } : n)
+                          // Persist read status
+                          try {
+                            saveLocalNotifications(updated)
+                          } catch {}
+                          return updated
+                        })
                         setSelectedNotification(notification)
                       }}
                       className={`px-4 py-3 border-b border-gray-50 last:border-b-0 active:bg-gray-50 transition-colors cursor-pointer ${
@@ -801,6 +869,7 @@ export default function ExamPrepApp() {
               }}
               onTouchStart={() => { if (carouselTimerRef.current) clearInterval(carouselTimerRef.current) }}
               onTouchEnd={() => {
+                if (carouselTimerRef.current) clearInterval(carouselTimerRef.current)
                 carouselTimerRef.current = setInterval(() => {
                   setActiveAnnouncement(prev => {
                     const next = (prev + 1) % announcements.length
@@ -818,7 +887,6 @@ export default function ExamPrepApp() {
                 <button
                   key={a.id}
                   onClick={() => {
-                    if (!requireAuth()) return
                     handleBottomNav(a.action)
                   }}
                   className="flex-shrink-0 w-full snap-center px-1"
@@ -2004,10 +2072,11 @@ export default function ExamPrepApp() {
                       const avg = data.total / data.count
                       if (avg < lowestAvg) {
                         lowestAvg = avg
-                        weakestCat = categories.find(c => c.id === catId) || null
+                        const found = categories.find(c => c.id === catId)
+                        if (found) weakestCat = found
                       }
                     })
-                    if (weakestCat && weakestCat.exams.length > 0) {
+                    if (weakestCat && weakestCat.exams && weakestCat.exams.length > 0) {
                       const tests = await fetchTestsByExam(weakestCat.exams[0].id)
                       if (tests.length > 0) {
                         await startTest(tests[0])
@@ -2069,24 +2138,72 @@ export default function ExamPrepApp() {
           {/* Previous Practice Sessions */}
           <div>
             <h2 className="font-bold text-lg mb-3">{_t('practice.recent')}</h2>
-            {auth.isLoggedIn ? (
-              <Card className="border-0 shadow-sm">
-                <CardContent className="p-4 text-center">
-                  <Clock className="w-8 h-8 text-gray-300 mx-auto mb-2" />
-                  <p className="text-gray-400 text-sm">{_t('practice.historyEmpty')}</p>
-                </CardContent>
-              </Card>
-            ) : (
-              <Card className="border-0 shadow-sm bg-gradient-to-r from-orange-50 to-red-50">
-                <CardContent className="p-4 text-center">
-                  <PenTool className="w-8 h-8 text-orange-400 mx-auto mb-2" />
-                  <p className="font-semibold text-sm text-gray-700">{_t('practice.loginSave')}</p>
-                  <Button size="sm" className="bg-gradient-to-r from-orange-500 to-red-500 text-white rounded-xl mt-2" onClick={() => setShowLoginModal(true)}>
-                    {_t('home.loginNow')}
-                  </Button>
-                </CardContent>
-              </Card>
-            )}
+            {(() => {
+              try {
+                const data = localStorage.getItem('examprep_results')
+                const allResults: TestResult[] = data ? JSON.parse(data) : []
+                const userId = auth.getUserId()
+                const userResults = userId
+                  ? allResults.filter((r: TestResult) => r.userId === userId)
+                  : allResults
+                const recentResults = userResults
+                  .sort((a: TestResult, b: TestResult) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+                  .slice(0, 5)
+
+                if (recentResults.length === 0) {
+                  return (
+                    <Card className="border-0 shadow-sm">
+                      <CardContent className="p-4 text-center">
+                        <Clock className="w-8 h-8 text-gray-300 mx-auto mb-2" />
+                        <p className="text-gray-400 text-sm">{_t('practice.historyEmpty')}</p>
+                      </CardContent>
+                    </Card>
+                  )
+                }
+
+                return (
+                  <div className="space-y-2">
+                    {recentResults.map(result => (
+                      <Card key={result.id} className="border-0 shadow-sm">
+                        <CardContent className="p-3 flex items-center gap-3">
+                          <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${
+                            (result.score / result.maxScore) >= 0.7 ? 'bg-emerald-50' :
+                            (result.score / result.maxScore) >= 0.4 ? 'bg-amber-50' : 'bg-red-50'
+                          }`}>
+                            <Trophy className={`w-5 h-5 ${
+                              (result.score / result.maxScore) >= 0.7 ? 'text-emerald-500' :
+                              (result.score / result.maxScore) >= 0.4 ? 'text-amber-500' : 'text-red-500'
+                            }`} />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="font-semibold text-sm truncate">{result.testName}</p>
+                            <p className="text-gray-400 text-xs">{result.examName} · {Math.round((result.score / result.maxScore) * 100)}%</p>
+                          </div>
+                          <div className="text-right">
+                            <p className={`font-bold text-sm ${
+                              (result.score / result.maxScore) >= 0.7 ? 'text-emerald-600' :
+                              (result.score / result.maxScore) >= 0.4 ? 'text-amber-600' : 'text-red-600'
+                            }`}>
+                              {result.correctCount}/{result.totalQuestions || result.correctCount + result.wrongCount + result.skippedCount}
+                            </p>
+                            <p className="text-gray-300 text-[10px]">{new Date(result.createdAt).toLocaleDateString()}</p>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+                )
+              } catch {
+                return (
+                  <Card className="border-0 shadow-sm">
+                    <CardContent className="p-4 text-center">
+                      <Clock className="w-8 h-8 text-gray-300 mx-auto mb-2" />
+                      <p className="text-gray-400 text-sm">{_t('practice.historyEmpty')}</p>
+                    </CardContent>
+                  </Card>
+                )
+              }
+            })()}
           </div>
         </div>
       </div>
@@ -2368,11 +2485,11 @@ export default function ExamPrepApp() {
               <div className="w-10 h-1 rounded-full bg-gray-200 mx-auto mb-5" />
               <h3 className="font-bold text-lg mb-4">{_t('lang.select')}</h3>
               <div className="space-y-1">
-                {[
-                  { code: 'en', name: _t('lang.english'), flag: '🇬🇧', available: true },
-                  { code: 'hi', name: _t('lang.hindi'), flag: '🇮🇳', available: true },
-                  { code: 'bn', name: _t('lang.bangla'), flag: '🇧🇩', available: true },
-                ].map(lang => (
+                {([
+                  { code: 'en' as Lang, name: _t('lang.english'), flag: '🇬🇧', available: true },
+                  { code: 'hi' as Lang, name: _t('lang.hindi'), flag: '🇮🇳', available: true },
+                  { code: 'bn' as Lang, name: _t('lang.bangla'), flag: '🇧🇩', available: true },
+                ]).map(lang => (
                   <button
                     key={lang.code}
                     className={`w-full flex items-center gap-3 p-4 rounded-xl transition-colors ${
@@ -2428,7 +2545,7 @@ export default function ExamPrepApp() {
               </div>
               <div className="space-y-2">
                 {[
-                  { label: _t('about.version'), value: '1.0' },
+                  { label: _t('about.version'), value: '2.0' },
                   { label: _t('about.size'), value: '~5 MB' },
                   { label: _t('about.exams'), value: '21+' },
                   { label: _t('about.questions'), value: '210+' },
@@ -2822,7 +2939,7 @@ export default function ExamPrepApp() {
                     setSelectedNotification(null)
                     setShowNotificationPanel(false)
                     // Check if it's an internal app page
-                    if (['home', 'exams', 'tests', 'practice', 'leaderboard', 'profile'].includes(link)) {
+                    if (['home', 'exams', 'tests', 'practice', 'leaderboard', 'profile', 'test-info', 'test-taking', 'results'].includes(link)) {
                       handleBottomNav(link as Page)
                     } else {
                       // External URL - open in new tab
@@ -2870,7 +2987,7 @@ export default function ExamPrepApp() {
                   onClick={() => {
                     const link = selectedTip.link!
                     setSelectedTip(null)
-                    if (['home', 'exams', 'tests', 'practice', 'leaderboard', 'profile'].includes(link)) {
+                    if (['home', 'exams', 'tests', 'practice', 'leaderboard', 'profile', 'test-info', 'test-taking', 'results'].includes(link)) {
                       handleBottomNav(link as Page)
                     } else {
                       window.open(link.startsWith('http') ? link : `https://${link}`, '_blank')
@@ -3008,18 +3125,5 @@ export default function ExamPrepApp() {
         </div>
       )}
     </div>
-  )
-}
-
-// Missing icon helper
-function FileText(props: React.SVGProps<SVGSVGElement>) {
-  return (
-    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
-      <path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z" />
-      <path d="M14 2v4a2 2 0 0 0 2 2h4" />
-      <path d="M10 9H8" />
-      <path d="M16 13H8" />
-      <path d="M16 17H8" />
-    </svg>
   )
 }

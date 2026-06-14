@@ -19,7 +19,10 @@ import {
   addBatchQuestions, seedFirestoreIfEmpty,
   type FirestoreExamCategory, type FirestoreExam, type FirestoreTest, type FirestoreQuestion
 } from '@/lib/firestore-service'
-import { getCategories as getLocalCategories } from '@/lib/local-data'
+import {
+  getCategories as getLocalCategories,
+  type LocalExamCategory, type LocalExam, type LocalTest, type LocalQuestion
+} from '@/lib/local-data'
 
 type ViewLevel = 'categories' | 'exams' | 'tests' | 'questions'
 
@@ -103,22 +106,22 @@ export default function ExamsTab() {
   const [seeding, setSeeding] = useState(false)
 
   // Categories
-  const [categories, setCategories] = useState<FirestoreExamCategory[]>([])
+  const [categories, setCategories] = useState<LocalExamCategory[]>([])
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null)
   const [selectedCategoryName, setSelectedCategoryName] = useState('')
 
   // Exams
-  const [exams, setExams] = useState<FirestoreExam[]>([])
+  const [exams, setExams] = useState<LocalExam[]>([])
   const [selectedExamId, setSelectedExamId] = useState<string | null>(null)
   const [selectedExamName, setSelectedExamName] = useState('')
 
   // Tests
-  const [tests, setTests] = useState<FirestoreTest[]>([])
+  const [tests, setTests] = useState<LocalTest[]>([])
   const [selectedTestId, setSelectedTestId] = useState<string | null>(null)
   const [selectedTestName, setSelectedTestName] = useState('')
 
   // Questions
-  const [questions, setQuestions] = useState<FirestoreQuestion[]>([])
+  const [questions, setQuestions] = useState<LocalQuestion[]>([])
 
   // Edit states
   const [editingId, setEditingId] = useState<string | null>(null)
@@ -153,17 +156,11 @@ export default function ExamsTab() {
     setLoading(true)
     try {
       const cats = await getCategories()
-      setCategories(cats.map(c => ({
-        id: c.id, name: c.name, slug: c.slug, icon: c.icon,
-        description: c.description, order: c.order, imageUrl: c.imageUrl
-      })))
+      setCategories(cats)
     } catch {
       // Fallback to local
       const local = getLocalCategories()
-      setCategories(local.map(c => ({
-        id: c.id, name: c.name, slug: c.slug, icon: c.icon,
-        description: c.description, order: c.order
-      })))
+      setCategories(local)
     } finally {
       setLoading(false)
     }
@@ -195,21 +192,21 @@ export default function ExamsTab() {
 
   useEffect(() => { loadCategories() }, [loadCategories])
 
-  const handleSelectCategory = (cat: FirestoreExamCategory) => {
+  const handleSelectCategory = (cat: LocalExamCategory) => {
     setSelectedCategoryId(cat.id)
     setSelectedCategoryName(cat.name)
     loadExams(cat.id)
     setViewLevel('exams')
   }
 
-  const handleSelectExam = (exam: FirestoreExam) => {
+  const handleSelectExam = (exam: LocalExam) => {
     setSelectedExamId(exam.id)
     setSelectedExamName(exam.name)
     loadTests(exam.id)
     setViewLevel('tests')
   }
 
-  const handleSelectTest = (test: FirestoreTest) => {
+  const handleSelectTest = (test: LocalTest) => {
     setSelectedTestId(test.id)
     setSelectedTestName(test.title)
     loadQuestions(test.id)
