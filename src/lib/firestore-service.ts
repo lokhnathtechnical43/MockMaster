@@ -38,12 +38,16 @@ import {
 import {
   Announcement,
   Notification,
+  DailyTip,
   getAnnouncements as getLocalAnnouncements,
   getNotifications as getLocalNotifications,
   saveAnnouncements as saveLocalAnnouncements,
   saveNotifications as saveLocalNotifications,
+  getDailyTips as getLocalDailyTips,
+  saveDailyTips as saveLocalDailyTips,
   DEFAULT_ANNOUNCEMENTS,
   DEFAULT_NOTIFICATIONS,
+  DEFAULT_DAILY_TIPS,
 } from '@/lib/admin-data'
 
 // ============================================================
@@ -74,6 +78,7 @@ const COLLECTIONS = {
   users: 'users',
   announcements: 'announcements',
   notifications: 'notifications',
+  dailyTips: 'daily_tips',
 } as const
 
 // ============================================================
@@ -954,6 +959,53 @@ export async function saveNotifications(
 }
 
 // ============================================================
+// Daily Tips CRUD
+// ============================================================
+
+/**
+ * Get all daily tips.
+ */
+export async function getDailyTips(): Promise<DailyTip[]> {
+  return firestoreOperation(
+    async () => {
+      const snap = await getDocs(collection(db, COLLECTIONS.dailyTips))
+      if (snap.empty) return DEFAULT_DAILY_TIPS
+      return snap.docs.map((d) => ({ id: d.id, ...d.data() } as DailyTip))
+    },
+    () => getLocalDailyTips()
+  )
+}
+
+/**
+ * Save (overwrite) the daily tips collection.
+ */
+export async function saveDailyTips(
+  data: DailyTip[]
+): Promise<void> {
+  if (!useFirestore) {
+    saveLocalDailyTips(data)
+    return
+  }
+  try {
+    const batch = writeBatch(db)
+    // Delete existing
+    const existing = await getDocs(collection(db, COLLECTIONS.dailyTips))
+    existing.docs.forEach((d) => batch.delete(d.ref))
+    // Add new
+    for (const item of data) {
+      const docRef = doc(collection(db, COLLECTIONS.dailyTips))
+      batch.set(docRef, { ...item, id: docRef.id })
+    }
+    await batch.commit()
+    // Also persist locally for offline access
+    saveLocalDailyTips(data)
+  } catch (error) {
+    console.error('[Firestore] saveDailyTips error, saving locally:', error)
+    saveLocalDailyTips(data)
+  }
+}
+
+// ============================================================
 // Analytics
 // ============================================================
 
@@ -1175,6 +1227,12 @@ export async function seedFirestoreIfEmpty(): Promise<boolean> {
     for (const notif of DEFAULT_NOTIFICATIONS) {
       const notifRef = doc(collection(db, COLLECTIONS.notifications))
       batch.set(notifRef, { ...notif, id: notifRef.id })
+    }
+
+    // Seed default daily tips
+    for (const tip of DEFAULT_DAILY_TIPS) {
+      const tipRef = doc(collection(db, COLLECTIONS.dailyTips))
+      batch.set(tipRef, { ...tip, id: tipRef.id })
     }
 
     await batch.commit()

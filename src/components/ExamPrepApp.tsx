@@ -15,7 +15,7 @@ import {
   GraduationCap, Shield, Building, Train, ShieldCheck, Swords,
   LogOut, Loader2, Mail, AlertTriangle, Settings, Bell,
   ChevronDown, Star, Flame, TrendingUp, Calendar, Gift,
-  HelpCircle, Share2, MessageCircle, Crown,
+  HelpCircle, Share2, MessageCircle, Crown, Lightbulb, ExternalLink,
   Menu, BookmarkPlus, Download, BarChart3, Wifi,
   ClipboardList, PenTool
 } from 'lucide-react'
@@ -30,12 +30,13 @@ import {
   getTestById as getFsTestById, saveResult as saveFsResult,
   getLeaderboard as getFsLeaderboard, getUseFirestore,
   getAnnouncements as getFsAnnouncements, getNotifications as getFsNotifications,
+  getDailyTips as getFsDailyTips,
   getResults as getFsResults,
 } from '@/lib/firestore-service'
 import { useFirebaseAuth } from '@/lib/use-firebase-auth'
 import LoginModal from '@/components/LoginModal'
 import { App } from '@capacitor/app'
-import { getAnnouncements as getLocalAnnouncements, getNotifications as getLocalNotifications } from '@/lib/admin-data'
+import { getAnnouncements as getLocalAnnouncements, getNotifications as getLocalNotifications, getDailyTips as getLocalDailyTips, type DailyTip } from '@/lib/admin-data'
 import { t, type Lang } from '@/lib/i18n'
 
 // ===== Types =====
@@ -156,9 +157,16 @@ export default function ExamPrepApp() {
 
   // --- Notifications (loaded from shared admin storage) ---
   const [notifications, setNotifications] = useState<
-    { id: string; title: string; message: string; time: string; read: boolean; type: 'update' | 'alert' | 'info' }[]
+    { id: string; title: string; message: string; time: string; read: boolean; type: 'update' | 'alert' | 'info'; link?: string }[]
   >([])
   const unreadCount = notifications.filter(n => !n.read).length
+  const [selectedNotification, setSelectedNotification] = useState<{
+    id: string; title: string; message: string; time: string; type: 'update' | 'alert' | 'info'; link?: string
+  } | null>(null)
+
+  // --- Daily Tips (loaded from shared admin storage) ---
+  const [dailyTips, setDailyTips] = useState<DailyTip[]>([])
+  const [selectedTip, setSelectedTip] = useState<DailyTip | null>(null)
 
   // --- Announcements (loaded from shared admin storage) ---
   const [announcements, setAnnouncements] = useState<
@@ -179,15 +187,19 @@ export default function ExamPrepApp() {
           setAnnouncements(anns.map(a => ({ ...a, action: a.action as Page })))
           const notifs = await getFsNotifications()
           setNotifications(notifs)
+          const tips = await getFsDailyTips()
+          setDailyTips(tips)
         } else {
           setAnnouncements(getLocalAnnouncements().map(a => ({ ...a, action: a.action as Page })))
           setNotifications(getLocalNotifications())
+          setDailyTips(getLocalDailyTips())
         }
       } catch (e) {
         console.error('Data load failed, using local fallback:', e)
         setCategories(getLocalCategories())
         setAnnouncements(getLocalAnnouncements().map(a => ({ ...a, action: a.action as Page })))
         setNotifications(getLocalNotifications())
+        setDailyTips(getLocalDailyTips())
       }
     }
     loadData()
@@ -625,7 +637,10 @@ export default function ExamPrepApp() {
                   notifications.map(notification => (
                     <div
                       key={notification.id}
-                      onClick={() => setNotifications(prev => prev.map(n => n.id === notification.id ? { ...n, read: true } : n))}
+                      onClick={() => {
+                        setNotifications(prev => prev.map(n => n.id === notification.id ? { ...n, read: true } : n))
+                        setSelectedNotification(notification)
+                      }}
                       className={`px-4 py-3 border-b border-gray-50 last:border-b-0 active:bg-gray-50 transition-colors cursor-pointer ${
                         !notification.read ? 'bg-orange-50/50' : ''
                       }`}
@@ -849,12 +864,46 @@ export default function ExamPrepApp() {
             <div className="flex items-center gap-2 mb-3">
               <Star className="w-5 h-5 text-amber-500" />
               <h2 className="font-bold text-lg">{_t('home.dailyTips')}</h2>
+              {dailyTips.filter(t => t.isActive).length > 1 && (
+                <Badge className="bg-amber-100 text-amber-700 text-[10px] px-1.5 py-0">
+                  {dailyTips.filter(t => t.isActive).length}
+                </Badge>
+              )}
             </div>
-            <Card className="border-0 shadow-sm border-l-4 border-l-orange-400">
-              <CardContent className="p-4">
-                <p className="text-sm text-gray-700 leading-relaxed">{_t('home.dailyTip')}</p>
-              </CardContent>
-            </Card>
+            {dailyTips.filter(tip => tip.isActive).length > 0 ? (
+              <Card
+                className="border-0 shadow-sm border-l-4 border-l-amber-400 cursor-pointer hover:shadow-md transition-shadow active:bg-amber-50/50"
+                onClick={() => {
+                  const activeTips = dailyTips.filter(tip => tip.isActive)
+                  const dayIndex = Math.floor(Date.now() / 86400000) % activeTips.length
+                  setSelectedTip(activeTips[dayIndex])
+                }}
+              >
+                <CardContent className="p-4">
+                  <div className="flex items-start gap-3">
+                    <div className="w-8 h-8 rounded-full bg-amber-100 flex items-center justify-center flex-shrink-0 mt-0.5">
+                      <Lightbulb className="w-4 h-4 text-amber-500" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm text-gray-700 leading-relaxed">
+                        {(() => {
+                          const activeTips = dailyTips.filter(tip => tip.isActive)
+                          const dayIndex = Math.floor(Date.now() / 86400000) % activeTips.length
+                          return activeTips[dayIndex]?.text || _t('home.dailyTip')
+                        })()}
+                      </p>
+                      <p className="text-[10px] text-amber-500 mt-1">{_t('home.tapExplore')}</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            ) : (
+              <Card className="border-0 shadow-sm border-l-4 border-l-amber-400">
+                <CardContent className="p-4">
+                  <p className="text-sm text-gray-700 leading-relaxed">{_t('home.dailyTip')}</p>
+                </CardContent>
+              </Card>
+            )}
           </div>
 
           {/* Upcoming Exams Section */}
@@ -2344,6 +2393,109 @@ export default function ExamPrepApp() {
           onGuestLogin={auth.loginAsGuest}
           onClose={() => setShowLoginModal(false)}
         />
+      )}
+
+      {/* Notification Detail Modal */}
+      {selectedNotification && (
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40" onClick={() => setSelectedNotification(null)}>
+          <div className="bg-white w-full max-w-lg rounded-t-3xl shadow-2xl animate-in slide-in-from-bottom duration-300" onClick={e => e.stopPropagation()}>
+            <div className="p-6">
+              <div className="flex items-start gap-4 mb-4">
+                <div className={`w-12 h-12 rounded-2xl flex items-center justify-center flex-shrink-0 ${
+                  selectedNotification.type === 'update' ? 'bg-blue-100' :
+                  selectedNotification.type === 'alert' ? 'bg-amber-100' :
+                  'bg-green-100'
+                }`}>
+                  {selectedNotification.type === 'update' ? <Zap className="w-6 h-6 text-blue-500" /> :
+                   selectedNotification.type === 'alert' ? <AlertTriangle className="w-6 h-6 text-amber-500" /> :
+                   <Gift className="w-6 h-6 text-green-500" />}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <h3 className="font-bold text-lg text-gray-900">{selectedNotification.title}</h3>
+                  <p className="text-gray-400 text-xs mt-0.5">{selectedNotification.time}</p>
+                </div>
+                <button onClick={() => setSelectedNotification(null)} className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center flex-shrink-0">
+                  <X className="w-4 h-4 text-gray-500" />
+                </button>
+              </div>
+              <p className="text-gray-700 text-sm leading-relaxed mb-4">{selectedNotification.message}</p>
+              {selectedNotification.link && (
+                <Button
+                  className="w-full bg-gradient-to-r from-orange-500 to-red-500 text-white rounded-xl h-11 font-semibold"
+                  onClick={() => {
+                    const link = selectedNotification.link!
+                    setSelectedNotification(null)
+                    setShowNotificationPanel(false)
+                    // Check if it's an internal app page
+                    if (['home', 'exams', 'tests', 'practice', 'leaderboard', 'profile'].includes(link)) {
+                      handleBottomNav(link as Page)
+                    } else {
+                      // External URL - open in new tab
+                      window.open(link.startsWith('http') ? link : `https://${link}`, '_blank')
+                    }
+                  }}
+                >
+                  <ExternalLink className="w-4 h-4 mr-2" /> Open Link
+                </Button>
+              )}
+              {!selectedNotification.link && (
+                <Button
+                  className="w-full bg-gray-100 text-gray-700 hover:bg-gray-200 rounded-xl h-11 font-medium"
+                  onClick={() => setSelectedNotification(null)}
+                >
+                  Close
+                </Button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Daily Tip Detail Modal */}
+      {selectedTip && (
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40" onClick={() => setSelectedTip(null)}>
+          <div className="bg-white w-full max-w-lg rounded-t-3xl shadow-2xl animate-in slide-in-from-bottom duration-300" onClick={e => e.stopPropagation()}>
+            <div className="p-6">
+              <div className="flex items-start gap-4 mb-4">
+                <div className="w-12 h-12 rounded-2xl bg-amber-100 flex items-center justify-center flex-shrink-0">
+                  <Lightbulb className="w-6 h-6 text-amber-500" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <h3 className="font-bold text-lg text-gray-900">{_t('home.dailyTips')}</h3>
+                  <p className="text-gray-400 text-xs mt-0.5">Daily Tip</p>
+                </div>
+                <button onClick={() => setSelectedTip(null)} className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center flex-shrink-0">
+                  <X className="w-4 h-4 text-gray-500" />
+                </button>
+              </div>
+              <p className="text-gray-700 text-sm leading-relaxed mb-4">{selectedTip.text}</p>
+              {selectedTip.link && (
+                <Button
+                  className="w-full bg-gradient-to-r from-amber-500 to-orange-500 text-white rounded-xl h-11 font-semibold"
+                  onClick={() => {
+                    const link = selectedTip.link!
+                    setSelectedTip(null)
+                    if (['home', 'exams', 'tests', 'practice', 'leaderboard', 'profile'].includes(link)) {
+                      handleBottomNav(link as Page)
+                    } else {
+                      window.open(link.startsWith('http') ? link : `https://${link}`, '_blank')
+                    }
+                  }}
+                >
+                  <ExternalLink className="w-4 h-4 mr-2" /> Open Link
+                </Button>
+              )}
+              {!selectedTip.link && (
+                <Button
+                  className="w-full bg-gray-100 text-gray-700 hover:bg-gray-200 rounded-xl h-11 font-medium"
+                  onClick={() => setSelectedTip(null)}
+                >
+                  Close
+                </Button>
+              )}
+            </div>
+          </div>
+        </div>
       )}
     </div>
   )

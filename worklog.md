@@ -191,3 +191,34 @@ Stage Summary:
 - All admin data (announcements, notifications, exams, tests, questions) manageable from admin panel
 - Analytics dashboard with Recharts for data visualization
 - Settings tab allows toggling Firestore and seeding data
+
+---
+Task ID: 1
+Agent: Main Agent
+Task: Make Daily Tips dynamic (admin-managed) and make Notifications clickable with link support
+
+Work Log:
+- Added DailyTip interface to admin-data.ts with id, text, link, isActive, createdAt fields
+- Added `link` optional field to Notification interface for admin to set URLs
+- Added DEFAULT_DAILY_TIPS with 3 sample tips
+- Added getDailyTips(), saveDailyTips(), getDailyTip() helper functions in admin-data.ts
+- Added STORAGE_KEYS.dailyTips key
+- Added Daily Tips CRUD to firestore-service.ts (getDailyTips, saveDailyTips)
+- Added dailyTips collection to Firestore COLLECTIONS
+- Added daily tips seeding in seedDatabase()
+- Created DailyTipsTab.tsx admin component with add/delete/toggle active functionality
+- Updated NotificationsTab.tsx with link field input
+- Updated AdminPanel.tsx with new 'dailyTips' tab and data loading/saving
+- Updated ExamPrepApp.tsx:
+  - Added dailyTips state and selectedTip/selectedNotification states
+  - Dynamic Daily Tips section showing admin-managed tips (rotates daily)
+  - Notification click opens detail modal with full message and link button
+  - Daily Tip click opens detail modal with link button
+  - Both modals support internal page navigation (exams, practice, etc.) and external URLs
+  - Added Lightbulb and ExternalLink icon imports
+
+Stage Summary:
+- Daily Tips are now dynamic and admin-manageable from /admin panel (Tips tab)
+- Notifications now have optional link field; clicking shows detail modal with link button
+- Both features work with Firestore and localStorage fallback
+- Build passes successfully with no errors

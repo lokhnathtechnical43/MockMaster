@@ -1,0 +1,647 @@
+     1→'use client'
+     2→
+     3→import { useState, useEffect, useCallback } from 'react'
+     4→import { Button } from '@/components/ui/button'
+     5→import { Card, CardContent } from '@/components/ui/card'
+     6→import { Badge } from '@/components/ui/badge'
+     7→import { Input } from '@/components/ui/input'
+     8→import { Textarea } from '@/components/ui/textarea'
+     9→import {
+    10→  BookOpen, ChevronRight, Plus, Trash2, Edit3, Save,
+    11→  ArrowLeft, RefreshCw, ListChecks, HelpCircle, Database
+    12→} from 'lucide-react'
+    13→import {
+    14→  getCategories, addCategory, updateCategory, deleteCategory,
+    15→  getExams, addExam, updateExam, deleteExam,
+    16→  getTests, addTest, updateTest, deleteTest,
+    17→  getQuestions, addQuestion, updateQuestion, deleteQuestion,
+    18→  addBatchQuestions, seedFirestoreIfEmpty,
+    19→  type FirestoreExamCategory, type FirestoreExam, type FirestoreTest, type FirestoreQuestion
+    20→} from '@/lib/firestore-service'
+    21→import { getCategories as getLocalCategories } from '@/lib/local-data'
+    22→
+    23→type ViewLevel = 'categories' | 'exams' | 'tests' | 'questions'
+    24→
+    25→export default function ExamsTab() {
+    26→  const [viewLevel, setViewLevel] = useState<ViewLevel>('categories')
+    27→  const [loading, setLoading] = useState(true)
+    28→  const [seeding, setSeeding] = useState(false)
+    29→
+    30→  // Categories
+    31→  const [categories, setCategories] = useState<FirestoreExamCategory[]>([])
+    32→  const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null)
+    33→  const [selectedCategoryName, setSelectedCategoryName] = useState('')
+    34→
+    35→  // Exams
+    36→  const [exams, setExams] = useState<FirestoreExam[]>([])
+    37→  const [selectedExamId, setSelectedExamId] = useState<string | null>(null)
+    38→  const [selectedExamName, setSelectedExamName] = useState('')
+    39→
+    40→  // Tests
+    41→  const [tests, setTests] = useState<FirestoreTest[]>([])
+    42→  const [selectedTestId, setSelectedTestId] = useState<string | null>(null)
+    43→  const [selectedTestName, setSelectedTestName] = useState('')
+    44→
+    45→  // Questions
+    46→  const [questions, setQuestions] = useState<FirestoreQuestion[]>([])
+    47→
+    48→  // Edit states
+    49→  const [editingId, setEditingId] = useState<string | null>(null)
+    50→  const [editName, setEditName] = useState('')
+    51→  const [editDesc, setEditDesc] = useState('')
+    52→
+    53→  // Add states
+    54→  const [showAdd, setShowAdd] = useState(false)
+    55→  const [addName, setAddName] = useState('')
+    56→  const [addDesc, setAddDesc] = useState('')
+    57→  const [addSlug, setAddSlug] = useState('')
+    58→
+    59→  // Add question
+    60→  const [showAddQuestion, setShowAddQuestion] = useState(false)
+    61→  const [qText, setQText] = useState('')
+    62→  const [qA, setQA] = useState('')
+    63→  const [qB, setQB] = useState('')
+    64→  const [qC, setQC] = useState('')
+    65→  const [qD, setQD] = useState('')
+    66→  const [qAns, setQAns] = useState('A')
+    67→  const [qExplanation, setQExplanation] = useState('')
+    68→  const [qSubject, setQSubject] = useState('')
+    69→
+    70→  // Batch questions
+    71→  const [showBatch, setShowBatch] = useState(false)
+    72→  const [batchText, setBatchText] = useState('')
+    73→
+    74→  const loadCategories = useCallback(async () => {
+    75→    setLoading(true)
+    76→    try {
+    77→      const cats = await getCategories()
+    78→      setCategories(cats.map(c => ({
+    79→        id: c.id, name: c.name, slug: c.slug, icon: c.icon,
+    80→        description: c.description, order: c.order
+    81→      })))
+    82→    } catch {
+    83→      // Fallback to local
+    84→      const local = getLocalCategories()
+    85→      setCategories(local.map(c => ({
+    86→        id: c.id, name: c.name, slug: c.slug, icon: c.icon,
+    87→        description: c.description, order: c.order
+    88→      })))
+    89→    } finally {
+    90→      setLoading(false)
+    91→    }
+    92→  }, [])
+    93→
+    94→  const loadExams = useCallback(async (categoryId: string) => {
+    95→    setLoading(true)
+    96→    try {
+    97→      const data = await getExams(categoryId)
+    98→      setExams(data)
+    99→    } catch { setExams([]) } finally { setLoading(false) }
+   100→  }, [])
+   101→
+   102→  const loadTests = useCallback(async (examId: string) => {
+   103→    setLoading(true)
+   104→    try {
+   105→      const data = await getTests(examId)
+   106→      setTests(data)
+   107→    } catch { setTests([]) } finally { setLoading(false) }
+   108→  }, [])
+   109→
+   110→  const loadQuestions = useCallback(async (testId: string) => {
+   111→    setLoading(true)
+   112→    try {
+   113→      const data = await getQuestions(testId)
+   114→      setQuestions(data)
+   115→    } catch { setQuestions([]) } finally { setLoading(false) }
+   116→  }, [])
+   117→
+   118→  useEffect(() => { loadCategories() }, [loadCategories])
+   119→
+   120→  const handleSelectCategory = (cat: FirestoreExamCategory) => {
+   121→    setSelectedCategoryId(cat.id)
+   122→    setSelectedCategoryName(cat.name)
+   123→    loadExams(cat.id)
+   124→    setViewLevel('exams')
+   125→  }
+   126→
+   127→  const handleSelectExam = (exam: FirestoreExam) => {
+   128→    setSelectedExamId(exam.id)
+   129→    setSelectedExamName(exam.name)
+   130→    loadTests(exam.id)
+   131→    setViewLevel('tests')
+   132→  }
+   133→
+   134→  const handleSelectTest = (test: FirestoreTest) => {
+   135→    setSelectedTestId(test.id)
+   136→    setSelectedTestName(test.title)
+   137→    loadQuestions(test.id)
+   138→    setViewLevel('questions')
+   139→  }
+   140→
+   141→  const handleBack = () => {
+   142→    if (viewLevel === 'questions') { setViewLevel('tests'); setQuestions([]) }
+   143→    else if (viewLevel === 'tests') { setViewLevel('exams'); setTests([]) }
+   144→    else if (viewLevel === 'exams') { setViewLevel('categories'); setExams([]) }
+   145→    setShowAdd(false)
+   146→    setEditingId(null)
+   147→  }
+   148→
+   149→  // --- CRUD Handlers ---
+   150→  const handleAddCategory = async () => {
+   151→    if (!addName.trim()) return
+   152→    try {
+   153→      await addCategory({
+   154→        name: addName, slug: addSlug || addName.toLowerCase().replace(/\s+/g, '-'),
+   155→        icon: '📋', description: addDesc, order: categories.length + 1
+   156→      })
+   157→      setAddName(''); setAddDesc(''); setAddSlug(''); setShowAdd(false)
+   158→      loadCategories()
+   159→    } catch { alert('Failed to add category') }
+   160→  }
+   161→
+   162→  const handleAddExam = async () => {
+   163→    if (!addName.trim() || !selectedCategoryId) return
+   164→    try {
+   165→      await addExam({
+   166→        name: addName, slug: addSlug || addName.toLowerCase().replace(/\s+/g, '-'),
+   167→        description: addDesc, totalQuestions: 0, duration: 60,
+   168→        markingScheme: '1/-0.25', order: exams.length + 1,
+   169→        testCount: 0, categoryId: selectedCategoryId
+   170→      })
+   171→      setAddName(''); setAddDesc(''); setAddSlug(''); setShowAdd(false)
+   172→      loadExams(selectedCategoryId)
+   173→    } catch { alert('Failed to add exam') }
+   174→  }
+   175→
+   176→  const handleAddTest = async () => {
+   177→    if (!addName.trim() || !selectedExamId) return
+   178→    try {
+   179→      await addTest({
+   180→        title: addName, slug: addSlug || addName.toLowerCase().replace(/\s+/g, '-'),
+   181→        description: addDesc, totalQuestions: 0, duration: 30,
+   182→        markingCorrect: 1, markingWrong: -0.25, markingSkipped: 0,
+   183→        difficulty: 'medium', isFree: true, isLive: true,
+   184→        examId: selectedExamId, examName: selectedExamName,
+   185→        examSlug: selectedExamName.toLowerCase().replace(/\s+/g, '-')
+   186→      })
+   187→      setAddName(''); setAddDesc(''); setAddSlug(''); setShowAdd(false)
+   188→      loadTests(selectedExamId)
+   189→    } catch { alert('Failed to add test') }
+   190→  }
+   191→
+   192→  const handleAddQuestion = async () => {
+   193→    if (!qText.trim() || !selectedTestId) return
+   194→    try {
+   195→      await addQuestion({
+   196→        questionText: qText, questionImage: null,
+   197→        optionA: qA, optionB: qB, optionC: qC, optionD: qD,
+   198→        correctAnswer: qAns, explanation: qExplanation || null,
+   199→        subject: qSubject || null, order: questions.length + 1,
+   200→        testId: selectedTestId
+   201→      })
+   202→      setQText(''); setQA(''); setQB(''); setQC(''); setQD('')
+   203→      setQAns('A'); setQExplanation(''); setQSubject('')
+   204→      setShowAddQuestion(false)
+   205→      loadQuestions(selectedTestId)
+   206→    } catch { alert('Failed to add question') }
+   207→  }
+   208→
+   209→  const handleBatchQuestions = async () => {
+   210→    if (!batchText.trim() || !selectedTestId) return
+   211→    try {
+   212→      const lines = batchText.trim().split('\n').filter(l => l.trim())
+   213→      const qs = lines.map((line, i) => {
+   214→        const parts = line.split('|')
+   215→        return {
+   216→          questionText: parts[0]?.trim() || '',
+   217→          optionA: parts[1]?.trim() || '',
+   218→          optionB: parts[2]?.trim() || '',
+   219→          optionC: parts[3]?.trim() || '',
+   220→          optionD: parts[4]?.trim() || '',
+   221→          correctAnswer: parts[5]?.trim() || 'A',
+   222→          explanation: parts[6]?.trim() || null,
+   223→          subject: parts[7]?.trim() || null,
+   224→          order: i + 1,
+   225→          testId: selectedTestId
+   226→        }
+   227→      }).filter(q => q.questionText)
+   228→      await addBatchQuestions(selectedTestId, qs)
+   229→      setBatchText(''); setShowBatch(false)
+   230→      loadQuestions(selectedTestId)
+   231→    } catch { alert('Failed to add batch questions') }
+   232→  }
+   233→
+   234→  const handleDelete = async (type: string, id: string) => {
+   235→    if (!confirm(`Delete this ${type}?`)) return
+   236→    try {
+   237→      if (type === 'category') { await deleteCategory(id); loadCategories() }
+   238→      else if (type === 'exam' && selectedCategoryId) { await deleteExam(id); loadExams(selectedCategoryId) }
+   239→      else if (type === 'test' && selectedExamId) { await deleteTest(id); loadTests(selectedExamId) }
+   240→      else if (type === 'question' && selectedTestId) { await deleteQuestion(id); loadQuestions(selectedTestId) }
+   241→    } catch { alert(`Failed to delete ${type}`) }
+   242→  }
+   243→
+   244→  const handleSeed = async () => {
+   245→    if (!confirm('Seed Firestore from local data? This may take a moment.')) return
+   246→    setSeeding(true)
+   247→    try {
+   248→      await seedFirestoreIfEmpty()
+   249→      alert('Firestore seeded successfully!')
+   250→      loadCategories()
+   251→    } catch { alert('Failed to seed Firestore') }
+   252→    finally { setSeeding(false) }
+   253→  }
+   254→
+   255→  const handleStartEdit = (id: string, name: string, desc: string) => {
+   256→    setEditingId(id)
+   257→    setEditName(name)
+   258→    setEditDesc(desc || '')
+   259→  }
+   260→
+   261→  const handleSaveEdit = async (type: string, id: string) => {
+   262→    try {
+   263→      if (type === 'category') {
+   264→        await updateCategory(id, { name: editName, description: editDesc })
+   265→        loadCategories()
+   266→      } else if (type === 'exam') {
+   267→        await updateExam(id, { name: editName, description: editDesc })
+   268→        if (selectedCategoryId) loadExams(selectedCategoryId)
+   269→      } else if (type === 'test') {
+   270→        await updateTest(id, { title: editName, description: editDesc })
+   271→        if (selectedExamId) loadTests(selectedExamId)
+   272→      }
+   273→      setEditingId(null)
+   274→    } catch { alert('Failed to update') }
+   275→  }
+   276→
+   277→  return (
+   278→    <div className="space-y-4">
+   279→      {/* Breadcrumb + Actions */}
+   280→      <div className="flex items-center justify-between">
+   281→        <div className="flex items-center gap-2 text-sm">
+   282→          {viewLevel !== 'categories' && (
+   283→            <button onClick={handleBack} className="text-violet-600 hover:text-violet-800 font-medium flex items-center gap-1">
+   284→              <ArrowLeft className="w-4 h-4" /> Back
+   285→            </button>
+   286→          )}
+   287→          <span className="text-gray-400">
+   288→            {viewLevel === 'categories' ? 'Categories' :
+   289→             viewLevel === 'exams' ? `› ${selectedCategoryName} › Exams` :
+   290→             viewLevel === 'tests' ? `› ${selectedCategoryName} › ${selectedExamName} › Tests` :
+   291→             `› ${selectedCategoryName} › ${selectedExamName} › ${selectedTestName} › Questions`}
+   292→          </span>
+   293→        </div>
+   294→        <div className="flex items-center gap-2">
+   295→          <Button
+   296→            variant="outline"
+   297→            size="sm"
+   298→            className="rounded-xl text-xs"
+   299→            onClick={handleSeed}
+   300→            disabled={seeding}
+   301→          >
+   302→            <Database className="w-3 h-3 mr-1" />
+   303→            {seeding ? 'Seeding...' : 'Seed Firestore'}
+   304→          </Button>
+   305→        </div>
+   306→      </div>
+   307→
+   308→      {/* Loading */}
+   309→      {loading && (
+   310→        <div className="flex items-center justify-center py-12">
+   311→          <RefreshCw className="w-6 h-6 text-gray-400 animate-spin" />
+   312→        </div>
+   313→      )}
+   314→
+   315→      {/* ===== CATEGORIES VIEW ===== */}
+   316→      {!loading && viewLevel === 'categories' && (
+   317→        <div className="space-y-4">
+   318→          <div className="flex items-center justify-between">
+   319→            <h3 className="font-bold text-sm">Categories ({categories.length})</h3>
+   320→            <Button size="sm" className="rounded-xl text-xs" onClick={() => { setShowAdd(!showAdd); setAddName(''); setAddDesc(''); setAddSlug('') }}>
+   321→              <Plus className="w-3 h-3 mr-1" /> Add Category
+   322→            </Button>
+   323→          </div>
+   324→
+   325→          {showAdd && (
+   326→            <Card className="border-0 shadow-md bg-orange-50/50">
+   327→              <CardContent className="p-4 space-y-2">
+   328→                <Input placeholder="Category name" value={addName} onChange={e => setAddName(e.target.value)} className="rounded-xl" />
+   329→                <Input placeholder="Slug (auto-generated if empty)" value={addSlug} onChange={e => setAddSlug(e.target.value)} className="rounded-xl" />
+   330→                <Input placeholder="Description" value={addDesc} onChange={e => setAddDesc(e.target.value)} className="rounded-xl" />
+   331→                <div className="flex gap-2">
+   332→                  <Button size="sm" className="rounded-xl" onClick={handleAddCategory} disabled={!addName.trim()}>Add</Button>
+   333→                  <Button size="sm" variant="outline" className="rounded-xl" onClick={() => setShowAdd(false)}>Cancel</Button>
+   334→                </div>
+   335→              </CardContent>
+   336→            </Card>
+   337→          )}
+   338→
+   339→          {categories.length === 0 ? (
+   340→            <Card className="border-0 shadow-sm">
+   341→              <CardContent className="p-8 text-center">
+   342→                <BookOpen className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+   343→                <p className="text-gray-400 text-sm">No categories found</p>
+   344→              </CardContent>
+   345→            </Card>
+   346→          ) : (
+   347→            categories.map(cat => (
+   348→              <Card key={cat.id} className="border-0 shadow-sm hover:shadow-md transition-shadow">
+   349→                <CardContent className="p-3 flex items-center gap-3">
+   350→                  {editingId === cat.id ? (
+   351→                    <div className="flex-1 space-y-2">
+   352→                      <Input value={editName} onChange={e => setEditName(e.target.value)} className="rounded-xl text-sm" />
+   353→                      <Input value={editDesc} onChange={e => setEditDesc(e.target.value)} placeholder="Description" className="rounded-xl text-sm" />
+   354→                      <div className="flex gap-2">
+   355→                        <Button size="sm" className="rounded-xl" onClick={() => handleSaveEdit('category', cat.id)}>
+   356→                          <Save className="w-3 h-3 mr-1" /> Save
+   357→                        </Button>
+   358→                        <Button size="sm" variant="outline" className="rounded-xl" onClick={() => setEditingId(null)}>Cancel</Button>
+   359→                      </div>
+   360→                    </div>
+   361→                  ) : (
+   362→                    <>
+   363→                      <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-orange-100 to-orange-200 flex items-center justify-center flex-shrink-0 text-lg">
+   364→                        {cat.icon || '📋'}
+   365→                      </div>
+   366→                      <button className="flex-1 min-w-0 text-left" onClick={() => handleSelectCategory(cat)}>
+   367→                        <p className="font-semibold text-sm truncate">{cat.name}</p>
+   368→                        <p className="text-gray-400 text-xs truncate">{cat.description || cat.slug}</p>
+   369→                      </button>
+   370→                      <div className="flex items-center gap-1">
+   371→                        <button onClick={() => handleStartEdit(cat.id, cat.name, cat.description)} className="w-8 h-8 rounded-lg bg-blue-50 hover:bg-blue-100 flex items-center justify-center">
+   372→                          <Edit3 className="w-3.5 h-3.5 text-blue-500" />
+   373→                        </button>
+   374→                        <button onClick={() => handleDelete('category', cat.id)} className="w-8 h-8 rounded-lg bg-red-50 hover:bg-red-100 flex items-center justify-center">
+   375→                          <Trash2 className="w-3.5 h-3.5 text-red-400" />
+   376→                        </button>
+   377→                        <button onClick={() => handleSelectCategory(cat)} className="w-8 h-8 rounded-lg bg-gray-50 hover:bg-gray-100 flex items-center justify-center">
+   378→                          <ChevronRight className="w-4 h-4 text-gray-400" />
+   379→                        </button>
+   380→                      </div>
+   381→                    </>
+   382→                  )}
+   383→                </CardContent>
+   384→              </Card>
+   385→            ))
+   386→          )}
+   387→        </div>
+   388→      )}
+   389→
+   390→      {/* ===== EXAMS VIEW ===== */}
+   391→      {!loading && viewLevel === 'exams' && (
+   392→        <div className="space-y-4">
+   393→          <div className="flex items-center justify-between">
+   394→            <h3 className="font-bold text-sm">Exams in {selectedCategoryName} ({exams.length})</h3>
+   395→            <Button size="sm" className="rounded-xl text-xs" onClick={() => { setShowAdd(!showAdd); setAddName(''); setAddDesc(''); setAddSlug('') }}>
+   396→              <Plus className="w-3 h-3 mr-1" /> Add Exam
+   397→            </Button>
+   398→          </div>
+   399→
+   400→          {showAdd && (
+   401→            <Card className="border-0 shadow-md bg-orange-50/50">
+   402→              <CardContent className="p-4 space-y-2">
+   403→                <Input placeholder="Exam name" value={addName} onChange={e => setAddName(e.target.value)} className="rounded-xl" />
+   404→                <Input placeholder="Slug" value={addSlug} onChange={e => setAddSlug(e.target.value)} className="rounded-xl" />
+   405→                <Input placeholder="Description" value={addDesc} onChange={e => setAddDesc(e.target.value)} className="rounded-xl" />
+   406→                <div className="flex gap-2">
+   407→                  <Button size="sm" className="rounded-xl" onClick={handleAddExam} disabled={!addName.trim()}>Add</Button>
+   408→                  <Button size="sm" variant="outline" className="rounded-xl" onClick={() => setShowAdd(false)}>Cancel</Button>
+   409→                </div>
+   410→              </CardContent>
+   411→            </Card>
+   412→          )}
+   413→
+   414→          {exams.length === 0 ? (
+   415→            <Card className="border-0 shadow-sm">
+   416→              <CardContent className="p-8 text-center">
+   417→                <BookOpen className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+   418→                <p className="text-gray-400 text-sm">No exams in this category</p>
+   419→              </CardContent>
+   420→            </Card>
+   421→          ) : (
+   422→            exams.map(exam => (
+   423→              <Card key={exam.id} className="border-0 shadow-sm hover:shadow-md transition-shadow">
+   424→                <CardContent className="p-3 flex items-center gap-3">
+   425→                  {editingId === exam.id ? (
+   426→                    <div className="flex-1 space-y-2">
+   427→                      <Input value={editName} onChange={e => setEditName(e.target.value)} className="rounded-xl text-sm" />
+   428→                      <Input value={editDesc} onChange={e => setEditDesc(e.target.value)} placeholder="Description" className="rounded-xl text-sm" />
+   429→                      <div className="flex gap-2">
+   430→                        <Button size="sm" className="rounded-xl" onClick={() => handleSaveEdit('exam', exam.id)}><Save className="w-3 h-3 mr-1" /> Save</Button>
+   431→                        <Button size="sm" variant="outline" className="rounded-xl" onClick={() => setEditingId(null)}>Cancel</Button>
+   432→                      </div>
+   433→                    </div>
+   434→                  ) : (
+   435→                    <>
+   436→                      <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-100 to-blue-200 flex items-center justify-center flex-shrink-0">
+   437→                        <BookOpen className="w-5 h-5 text-blue-500" />
+   438→                      </div>
+   439→                      <button className="flex-1 min-w-0 text-left" onClick={() => handleSelectExam(exam)}>
+   440→                        <p className="font-semibold text-sm truncate">{exam.name}</p>
+   441→                        <p className="text-gray-400 text-xs">{exam.testCount || 0} tests • {exam.totalQuestions || 0} questions</p>
+   442→                      </button>
+   443→                      <div className="flex items-center gap-1">
+   444→                        <button onClick={() => handleStartEdit(exam.id, exam.name, exam.description)} className="w-8 h-8 rounded-lg bg-blue-50 hover:bg-blue-100 flex items-center justify-center">
+   445→                          <Edit3 className="w-3.5 h-3.5 text-blue-500" />
+   446→                        </button>
+   447→                        <button onClick={() => handleDelete('exam', exam.id)} className="w-8 h-8 rounded-lg bg-red-50 hover:bg-red-100 flex items-center justify-center">
+   448→                          <Trash2 className="w-3.5 h-3.5 text-red-400" />
+   449→                        </button>
+   450→                        <button onClick={() => handleSelectExam(exam)} className="w-8 h-8 rounded-lg bg-gray-50 hover:bg-gray-100 flex items-center justify-center">
+   451→                          <ChevronRight className="w-4 h-4 text-gray-400" />
+   452→                        </button>
+   453→                      </div>
+   454→                    </>
+   455→                  )}
+   456→                </CardContent>
+   457→              </Card>
+   458→            ))
+   459→          )}
+   460→        </div>
+   461→      )}
+   462→
+   463→      {/* ===== TESTS VIEW ===== */}
+   464→      {!loading && viewLevel === 'tests' && (
+   465→        <div className="space-y-4">
+   466→          <div className="flex items-center justify-between">
+   467→            <h3 className="font-bold text-sm">Tests in {selectedExamName} ({tests.length})</h3>
+   468→            <Button size="sm" className="rounded-xl text-xs" onClick={() => { setShowAdd(!showAdd); setAddName(''); setAddDesc(''); setAddSlug('') }}>
+   469→              <Plus className="w-3 h-3 mr-1" /> Add Test
+   470→            </Button>
+   471→          </div>
+   472→
+   473→          {showAdd && (
+   474→            <Card className="border-0 shadow-md bg-orange-50/50">
+   475→              <CardContent className="p-4 space-y-2">
+   476→                <Input placeholder="Test title" value={addName} onChange={e => setAddName(e.target.value)} className="rounded-xl" />
+   477→                <Input placeholder="Slug" value={addSlug} onChange={e => setAddSlug(e.target.value)} className="rounded-xl" />
+   478→                <Input placeholder="Description" value={addDesc} onChange={e => setAddDesc(e.target.value)} className="rounded-xl" />
+   479→                <div className="flex gap-2">
+   480→                  <Button size="sm" className="rounded-xl" onClick={handleAddTest} disabled={!addName.trim()}>Add</Button>
+   481→                  <Button size="sm" variant="outline" className="rounded-xl" onClick={() => setShowAdd(false)}>Cancel</Button>
+   482→                </div>
+   483→              </CardContent>
+   484→            </Card>
+   485→          )}
+   486→
+   487→          {tests.length === 0 ? (
+   488→            <Card className="border-0 shadow-sm">
+   489→              <CardContent className="p-8 text-center">
+   490→                <ListChecks className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+   491→                <p className="text-gray-400 text-sm">No tests in this exam</p>
+   492→              </CardContent>
+   493→            </Card>
+   494→          ) : (
+   495→            tests.map(test => (
+   496→              <Card key={test.id} className="border-0 shadow-sm hover:shadow-md transition-shadow">
+   497→                <CardContent className="p-3 flex items-center gap-3">
+   498→                  {editingId === test.id ? (
+   499→                    <div className="flex-1 space-y-2">
+   500→                      <Input value={editName} onChange={e => setEditName(e.target.value)} className="rounded-xl text-sm" />
+   501→                      <Input value={editDesc} onChange={e => setEditDesc(e.target.value)} placeholder="Description" className="rounded-xl text-sm" />
+   502→                      <div className="flex gap-2">
+   503→                        <Button size="sm" className="rounded-xl" onClick={() => handleSaveEdit('test', test.id)}><Save className="w-3 h-3 mr-1" /> Save</Button>
+   504→                        <Button size="sm" variant="outline" className="rounded-xl" onClick={() => setEditingId(null)}>Cancel</Button>
+   505→                      </div>
+   506→                    </div>
+   507→                  ) : (
+   508→                    <>
+   509→                      <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-100 to-emerald-200 flex items-center justify-center flex-shrink-0">
+   510→                        <ListChecks className="w-5 h-5 text-emerald-500" />
+   511→                      </div>
+   512→                      <button className="flex-1 min-w-0 text-left" onClick={() => handleSelectTest(test)}>
+   513→                        <p className="font-semibold text-sm truncate">{test.title}</p>
+   514→                        <p className="text-gray-400 text-xs">{test.totalQuestions}Q • {test.duration}min • {test.difficulty}</p>
+   515→                      </button>
+   516→                      <div className="flex items-center gap-1">
+   517→                        <Badge variant="secondary" className={`text-[9px] ${test.isLive ? 'bg-emerald-100 text-emerald-700' : 'bg-gray-100 text-gray-500'}`}>
+   518→                          {test.isLive ? 'Live' : 'Draft'}
+   519→                        </Badge>
+   520→                        <button onClick={() => handleStartEdit(test.id, test.title, test.description)} className="w-8 h-8 rounded-lg bg-blue-50 hover:bg-blue-100 flex items-center justify-center">
+   521→                          <Edit3 className="w-3.5 h-3.5 text-blue-500" />
+   522→                        </button>
+   523→                        <button onClick={() => handleDelete('test', test.id)} className="w-8 h-8 rounded-lg bg-red-50 hover:bg-red-100 flex items-center justify-center">
+   524→                          <Trash2 className="w-3.5 h-3.5 text-red-400" />
+   525→                        </button>
+   526→                        <button onClick={() => handleSelectTest(test)} className="w-8 h-8 rounded-lg bg-gray-50 hover:bg-gray-100 flex items-center justify-center">
+   527→                          <ChevronRight className="w-4 h-4 text-gray-400" />
+   528→                        </button>
+   529→                      </div>
+   530→                    </>
+   531→                  )}
+   532→                </CardContent>
+   533→              </Card>
+   534→            ))
+   535→          )}
+   536→        </div>
+   537→      )}
+   538→
+   539→      {/* ===== QUESTIONS VIEW ===== */}
+   540→      {!loading && viewLevel === 'questions' && (
+   541→        <div className="space-y-4">
+   542→          <div className="flex items-center justify-between">
+   543→            <h3 className="font-bold text-sm">Questions in {selectedTestName} ({questions.length})</h3>
+   544→            <div className="flex gap-2">
+   545→              <Button size="sm" variant="outline" className="rounded-xl text-xs" onClick={() => { setShowBatch(!showBatch); setBatchText('') }}>
+   546→                <Database className="w-3 h-3 mr-1" /> Batch Import
+   547→              </Button>
+   548→              <Button size="sm" className="rounded-xl text-xs" onClick={() => { setShowAddQuestion(!showAddQuestion); setQText(''); setQA(''); setQB(''); setQC(''); setQD('') }}>
+   549→                <Plus className="w-3 h-3 mr-1" /> Add Question
+   550→              </Button>
+   551→            </div>
+   552→          </div>
+   553→
+   554→          {/* Add Single Question */}
+   555→          {showAddQuestion && (
+   556→            <Card className="border-0 shadow-md bg-blue-50/50">
+   557→              <CardContent className="p-4 space-y-2">
+   558→                <Textarea placeholder="Question text" value={qText} onChange={e => setQText(e.target.value)} className="rounded-xl" rows={2} />
+   559→                <div className="grid grid-cols-2 gap-2">
+   560→                  <Input placeholder="Option A" value={qA} onChange={e => setQA(e.target.value)} className="rounded-xl" />
+   561→                  <Input placeholder="Option B" value={qB} onChange={e => setQB(e.target.value)} className="rounded-xl" />
+   562→                  <Input placeholder="Option C" value={qC} onChange={e => setQC(e.target.value)} className="rounded-xl" />
+   563→                  <Input placeholder="Option D" value={qD} onChange={e => setQD(e.target.value)} className="rounded-xl" />
+   564→                </div>
+   565→                <div className="grid grid-cols-2 gap-2">
+   566→                  <div>
+   567→                    <p className="text-xs text-gray-500 mb-1">Correct Answer</p>
+   568→                    <div className="flex gap-2">
+   569→                      {['A', 'B', 'C', 'D'].map(o => (
+   570→                        <button key={o} onClick={() => setQAns(o)} className={`w-9 h-9 rounded-lg text-sm font-bold ${qAns === o ? 'bg-emerald-500 text-white' : 'bg-gray-100 text-gray-500'}`}>
+   571→                          {o}
+   572→                        </button>
+   573→                      ))}
+   574→                    </div>
+   575→                  </div>
+   576→                  <Input placeholder="Subject (optional)" value={qSubject} onChange={e => setQSubject(e.target.value)} className="rounded-xl" />
+   577→                </div>
+   578→                <Textarea placeholder="Explanation (optional)" value={qExplanation} onChange={e => setQExplanation(e.target.value)} className="rounded-xl" rows={2} />
+   579→                <div className="flex gap-2">
+   580→                  <Button size="sm" className="rounded-xl" onClick={handleAddQuestion} disabled={!qText.trim()}>Add Question</Button>
+   581→                  <Button size="sm" variant="outline" className="rounded-xl" onClick={() => setShowAddQuestion(false)}>Cancel</Button>
+   582→                </div>
+   583→              </CardContent>
+   584→            </Card>
+   585→          )}
+   586→
+   587→          {/* Batch Import */}
+   588→          {showBatch && (
+   589→            <Card className="border-0 shadow-md bg-purple-50/50">
+   590→              <CardContent className="p-4 space-y-2">
+   591→                <p className="text-xs text-gray-500">Format: Question|OptA|OptB|OptC|OptD|Answer|Explanation|Subject (one per line)</p>
+   592→                <Textarea
+   593→                  placeholder={"What is 2+2?|4|3|5|6|A|Basic addition|Math\nCapital of India?|Mumbai|Delhi|Kolkata|Chennai|B|India's capital|GK"}
+   594→                  value={batchText}
+   595→                  onChange={e => setBatchText(e.target.value)}
+   596→                  className="rounded-xl font-mono text-xs"
+   597→                  rows={5}
+   598→                />
+   599→                <div className="flex gap-2">
+   600→                  <Button size="sm" className="rounded-xl" onClick={handleBatchQuestions} disabled={!batchText.trim()}>Import Batch</Button>
+   601→                  <Button size="sm" variant="outline" className="rounded-xl" onClick={() => setShowBatch(false)}>Cancel</Button>
+   602→                </div>
+   603→              </CardContent>
+   604→            </Card>
+   605→          )}
+   606→
+   607→          {questions.length === 0 ? (
+   608→            <Card className="border-0 shadow-sm">
+   609→              <CardContent className="p-8 text-center">
+   610→                <HelpCircle className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+   611→                <p className="text-gray-400 text-sm">No questions in this test</p>
+   612→                <p className="text-gray-300 text-xs mt-1">Add questions individually or use batch import</p>
+   613→              </CardContent>
+   614→            </Card>
+   615→          ) : (
+   616→            <div className="space-y-2 max-h-[60vh] overflow-y-auto">
+   617→              {questions.map((q, i) => (
+   618→                <Card key={q.id} className="border-0 shadow-sm">
+   619→                  <CardContent className="p-3">
+   620→                    <div className="flex items-start gap-2">
+   621→                      <span className="text-xs text-gray-400 mt-0.5 flex-shrink-0">#{i + 1}</span>
+   622→                      <div className="flex-1 min-w-0">
+   623→                        <p className="text-sm font-medium">{q.questionText}</p>
+   624→                        <div className="grid grid-cols-2 gap-1 mt-1.5 text-xs">
+   625→                          <span className={`px-2 py-0.5 rounded ${q.correctAnswer === 'A' ? 'bg-emerald-100 text-emerald-700 font-medium' : 'bg-gray-50 text-gray-500'}`}>A: {q.optionA}</span>
+   626→                          <span className={`px-2 py-0.5 rounded ${q.correctAnswer === 'B' ? 'bg-emerald-100 text-emerald-700 font-medium' : 'bg-gray-50 text-gray-500'}`}>B: {q.optionB}</span>
+   627→                          <span className={`px-2 py-0.5 rounded ${q.correctAnswer === 'C' ? 'bg-emerald-100 text-emerald-700 font-medium' : 'bg-gray-50 text-gray-500'}`}>C: {q.optionC}</span>
+   628→                          <span className={`px-2 py-0.5 rounded ${q.correctAnswer === 'D' ? 'bg-emerald-100 text-emerald-700 font-medium' : 'bg-gray-50 text-gray-500'}`}>D: {q.optionD}</span>
+   629→                        </div>
+   630→                        {q.explanation && <p className="text-gray-400 text-[10px] mt-1">💡 {q.explanation}</p>}
+   631→                        {q.subject && <Badge variant="secondary" className="text-[9px] mt-1">{q.subject}</Badge>}
+   632→                      </div>
+   633→                      <button onClick={() => handleDelete('question', q.id)} className="w-7 h-7 rounded-lg bg-red-50 hover:bg-red-100 flex items-center justify-center flex-shrink-0">
+   634→                        <Trash2 className="w-3 h-3 text-red-400" />
+   635→                      </button>
+   636→                    </div>
+   637→                  </CardContent>
+   638→                </Card>
+   639→              ))}
+   640→            </div>
+   641→          )}
+   642→        </div>
+   643→      )}
+   644→    </div>
+   645→  )
+   646→}
+   647→

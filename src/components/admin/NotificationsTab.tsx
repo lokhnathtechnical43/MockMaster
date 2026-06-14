@@ -6,7 +6,7 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import {
   Bell, Zap, AlertTriangle, Gift, Plus,
-  Trash2, RefreshCw
+  Trash2, RefreshCw, ExternalLink
 } from 'lucide-react'
 import {
   type Notification,
@@ -22,6 +22,7 @@ export default function NotificationsTab({ notifications, onUpdate }: Notificati
   const [newNotifTitle, setNewNotifTitle] = useState('')
   const [newNotifMessage, setNewNotifMessage] = useState('')
   const [newNotifType, setNewNotifType] = useState<'update' | 'alert' | 'info'>('info')
+  const [newNotifLink, setNewNotifLink] = useState('')
 
   const handleSend = () => {
     const newNotif: Notification = {
@@ -31,10 +32,12 @@ export default function NotificationsTab({ notifications, onUpdate }: Notificati
       time: 'Just now',
       read: false,
       type: newNotifType,
+      link: newNotifLink || undefined,
     }
     onUpdate([newNotif, ...notifications])
     setNewNotifTitle('')
     setNewNotifMessage('')
+    setNewNotifLink('')
   }
 
   const handleDelete = (index: number) => {
@@ -69,6 +72,13 @@ export default function NotificationsTab({ notifications, onUpdate }: Notificati
               placeholder="Message (e.g. A new version is available...)"
               rows={3}
               className="w-full px-3 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-orange-300 resize-none"
+            />
+            <input
+              type="text"
+              value={newNotifLink}
+              onChange={e => setNewNotifLink(e.target.value)}
+              placeholder="Link (optional, e.g. https://example.com or 'exams')"
+              className="w-full px-3 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-orange-300"
             />
             <div>
               <p className="text-xs text-gray-500 mb-1.5">Type</p>
@@ -142,6 +152,11 @@ export default function NotificationsTab({ notifications, onUpdate }: Notificati
                       {!n.read && <div className="w-2 h-2 rounded-full bg-orange-500 flex-shrink-0" />}
                     </div>
                     <p className="text-gray-400 text-xs truncate">{n.message}</p>
+                    {n.link && (
+                      <p className="text-blue-500 text-[10px] mt-0.5 flex items-center gap-1 truncate">
+                        <ExternalLink className="w-3 h-3" /> {n.link}
+                      </p>
+                    )}
                     <p className="text-gray-300 text-[10px] mt-0.5">{n.time}</p>
                   </div>
                   <button

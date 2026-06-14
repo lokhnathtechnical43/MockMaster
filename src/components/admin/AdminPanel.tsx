@@ -9,17 +9,21 @@ import {
   BookOpen, Bell, Flame, PieChart
 } from 'lucide-react'
 import {
-  type Announcement, type Notification,
+  type Announcement, type Notification, type DailyTip,
   getAnnouncements as getLocalAnnouncements,
   getNotifications as getLocalNotifications,
   saveAnnouncements as saveLocalAnnouncements,
   saveNotifications as saveLocalNotifications,
+  getDailyTips as getLocalDailyTips,
+  saveDailyTips as saveLocalDailyTips,
 } from '@/lib/admin-data'
 import {
   getAnnouncements as getFsAnnouncements,
   getNotifications as getFsNotifications,
   saveAnnouncements as saveFsAnnouncements,
   saveNotifications as saveFsNotifications,
+  getDailyTips as getFsDailyTips,
+  saveDailyTips as saveFsDailyTips,
   getResults as getFsResults,
   getUseFirestore,
 } from '@/lib/firestore-service'
@@ -33,9 +37,10 @@ import UsersTab from './UsersTab'
 import AnalyticsTab from './AnalyticsTab'
 import AnnouncementsTab from './AnnouncementsTab'
 import NotificationsTab from './NotificationsTab'
+import DailyTipsTab from './DailyTipsTab'
 import SettingsTab from './SettingsTab'
 
-type AdminTab = 'dashboard' | 'exams' | 'users' | 'analytics' | 'announcements' | 'notifications' | 'settings'
+type AdminTab = 'dashboard' | 'exams' | 'users' | 'analytics' | 'announcements' | 'notifications' | 'dailyTips' | 'settings'
 
 export default function AdminPanel() {
   // --- Auth ---
@@ -51,6 +56,7 @@ export default function AdminPanel() {
   const [allResults, setAllResults] = useState<TestResult[]>([])
   const [announcements, setAnnouncements] = useState<Announcement[]>([])
   const [notifications, setNotifications] = useState<Notification[]>([])
+  const [dailyTips, setDailyTips] = useState<DailyTip[]>([])
 
   // --- Load data on mount (always from Firestore if available) ---
   useEffect(() => {
@@ -64,23 +70,27 @@ export default function AdminPanel() {
     const loadAdminData = async () => {
       try {
         if (getUseFirestore() && isFirebaseReady()) {
-          const [anns, notifs, results] = await Promise.all([
+          const [anns, notifs, tips, results] = await Promise.all([
             getFsAnnouncements(),
             getFsNotifications(),
+            getFsDailyTips(),
             getFsResults(),
           ])
           setAnnouncements(anns)
           setNotifications(notifs)
+          setDailyTips(tips)
           setAllResults(results)
         } else {
           setAnnouncements(getLocalAnnouncements())
           setNotifications(getLocalNotifications())
+          setDailyTips(getLocalDailyTips())
           setAllResults(getLocalResults())
         }
       } catch (e) {
         console.error('Admin data load failed, using local:', e)
         setAnnouncements(getLocalAnnouncements())
         setNotifications(getLocalNotifications())
+        setDailyTips(getLocalDailyTips())
         setAllResults(getLocalResults())
       }
     }
@@ -124,6 +134,18 @@ export default function AdminPanel() {
       }
     }
   }, [notifications])
+
+  // Save daily tips to Firestore + localStorage when changed
+  useEffect(() => {
+    if (dailyTips.length > 0) {
+      saveLocalDailyTips(dailyTips) // local backup
+      if (getUseFirestore() && isFirebaseReady()) {
+        saveFsDailyTips(dailyTips).catch(e =>
+          console.error('[Admin] Failed to save daily tips to Firestore:', e)
+        )
+      }
+    }
+  }, [dailyTips])
 
   const ADMIN_PASSWORD = 'admin123'
 
@@ -238,6 +260,7 @@ export default function AdminPanel() {
     { id: 'analytics', icon: PieChart, label: 'Analytics' },
     { id: 'announcements', icon: Flame, label: 'Announce' },
     { id: 'notifications', icon: Bell, label: 'Notify' },
+    { id: 'dailyTips', icon: FileText, label: 'Tips' },
     { id: 'settings', icon: Settings, label: 'Settings' },
   ]
 
@@ -323,6 +346,13 @@ export default function AdminPanel() {
           <NotificationsTab
             notifications={notifications}
             onUpdate={setNotifications}
+          />
+        )}
+
+        {adminTab === 'dailyTips' && (
+          <DailyTipsTab
+            tips={dailyTips}
+            onUpdate={setDailyTips}
           />
         )}
 
