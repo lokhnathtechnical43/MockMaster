@@ -44,6 +44,7 @@ const translations: Record<Lang, Record<string, string>> = {
 
     // === Tests Page ===
     'tests.available': 'Available Tests',
+    'tests.selectExam': 'Select an exam to start practicing',
     'tests.free': 'FREE',
     'tests.startTest': 'Start Test',
     'tests.Qs': 'Qs',
@@ -253,6 +254,7 @@ const translations: Record<Lang, Record<string, string>> = {
 
     // === Tests Page ===
     'tests.available': 'उपलब्ध टेस्ट',
+    'tests.selectExam': 'अभ्यास शुरू करने के लिए एक परीक्षा चुनें',
     'tests.free': 'मुफ्त',
     'tests.startTest': 'टेस्ट शुरू करें',
     'tests.Qs': 'प्रश्न',
@@ -462,6 +464,7 @@ const translations: Record<Lang, Record<string, string>> = {
 
     // === Tests Page ===
     'tests.available': 'উপলব্ধ টেস্ট',
+    'tests.selectExam': 'অনুশীলন শুরু করতে একটি পরীক্ষা নির্বাচন করুন',
     'tests.free': 'বিনামূল্যে',
     'tests.startTest': 'টেস্ট শুরু করুন',
     'tests.Qs': 'প্রশ্ন',

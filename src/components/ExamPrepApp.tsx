@@ -101,6 +101,24 @@ function formatTime(seconds: number): string {
   return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`
 }
 
+/** Share with Web Share API fallback to clipboard copy */
+async function shareApp(title: string, text: string, url: string) {
+  if (navigator.share) {
+    try {
+      await navigator.share({ title, text, url })
+    } catch {}
+  } else {
+    // Desktop fallback: copy link to clipboard
+    try {
+      await navigator.clipboard.writeText(`${text} ${url}`)
+      alert('Link copied to clipboard!')
+    } catch {
+      // Ultimate fallback
+      prompt('Copy this link:', url)
+    }
+  }
+}
+
 function getCatColor(slug: string): CategoryColor {
   return CATEGORY_COLORS[slug] || CATEGORY_COLORS.ssc
 }
@@ -194,7 +212,15 @@ export default function ExamPrepApp() {
   const [showAboutSheet, setShowAboutSheet] = useState(false)
   const [showHelpSheet, setShowHelpSheet] = useState(false)
   const [showOfflineSheet, setShowOfflineSheet] = useState(false)
-  const [selectedLanguage, setSelectedLanguage] = useState<Lang>('en')
+  const [selectedLanguage, setSelectedLanguage] = useState<Lang>(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const stored = localStorage.getItem('examprep_language')
+        if (stored === 'en' || stored === 'hi' || stored === 'bn') return stored
+      } catch {}
+    }
+    return 'en'
+  })
   const [showQuestionNav, setShowQuestionNav] = useState(false)
   const [showSideMenu, setShowSideMenu] = useState(false)
   const [showNotificationPanel, setShowNotificationPanel] = useState(false)
@@ -1437,7 +1463,23 @@ export default function ExamPrepApp() {
 
   // ===== RENDER: Tests Page =====
   function renderTests() {
-    if (!selectedExam || !selectedCategory) return null
+    if (!selectedExam || !selectedCategory) {
+      // No exam selected — redirect to exams page
+      return (
+        <div className="pb-20">
+          <div className="bg-gradient-to-r from-orange-500 to-red-500 px-4 pt-[calc(env(safe-area-inset-top,0px)+3rem)] pb-6 rounded-b-3xl">
+            <h1 className="text-white text-lg font-bold">{_t('tests.available')}</h1>
+          </div>
+          <div className="px-4 mt-8 text-center">
+            <BookOpen className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+            <p className="text-gray-500 text-sm mb-4">{_t('tests.selectExam')}</p>
+            <Button onClick={() => navigateTo('exams')} className="bg-gradient-to-r from-orange-500 to-red-500 text-white rounded-xl">
+              {_t('home.viewAll')}
+            </Button>
+          </div>
+        </div>
+      )
+    }
     const color = getCatColor(selectedCategory.slug)
     return (
       <div className="pb-20">
@@ -2375,7 +2417,7 @@ export default function ExamPrepApp() {
           <div className="flex items-center justify-between mb-6 relative z-10">
             <h1 className="text-white text-xl font-bold">{_t('profile.title')}</h1>
             <button
-              onClick={() => setShowAboutSheet(true)}
+              onClick={() => setShowLanguageSheet(true)}
               className="w-9 h-9 rounded-full bg-white/10 backdrop-blur flex items-center justify-center"
             >
               <Settings className="w-4 h-4 text-white/70" />
@@ -2587,9 +2629,7 @@ export default function ExamPrepApp() {
                 <button
                   className="w-full flex items-center gap-3 p-4 hover:bg-gray-50/80 transition-colors active:bg-gray-100"
                   onClick={() => {
-                    if (navigator.share) {
-                      navigator.share({ title: _t('app.name'), text: _t('share.text'), url: window.location.href })
-                    }
+                    shareApp(_t('app.name'), _t('share.text'), window.location.href)
                   }}
                 >
                   <div className="w-9 h-9 rounded-xl bg-pink-50 flex items-center justify-center">
@@ -2640,6 +2680,7 @@ export default function ExamPrepApp() {
                     onClick={() => {
                       if (lang.available) {
                         setSelectedLanguage(lang.code)
+                        try { localStorage.setItem('examprep_language', lang.code) } catch {}
                         setShowLanguageSheet(false)
                       }
                     }}
@@ -2647,6 +2688,7 @@ export default function ExamPrepApp() {
                       if (lang.available) {
                         e.preventDefault()
                         setSelectedLanguage(lang.code)
+                        try { localStorage.setItem('examprep_language', lang.code) } catch {}
                         setShowLanguageSheet(false)
                       }
                     }}
@@ -2779,14 +2821,30 @@ export default function ExamPrepApp() {
                         <p className="font-semibold text-sm">{cat.name}</p>
                         <p className="text-gray-400 text-xs">{cat.exams.length} {_t('home.exams')}</p>
                       </div>
-                      <Button size="sm" variant="outline" className="rounded-xl text-xs" onClick={() => {
-                        // Download/sync category data to localStorage
+                      <Button size="sm" variant="outline" className="rounded-xl text-xs" onClick={async () => {
+                        // Download/sync category tests & questions to localStorage for offline use
                         try {
+                          const offlineData: { catId: string; catName: string; tests: LocalTest[] } = {
+                            catId: cat.id,
+                            catName: cat.name,
+                            tests: []
+                          }
+                          for (const exam of cat.exams) {
+                            const tests = await fetchTestsByExam(exam.id)
+                            for (const test of tests) {
+                              const fullTest = await fetchTestById(test.id)
+                              if (fullTest) offlineData.tests.push(fullTest)
+                            }
+                          }
                           const key = `examprep_offline_${cat.slug}`
-                          localStorage.setItem(key, JSON.stringify(cat))
-                        } catch {}
+                          localStorage.setItem(key, JSON.stringify(offlineData))
+                          // Show confirmation
+                          alert(`${cat.name}: ${offlineData.tests.length} tests saved for offline use!`)
+                        } catch (e) {
+                          console.error('Offline save error:', e)
+                        }
                       }}>
-                        <Download className="w-3 h-3 mr-1" /> Save
+                        <Download className="w-3 h-3 mr-1" /> {_t('about.save') || 'Save'}
                       </Button>
                     </div>
                   )
@@ -2954,7 +3012,7 @@ export default function ExamPrepApp() {
                   }},
                   { icon: BookmarkPlus, label: _t('menu.bookmarkedQ'), soon: false, action: () => {
                     if (auth.isLoggedIn) {
-                      handleBottomNav('tests')
+                      handleBottomNav('practice')
                     } else {
                       setShowLoginModal(true)
                     }
@@ -2995,9 +3053,7 @@ export default function ExamPrepApp() {
                   { icon: Wifi, id: 'offline', label: _t('menu.offlineMode'), sub: _t('menu.downloadTests'), action: () => { setShowSideMenu(false); setShowOfflineSheet(true) } },
                   { icon: HelpCircle, id: 'help', label: _t('menu.helpFaq'), sub: _t('menu.getSupport'), action: () => { setShowSideMenu(false); setShowHelpSheet(true) } },
                   { icon: Share2, id: 'share', label: _t('menu.shareApp'), sub: _t('menu.tellFriends'), action: () => {
-                    if (navigator.share) {
-                      navigator.share({ title: _t('app.name'), text: _t('share.text'), url: window.location.href })
-                    }
+                    shareApp(_t('app.name'), _t('share.text'), window.location.href)
                   }},
                   { icon: Shield, id: 'about', label: _t('menu.about'), sub: _t('app.version'), action: () => setShowAboutSheet(true) },
                 ].map((item, i) => (
