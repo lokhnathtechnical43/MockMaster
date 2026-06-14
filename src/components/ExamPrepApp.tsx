@@ -197,6 +197,15 @@ export default function ExamPrepApp() {
     return guestPracticeCount < 1
   }
 
+  // --- Guest Auth Guard ---
+  // Returns true if user is logged in (not guest/unauthenticated)
+  // If not, shows guest warning and returns false
+  function requireAuth(): boolean {
+    if (auth.isLoggedIn && !auth.isGuest) return true
+    setShowGuestWarning(true)
+    return false
+  }
+
   // --- Page Images (loaded from admin storage) ---
   const [pageImages, setPageImages] = useState<Record<string, string>>({})
 
@@ -335,13 +344,15 @@ export default function ExamPrepApp() {
     const prev = pageHistoryRef.current.pop()
     if (prev) {
       setCurrentPage(prev)
-      // Restore scroll position
-      setTimeout(() => {
-        const savedY = scrollPositionsRef.current[prev]
-        if (savedY !== undefined) {
-          window.scrollTo(0, savedY)
-        }
-      }, 50)
+      // Restore scroll position with longer delay to ensure page has rendered
+      const savedY = scrollPositionsRef.current[prev]
+      if (savedY !== undefined) {
+        requestAnimationFrame(() => {
+          requestAnimationFrame(() => {
+            window.scrollTo(0, savedY)
+          })
+        })
+      }
     } else {
       setCurrentPage('home')
       window.scrollTo(0, 0)
@@ -566,10 +577,9 @@ export default function ExamPrepApp() {
   // --- Bottom nav handler ---
   function handleBottomNav(page: Page) {
     // Save scroll before switching
-    if (mainContainerRef.current) {
-      scrollPositionsRef.current[currentPage] = window.scrollY
-    }
-    pageHistoryRef.current = []
+    scrollPositionsRef.current[currentPage] = window.scrollY
+    // Push current page to history so back button works
+    pageHistoryRef.current.push(currentPage)
     setCurrentPage(page)
     window.scrollTo(0, 0)
   }
@@ -807,12 +817,15 @@ export default function ExamPrepApp() {
               {announcements.map((a, index) => (
                 <button
                   key={a.id}
-                  onClick={() => handleBottomNav(a.action)}
+                  onClick={() => {
+                    if (!requireAuth()) return
+                    handleBottomNav(a.action)
+                  }}
                   className="flex-shrink-0 w-full snap-center px-1"
                 >
                   <div className={`bg-gradient-to-br ${a.gradient} rounded-2xl overflow-hidden shadow-md active:scale-[0.98] transition-transform`}>
-                    {/* Image Area */}
-                    <div className="h-32 relative flex items-center justify-center overflow-hidden">
+                    {/* Image Area - Bigger Cards */}
+                    <div className="h-44 relative flex items-center justify-center overflow-hidden">
                       {/* Custom Image or Background Pattern */}
                       {a.imageUrl ? (
                         <>
@@ -948,6 +961,7 @@ export default function ExamPrepApp() {
                     key={cat.id}
                     className="border-0 shadow-sm cursor-pointer hover:shadow-md transition-shadow"
                     onClick={() => {
+                      if (!requireAuth()) return
                       setSelectedCategory(cat)
                       navigateTo('exams')
                     }}
@@ -985,7 +999,10 @@ export default function ExamPrepApp() {
                   <Card
                     key={exam.id}
                     className="border-0 shadow-sm cursor-pointer hover:shadow-md transition-shadow"
-                    onClick={() => openExam(exam, cat)}
+                    onClick={() => {
+                      if (!requireAuth()) return
+                      openExam(exam, cat)
+                    }}
                   >
                     <CardContent className="p-3 flex items-center gap-3">
                       <div className={`w-10 h-10 rounded-xl ${getCatColor(cat.slug).light} flex items-center justify-center ${getCatColor(cat.slug).text}`}>
@@ -1086,12 +1103,11 @@ export default function ExamPrepApp() {
               {upcomingExams.map((exam, i) => (
                 <Card key={exam.id} className="border-0 shadow-sm cursor-pointer hover:shadow-md transition-shadow"
                   onClick={() => {
-                    const cat = categories.find(c => c.slug === exam.catSlug)
-                    if (cat && cat.exams.length > 0) {
-                      openExam(cat.exams[0], cat)
-                    } else {
-                      handleBottomNav('exams')
+                    if (!auth.isLoggedIn && !auth.isGuest) {
+                      setShowGuestWarning(true)
+                      return
                     }
+                    setSelectedUpcomingExam(exam)
                   }}
                 >
                   <CardContent className="p-3 flex items-center gap-3">
@@ -1223,7 +1239,10 @@ export default function ExamPrepApp() {
                     <Card
                       key={exam.id}
                       className="border-0 shadow-sm cursor-pointer hover:shadow-md transition-shadow"
-                      onClick={() => openExam(exam, cat)}
+                      onClick={() => {
+                        if (!requireAuth()) return
+                        openExam(exam, cat)
+                      }}
                     >
                       <CardContent className="p-3 flex items-center gap-3">
                         {exam.imageUrl ? (
@@ -1803,7 +1822,7 @@ export default function ExamPrepApp() {
 
           <Button
             className="w-full rounded-xl bg-gradient-to-r from-orange-500 to-red-500 text-white"
-            onClick={() => { pageHistoryRef.current = []; setCurrentPage('home') }}
+            onClick={goBack}
           >
             <Home className="w-4 h-4 mr-2" /> {_t('results.backHome')}
           </Button>
@@ -1894,11 +1913,16 @@ export default function ExamPrepApp() {
             <h2 className="font-bold text-lg mb-3">{_t('practice.chooseMode')}</h2>
             <div className="grid grid-cols-2 gap-3">
               <Card className="border-0 shadow-sm cursor-pointer hover:shadow-md transition-shadow" onClick={() => {
+                if (!canGuestPractice()) {
+                  setShowGuestWarning(true)
+                  return
+                }
                 const allCats = categories
                 const allExams = allCats.flatMap(c => c.exams)
                 if (allExams.length > 0) {
                   const randomExam = allExams[Math.floor(Math.random() * allExams.length)]
                   const randomCat = allCats.find(c => c.exams.some(e => e.id === randomExam.id))!
+                  incrementGuestPractice()
                   openExam(randomExam, randomCat)
                 }
               }}>
@@ -1910,7 +1934,10 @@ export default function ExamPrepApp() {
                   <p className="text-gray-400 text-[11px] mt-1">{_t('practice.quickSub')}</p>
                 </CardContent>
               </Card>
-              <Card className="border-0 shadow-sm cursor-pointer hover:shadow-md transition-shadow" onClick={() => handleBottomNav('exams')}>
+              <Card className="border-0 shadow-sm cursor-pointer hover:shadow-md transition-shadow" onClick={() => {
+                if (!requireAuth()) return
+                handleBottomNav('exams')
+              }}>
                 <CardContent className="p-4 text-center">
                   <div className="w-12 h-12 rounded-2xl bg-blue-50 flex items-center justify-center mx-auto mb-2">
                     <Target className="w-6 h-6 text-blue-500" />
@@ -1920,16 +1947,13 @@ export default function ExamPrepApp() {
                 </CardContent>
               </Card>
               <Card className="border-0 shadow-sm cursor-pointer hover:shadow-md transition-shadow" onClick={() => {
-                if (auth.isLoggedIn) {
-                  // Show bookmarked/reviewed questions from past tests
-                  const results = getUserStats()
-                  if (results.testsTaken > 0) {
-                    handleBottomNav('tests')
-                  } else {
-                    handleBottomNav('exams')
-                  }
+                if (!requireAuth()) return
+                // Show bookmarked/reviewed questions from past tests
+                const results = getUserStats()
+                if (results.testsTaken > 0) {
+                  handleBottomNav('tests')
                 } else {
-                  setShowLoginModal(true)
+                  handleBottomNav('exams')
                 }
               }}>
                 <CardContent className="p-4 text-center">
@@ -1941,11 +1965,8 @@ export default function ExamPrepApp() {
                 </CardContent>
               </Card>
               <Card className="border-0 shadow-sm cursor-pointer hover:shadow-md transition-shadow" onClick={() => {
-                if (auth.isLoggedIn) {
-                  handleBottomNav('tests')
-                } else {
-                  setShowLoginModal(true)
-                }
+                if (!requireAuth()) return
+                handleBottomNav('tests')
               }}>
                 <CardContent className="p-4 text-center">
                   <div className="w-12 h-12 rounded-2xl bg-purple-50 flex items-center justify-center mx-auto mb-2">
@@ -1970,6 +1991,7 @@ export default function ExamPrepApp() {
                     key={cat.id}
                     className="border-0 shadow-sm cursor-pointer hover:shadow-md transition-shadow"
                     onClick={() => {
+                      if (!requireAuth()) return
                       setSelectedCategory(cat)
                       navigateTo('exams')
                     }}

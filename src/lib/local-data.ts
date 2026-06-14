@@ -176,6 +176,20 @@ const RAILWAYS_QS: LocalQuestion[] = [
   makeQ('rrb-ntpc-q10', 'If 3x - 5 = 16, then x = ?', '7', '5', '6', '8', 'A', '3x = 21, x = 7', 'Mathematics'),
 ]
 
+// RRB NTPC Test 2 Questions
+const RRB_NTPC_T2_QS: LocalQuestion[] = [
+  makeQ('rrb-ntpc-t2-q1', 'The longest railway platform in India is at:', 'Hubballi', 'Gorakhpur', 'Kollam', 'Bilaspur', 'A', 'Hubballi railway station in Karnataka has the longest platform in India (1,505 metres).', 'General Knowledge'),
+  makeQ('rrb-ntpc-t2-q2', 'A shopkeeper earns a profit of 20% by selling an article for Rs. 180. The cost price is:', 'Rs. 150', 'Rs. 160', 'Rs. 140', 'Rs. 120', 'A', 'CP = 180/1.2 = 150', 'Mathematics'),
+  makeQ('rrb-ntpc-t2-q3', 'Which vitamin deficiency causes Scurvy?', 'Vitamin C', 'Vitamin A', 'Vitamin D', 'Vitamin B', 'A', 'Scurvy is caused by Vitamin C deficiency, leading to bleeding gums and weakness.', 'Science'),
+  makeQ('rrb-ntpc-t2-q4', 'Choose the correct synonym of "Diligent":', 'Hardworking', 'Lazy', 'Clever', 'Slow', 'A', 'Diligent means showing steady and earnest care in one\'s work; hardworking.', 'English'),
+  makeQ('rrb-ntpc-t2-q5', 'The Indian Railways uses which gauge the most?', 'Broad Gauge', 'Meter Gauge', 'Narrow Gauge', 'Standard Gauge', 'A', 'Indian Railways predominantly uses Broad Gauge (1676 mm).', 'General Knowledge'),
+  makeQ('rrb-ntpc-t2-q6', 'If the simple interest on Rs. 2000 at 5% per annum is Rs. 400, the time period is:', '4 years', '3 years', '5 years', '2 years', 'A', 'SI = PRT/100 → 400 = 2000×5×T/100 → T = 4 years', 'Mathematics'),
+  makeQ('rrb-ntpc-t2-q7', 'Blood pressure is measured using:', 'Sphygmomanometer', 'Stethoscope', 'Thermometer', 'Spirometer', 'A', 'A sphygmomanometer is used to measure blood pressure.', 'Science'),
+  makeQ('rrb-ntpc-t2-q8', 'Which Viceroy introduced the Railways in India?', 'Lord Dalhousie', 'Lord Canning', 'Lord Curzon', 'Lord Ripon', 'A', 'Lord Dalhousie is known as the Father of Indian Railways for introducing the railway system.', 'General Knowledge'),
+  makeQ('rrb-ntpc-t2-q9', 'Choose the correct antonym of "Abrupt":', 'Gradual', 'Sudden', 'Quick', 'Steep', 'A', 'Abrupt means sudden and unexpected; its antonym is Gradual.', 'English'),
+  makeQ('rrb-ntpc-t2-q10', 'In a code language, if TRAIN is written as WUDLQ, how is RAIL written?', 'UDLO', 'VDMN', 'UDLP', 'VDLO', 'A', 'Each letter is shifted by +3: T→W, R→U, A→D, I→L, N→Q. So RAIL → UDLO.', 'Reasoning'),
+]
+
 // Defence Questions
 const DEFENCE_QS: LocalQuestion[] = [
   makeQ('defence-q1', 'What is the rank of the Chief of the Army Staff in India?', 'General', 'Lieutenant General', 'Major General', 'Field Marshal', 'A', 'The Chief of the Army Staff holds the rank of General.', 'General Knowledge'),
@@ -242,18 +256,22 @@ const FALLBACK_CATEGORIES: LocalExamCategory[] = [
     exams: [
       { id: 'ssc-cgl', name: 'SSC CGL', slug: 'ssc-cgl', description: 'Combined Graduate Level', totalQuestions: 100, duration: 60, markingScheme: '2 marks each, -0.5 negative', order: 1, testCount: 3 },
       { id: 'ssc-chsl', name: 'SSC CHSL', slug: 'ssc-chsl', description: 'Combined Higher Secondary Level', totalQuestions: 100, duration: 60, markingScheme: '2 marks each, -0.5 negative', order: 2, testCount: 2 },
+      { id: 'ssc-mts', name: 'SSC MTS', slug: 'ssc-mts', description: 'Multi-Tasking Staff', totalQuestions: 100, duration: 90, markingScheme: '1 mark each, no negative marking', order: 3, testCount: 1 },
     ],
   },
   {
     id: 'banking', name: 'Banking', slug: 'banking', icon: '🏦', description: 'Banking & IBPS exams', order: 2,
     exams: [
       { id: 'ibps-po', name: 'IBPS PO', slug: 'ibps-po', description: 'Institute of Banking Personnel Selection - Probationary Officer', totalQuestions: 100, duration: 60, markingScheme: '1 mark each, -0.25 negative', order: 1, testCount: 3 },
+      { id: 'ibps-clerk', name: 'IBPS Clerk', slug: 'ibps-clerk', description: 'IBPS Clerk Recruitment Exam', totalQuestions: 100, duration: 60, markingScheme: '1 mark each, -0.25 negative', order: 2, testCount: 1 },
+      { id: 'sbi-po', name: 'SBI PO', slug: 'sbi-po', description: 'State Bank of India - Probationary Officer', totalQuestions: 100, duration: 60, markingScheme: '1 mark each, -0.25 negative', order: 3, testCount: 1 },
     ],
   },
   {
     id: 'railways', name: 'Railways', slug: 'railways', icon: '🚂', description: 'Railway Recruitment Board exams', order: 3,
     exams: [
       { id: 'rrb-ntpc', name: 'RRB NTPC', slug: 'rrb-ntpc', description: 'Non-Technical Popular Categories', totalQuestions: 100, duration: 90, markingScheme: '1 mark each, -0.33 negative', order: 1, testCount: 2 },
+      { id: 'rrb-group-d', name: 'RRB Group D', slug: 'rrb-group-d', description: 'Railway Group D Recruitment', totalQuestions: 100, duration: 90, markingScheme: '1 mark each, -0.33 negative', order: 2, testCount: 1 },
     ],
   },
   {
@@ -334,6 +352,14 @@ const ALL_TESTS_LOCAL: LocalTest[] = [
     difficulty: 'Medium', isFree: true, isLive: true,
     exam: { id: 'rrb-ntpc', name: 'RRB NTPC', slug: 'rrb-ntpc' },
     questions: RAILWAYS_QS,
+  },
+  {
+    id: 'rrb-ntpc-test-2', title: 'RRB NTPC Mock Test 2', slug: 'rrb-ntpc-mock-2',
+    description: 'Practice test for RRB NTPC with GK and Reasoning focus',
+    totalQuestions: 10, duration: 15, markingCorrect: 1, markingWrong: -0.33, markingSkipped: 0,
+    difficulty: 'Medium', isFree: true, isLive: true,
+    exam: { id: 'rrb-ntpc', name: 'RRB NTPC', slug: 'rrb-ntpc' },
+    questions: RRB_NTPC_T2_QS,
   },
   // NDA Tests
   {
