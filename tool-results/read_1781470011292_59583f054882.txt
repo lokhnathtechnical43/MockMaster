@@ -1,0 +1,1363 @@
+     1→// Firestore Service Layer for ExamPrep Bharat
+     2→// Provides full CRUD operations with offline fallback to local-data.ts
+     3→
+     4→import {
+     5→  collection,
+     6→  doc,
+     7→  getDoc,
+     8→  getDocs,
+     9→  setDoc,
+    10→  addDoc,
+    11→  updateDoc,
+    12→  deleteDoc,
+    13→  query,
+    14→  where,
+    15→  orderBy,
+    16→  limit,
+    17→  serverTimestamp,
+    18→  Timestamp,
+    19→  writeBatch,
+    20→  DocumentData,
+    21→  QueryConstraint,
+    22→} from 'firebase/firestore'
+    23→import { db, isFirebaseReady } from '@/lib/firebase'
+    24→import {
+    25→  LocalExamCategory,
+    26→  LocalExam,
+    27→  LocalTest,
+    28→  LocalQuestion,
+    29→  TestResult,
+    30→  getCategories as getLocalCategories,
+    31→  getTestsByExam as getLocalTestsByExam,
+    32→  getTestById as getLocalTestById,
+    33→  saveResult as saveLocalResult,
+    34→  getResults as getLocalResults,
+    35→  getLeaderboard as getLocalLeaderboard,
+    36→  ALL_TESTS,
+    37→} from '@/lib/local-data'
+    38→import {
+    39→  Announcement,
+    40→  Notification,
+    41→  DailyTip,
+    42→  UpcomingExam,
+    43→  getAnnouncements as getLocalAnnouncements,
+    44→  getNotifications as getLocalNotifications,
+    45→  saveAnnouncements as saveLocalAnnouncements,
+    46→  saveNotifications as saveLocalNotifications,
+    47→  getDailyTips as getLocalDailyTips,
+    48→  saveDailyTips as saveLocalDailyTips,
+    49→  getUpcomingExams as getLocalUpcomingExams,
+    50→  saveUpcomingExams as saveLocalUpcomingExams,
+    51→  DEFAULT_ANNOUNCEMENTS,
+    52→  DEFAULT_NOTIFICATIONS,
+    53→  DEFAULT_DAILY_TIPS,
+    54→  DEFAULT_UPCOMING_EXAMS,
+    55→} from '@/lib/admin-data'
+    56→
+    57→// ============================================================
+    58→// Configuration
+    59→// ============================================================
+    60→
+    61→/** Global flag to toggle Firestore vs local fallback */
+    62→let useFirestore = false
+    63→
+    64→export function setUseFirestore(value: boolean) {
+    65→  useFirestore = value
+    66→}
+    67→
+    68→export function getUseFirestore(): boolean {
+    69→  return useFirestore
+    70→}
+    71→
+    72→// ============================================================
+    73→// Firestore Collection Names
+    74→// ============================================================
+    75→
+    76→const COLLECTIONS = {
+    77→  categories: 'categories',
+    78→  exams: 'exams',
+    79→  tests: 'tests',
+    80→  questions: 'questions',
+    81→  results: 'results',
+    82→  users: 'users',
+    83→  announcements: 'announcements',
+    84→  notifications: 'notifications',
+    85→  dailyTips: 'daily_tips',
+    86→  upcomingExams: 'upcoming_exams',
+    87→  pageImages: 'page_images',
+    88→} as const
+    89→
+    90→// ============================================================
+    91→// Firestore Document Types
+    92→// ============================================================
+    93→
+    94→export interface FirestoreExamCategory {
+    95→  id: string
+    96→  name: string
+    97→  slug: string
+    98→  icon: string
+    99→  description: string
+   100→  order: number
+   101→  imageUrl?: string // Optional custom image (base64 data URL or external URL)
+   102→}
+   103→
+   104→export interface FirestoreExam {
+   105→  id: string
+   106→  name: string
+   107→  slug: string
+   108→  description: string
+   109→  totalQuestions: number
+   110→  duration: number
+   111→  markingScheme: string
+   112→  order: number
+   113→  testCount: number
+   114→  categoryId: string
+   115→  imageUrl?: string // Optional custom image (base64 data URL or external URL)
+   116→}
+   117→
+   118→export interface FirestoreTest {
+   119→  id: string
+   120→  title: string
+   121→  slug: string
+   122→  description: string
+   123→  totalQuestions: number
+   124→  duration: number
+   125→  markingCorrect: number
+   126→  markingWrong: number
+   127→  markingSkipped: number
+   128→  difficulty: string
+   129→  isFree: boolean
+   130→  isLive: boolean
+   131→  examId: string
+   132→  examName: string
+   133→  examSlug: string
+   134→  imageUrl?: string // Optional custom image (base64 data URL or external URL)
+   135→}
+   136→
+   137→export interface FirestoreQuestion {
+   138→  id: string
+   139→  questionText: string
+   140→  questionImage: string | null
+   141→  optionA: string
+   142→  optionB: string
+   143→  optionC: string
+   144→  optionD: string
+   145→  correctAnswer: string
+   146→  explanation: string | null
+   147→  subject: string | null
+   148→  order: number
+   149→  testId: string
+   150→}
+   151→
+   152→export interface FirestoreTestResult {
+   153→  id: string
+   154→  testId: string
+   155→  testName: string
+   156→  examName: string
+   157→  userId: string
+   158→  correctCount: number
+   159→  wrongCount: number
+   160→  skippedCount: number
+   161→  score: number
+   162→  maxScore: number
+   163→  timeTaken: number
+   164→  totalQuestions: number
+   165→  answers: Record<string, string>
+   166→  createdAt: string | Timestamp
+   167→}
+   168→
+   169→export interface FirestoreUser {
+   170→  id: string
+   171→  name: string
+   172→  email: string
+   173→  phone: string
+   174→  photoURL: string
+   175→  role: 'user' | 'admin' | 'banned'
+   176→  testsCompleted: number
+   177→  totalScore: number
+   178→  createdAt: string | Timestamp
+   179→  lastActive: string | Timestamp
+   180→}
+   181→
+   182→export interface FirestoreAnnouncement {
+   183→  id: string
+   184→  image: string
+   185→  imageUrl?: string // Optional custom image (base64 data URL or external URL)
+   186→  title: string
+   187→  subtitle: string
+   188→  action: string
+   189→  gradient: string
+   190→}
+   191→
+   192→export interface FirestoreNotification {
+   193→  id: string
+   194→  title: string
+   195→  message: string
+   196→  time: string
+   197→  read: boolean
+   198→  type: 'update' | 'alert' | 'info'
+   199→  imageUrl?: string // Optional custom image (base64 data URL or external URL)
+   200→}
+   201→
+   202→// ============================================================
+   203→// Analytics Types
+   204→// ============================================================
+   205→
+   206→export interface DashboardStats {
+   207→  totalUsers: number
+   208→  totalTests: number
+   209→  totalResults: number
+   210→  avgScore: number
+   211→  recentActivity: FirestoreTestResult[]
+   212→}
+   213→
+   214→export interface DailyStats {
+   215→  date: string
+   216→  results: number
+   217→  avgScore: number
+   218→  uniqueUsers: number
+   219→}
+   220→
+   221→// ============================================================
+   222→// Helper: Safe Firestore call with fallback
+   223→// ============================================================
+   224→
+   225→async function firestoreOperation<T>(
+   226→  firestoreFn: () => Promise<T>,
+   227→  fallbackFn: () => T
+   228→): Promise<T> {
+   229→  if (!useFirestore || !isFirebaseReady() || !db) {
+   230→    return fallbackFn()
+   231→  }
+   232→  try {
+   233→    return await firestoreFn()
+   234→  } catch (error) {
+   235→    console.error('[Firestore] Operation failed, falling back to local data:', error)
+   236→    return fallbackFn()
+   237→  }
+   238→}
+   239→
+   240→// ============================================================
+   241→// Category CRUD
+   242→// ============================================================
+   243→
+   244→/**
+   245→ * Get all categories with their nested exams.
+   246→ * Firestore: fetches categories & exams separately, then merges.
+   247→ * Fallback: returns local-data categories.
+   248→ */
+   249→export async function getCategories(): Promise<LocalExamCategory[]> {
+   250→  return firestoreOperation(
+   251→    async () => {
+   252→      const catSnap = await getDocs(
+   253→        query(collection(db, COLLECTIONS.categories), orderBy('order'))
+   254→      )
+   255→      const examSnap = await getDocs(
+   256→        query(collection(db, COLLECTIONS.exams), orderBy('order'))
+   257→      )
+   258→
+   259→      const examsByCategory: Record<string, FirestoreExam[]> = {}
+   260→      examSnap.docs.forEach((d) => {
+   261→        const exam = { id: d.id, ...d.data() } as FirestoreExam
+   262→        if (!examsByCategory[exam.categoryId]) examsByCategory[exam.categoryId] = []
+   263→        examsByCategory[exam.categoryId].push(exam)
+   264→      })
+   265→
+   266→      return catSnap.docs.map((d) => {
+   267→        const cat = { id: d.id, ...d.data() } as FirestoreExamCategory
+   268→        const catExams = examsByCategory[cat.id] || []
+   269→        return {
+   270→          id: cat.id,
+   271→          name: cat.name,
+   272→          slug: cat.slug,
+   273→          icon: cat.icon,
+   274→          description: cat.description,
+   275→          order: cat.order,
+   276→          exams: catExams.map((e) => ({
+   277→            id: e.id,
+   278→            name: e.name,
+   279→            slug: e.slug,
+   280→            description: e.description,
+   281→            totalQuestions: e.totalQuestions,
+   282→            duration: e.duration,
+   283→            markingScheme: e.markingScheme,
+   284→            order: e.order,
+   285→            testCount: e.testCount,
+   286→          })),
+   287→        } as LocalExamCategory
+   288→      })
+   289→    },
+   290→    () => getLocalCategories()
+   291→  )
+   292→}
+   293→
+   294→/**
+   295→ * Add a new category to Firestore.
+   296→ */
+   297→export async function addCategory(
+   298→  data: Omit<FirestoreExamCategory, 'id'>
+   299→): Promise<FirestoreExamCategory> {
+   300→  try {
+   301→    const docRef = await addDoc(collection(db, COLLECTIONS.categories), data)
+   302→    return { id: docRef.id, ...data }
+   303→  } catch (error) {
+   304→    console.error('[Firestore] addCategory error:', error)
+   305→    throw error
+   306→  }
+   307→}
+   308→
+   309→/**
+   310→ * Update an existing category.
+   311→ */
+   312→export async function updateCategory(
+   313→  id: string,
+   314→  data: Partial<FirestoreExamCategory>
+   315→): Promise<void> {
+   316→  try {
+   317→    await updateDoc(doc(db, COLLECTIONS.categories, id), data)
+   318→  } catch (error) {
+   319→    console.error('[Firestore] updateCategory error:', error)
+   320→    throw error
+   321→  }
+   322→}
+   323→
+   324→/**
+   325→ * Delete a category and all its associated exams.
+   326→ */
+   327→export async function deleteCategory(id: string): Promise<void> {
+   328→  try {
+   329→    // Delete associated exams first
+   330→    const examSnap = await getDocs(
+   331→      query(collection(db, COLLECTIONS.exams), where('categoryId', '==', id))
+   332→    )
+   333→    const batch = writeBatch(db)
+   334→    examSnap.docs.forEach((d) => batch.delete(d.ref))
+   335→    batch.delete(doc(db, COLLECTIONS.categories, id))
+   336→    await batch.commit()
+   337→  } catch (error) {
+   338→    console.error('[Firestore] deleteCategory error:', error)
+   339→    throw error
+   340→  }
+   341→}
+   342→
+   343→// ============================================================
+   344→// Exam CRUD
+   345→// ============================================================
+   346→
+   347→/**
+   348→ * Get exams, optionally filtered by category.
+   349→ */
+   350→export async function getExams(categoryId?: string): Promise<LocalExam[]> {
+   351→  return firestoreOperation(
+   352→    async () => {
+   353→      const constraints: QueryConstraint[] = [orderBy('order')]
+   354→      if (categoryId) constraints.push(where('categoryId', '==', categoryId))
+   355→
+   356→      const snap = await getDocs(query(collection(db, COLLECTIONS.exams), ...constraints))
+   357→      return snap.docs.map((d) => {
+   358→        const e = { id: d.id, ...d.data() } as FirestoreExam
+   359→        return {
+   360→          id: e.id,
+   361→          name: e.name,
+   362→          slug: e.slug,
+   363→          description: e.description,
+   364→          totalQuestions: e.totalQuestions,
+   365→          duration: e.duration,
+   366→          markingScheme: e.markingScheme,
+   367→          order: e.order,
+   368→          testCount: e.testCount,
+   369→        } as LocalExam
+   370→      })
+   371→    },
+   372→    () => {
+   373→      const cats = getLocalCategories()
+   374→      const allExams = cats.flatMap((c) => c.exams)
+   375→      if (categoryId) {
+   376→        // Filter by category: match category id from parent
+   377→        const cat = cats.find(c => c.id === categoryId)
+   378→        return cat ? cat.exams : []
+   379→      }
+   380→      return allExams
+   381→    }
+   382→  )
+   383→}
+   384→
+   385→/**
+   386→ * Add a new exam.
+   387→ */
+   388→export async function addExam(
+   389→  data: Omit<FirestoreExam, 'id'>
+   390→): Promise<FirestoreExam> {
+   391→  try {
+   392→    const docRef = await addDoc(collection(db, COLLECTIONS.exams), data)
+   393→    return { id: docRef.id, ...data }
+   394→  } catch (error) {
+   395→    console.error('[Firestore] addExam error:', error)
+   396→    throw error
+   397→  }
+   398→}
+   399→
+   400→/**
+   401→ * Update an existing exam.
+   402→ */
+   403→export async function updateExam(
+   404→  id: string,
+   405→  data: Partial<FirestoreExam>
+   406→): Promise<void> {
+   407→  try {
+   408→    await updateDoc(doc(db, COLLECTIONS.exams, id), data)
+   409→  } catch (error) {
+   410→    console.error('[Firestore] updateExam error:', error)
+   411→    throw error
+   412→  }
+   413→}
+   414→
+   415→/**
+   416→ * Delete an exam and all its associated tests and questions.
+   417→ */
+   418→export async function deleteExam(id: string): Promise<void> {
+   419→  try {
+   420→    // Delete associated tests
+   421→    const testSnap = await getDocs(
+   422→      query(collection(db, COLLECTIONS.tests), where('examId', '==', id))
+   423→    )
+   424→    const batch = writeBatch(db)
+   425→    for (const testDoc of testSnap.docs) {
+   426→      // Delete associated questions
+   427→      const qSnap = await getDocs(
+   428→        query(collection(db, COLLECTIONS.questions), where('testId', '==', testDoc.id))
+   429→      )
+   430→      qSnap.docs.forEach((q) => batch.delete(q.ref))
+   431→      batch.delete(testDoc.ref)
+   432→    }
+   433→    batch.delete(doc(db, COLLECTIONS.exams, id))
+   434→    await batch.commit()
+   435→  } catch (error) {
+   436→    console.error('[Firestore] deleteExam error:', error)
+   437→    throw error
+   438→  }
+   439→}
+   440→
+   441→// ============================================================
+   442→// Test CRUD
+   443→// ============================================================
+   444→
+   445→/**
+   446→ * Get tests, optionally filtered by exam.
+   447→ */
+   448→export async function getTests(examId?: string): Promise<LocalTest[]> {
+   449→  return firestoreOperation(
+   450→    async () => {
+   451→      const constraints: QueryConstraint[] = [orderBy('slug')]
+   452→      if (examId) constraints.push(where('examId', '==', examId))
+   453→
+   454→      const snap = await getDocs(query(collection(db, COLLECTIONS.tests), ...constraints))
+   455→      return snap.docs.map((d) => {
+   456→        const t = { id: d.id, ...d.data() } as FirestoreTest
+   457→        return {
+   458→          id: t.id,
+   459→          title: t.title,
+   460→          slug: t.slug,
+   461→          description: t.description,
+   462→          totalQuestions: t.totalQuestions,
+   463→          duration: t.duration,
+   464→          markingCorrect: t.markingCorrect,
+   465→          markingWrong: t.markingWrong,
+   466→          markingSkipped: t.markingSkipped,
+   467→          difficulty: t.difficulty,
+   468→          isFree: t.isFree,
+   469→          isLive: t.isLive,
+   470→          exam: { id: t.examId, name: t.examName, slug: t.examSlug },
+   471→          questions: [], // Questions loaded separately via getTestById
+   472→        } as LocalTest
+   473→      })
+   474→    },
+   475→    () => {
+   476→      if (examId) return getLocalTestsByExam(examId)
+   477→      return ALL_TESTS.map((t) => ({ ...t, questions: [] }))
+   478→    }
+   479→  )
+   480→}
+   481→
+   482→/**
+   483→ * Get a single test by ID, including its questions.
+   484→ */
+   485→export async function getTestById(id: string): Promise<LocalTest | null> {
+   486→  return firestoreOperation(
+   487→    async () => {
+   488→      const testDoc = await getDoc(doc(db, COLLECTIONS.tests, id))
+   489→      if (!testDoc.exists()) return null
+   490→
+   491→      const t = { id: testDoc.id, ...testDoc.data() } as FirestoreTest
+   492→
+   493→      // Fetch questions for this test
+   494→      const qSnap = await getDocs(
+   495→        query(collection(db, COLLECTIONS.questions), where('testId', '==', id), orderBy('order'))
+   496→      )
+   497→      const questions: LocalQuestion[] = qSnap.docs.map((qd) => {
+   498→        const q = { id: qd.id, ...qd.data() } as FirestoreQuestion
+   499→        return {
+   500→          id: q.id,
+   501→          questionText: q.questionText,
+   502→          questionImage: q.questionImage,
+   503→          optionA: q.optionA,
+   504→          optionB: q.optionB,
+   505→          optionC: q.optionC,
+   506→          optionD: q.optionD,
+   507→          correctAnswer: q.correctAnswer,
+   508→          explanation: q.explanation,
+   509→          subject: q.subject,
+   510→          order: q.order,
+   511→        }
+   512→      })
+   513→
+   514→      return {
+   515→        id: t.id,
+   516→        title: t.title,
+   517→        slug: t.slug,
+   518→        description: t.description,
+   519→        totalQuestions: t.totalQuestions,
+   520→        duration: t.duration,
+   521→        markingCorrect: t.markingCorrect,
+   522→        markingWrong: t.markingWrong,
+   523→        markingSkipped: t.markingSkipped,
+   524→        difficulty: t.difficulty,
+   525→        isFree: t.isFree,
+   526→        isLive: t.isLive,
+   527→        exam: { id: t.examId, name: t.examName, slug: t.examSlug },
+   528→        questions,
+   529→      } as LocalTest
+   530→    },
+   531→    () => getLocalTestById(id) ?? null
+   532→  )
+   533→}
+   534→
+   535→/**
+   536→ * Add a new test.
+   537→ */
+   538→export async function addTest(
+   539→  data: Omit<FirestoreTest, 'id'>
+   540→): Promise<FirestoreTest> {
+   541→  try {
+   542→    const docRef = await addDoc(collection(db, COLLECTIONS.tests), data)
+   543→    return { id: docRef.id, ...data }
+   544→  } catch (error) {
+   545→    console.error('[Firestore] addTest error:', error)
+   546→    throw error
+   547→  }
+   548→}
+   549→
+   550→/**
+   551→ * Update an existing test.
+   552→ */
+   553→export async function updateTest(
+   554→  id: string,
+   555→  data: Partial<FirestoreTest>
+   556→): Promise<void> {
+   557→  try {
+   558→    await updateDoc(doc(db, COLLECTIONS.tests, id), data)
+   559→  } catch (error) {
+   560→    console.error('[Firestore] updateTest error:', error)
+   561→    throw error
+   562→  }
+   563→}
+   564→
+   565→/**
+   566→ * Delete a test and all its associated questions.
+   567→ */
+   568→export async function deleteTest(id: string): Promise<void> {
+   569→  try {
+   570→    const qSnap = await getDocs(
+   571→      query(collection(db, COLLECTIONS.questions), where('testId', '==', id))
+   572→    )
+   573→    const batch = writeBatch(db)
+   574→    qSnap.docs.forEach((q) => batch.delete(q.ref))
+   575→    batch.delete(doc(db, COLLECTIONS.tests, id))
+   576→    await batch.commit()
+   577→  } catch (error) {
+   578→    console.error('[Firestore] deleteTest error:', error)
+   579→    throw error
+   580→  }
+   581→}
+   582→
+   583→// ============================================================
+   584→// Question CRUD
+   585→// ============================================================
+   586→
+   587→/**
+   588→ * Get all questions for a given test.
+   589→ */
+   590→export async function getQuestions(testId: string): Promise<LocalQuestion[]> {
+   591→  return firestoreOperation(
+   592→    async () => {
+   593→      const snap = await getDocs(
+   594→        query(
+   595→          collection(db, COLLECTIONS.questions),
+   596→          where('testId', '==', testId),
+   597→          orderBy('order')
+   598→        )
+   599→      )
+   600→      return snap.docs.map((d) => {
+   601→        const q = { id: d.id, ...d.data() } as FirestoreQuestion
+   602→        return {
+   603→          id: q.id,
+   604→          questionText: q.questionText,
+   605→          questionImage: q.questionImage,
+   606→          optionA: q.optionA,
+   607→          optionB: q.optionB,
+   608→          optionC: q.optionC,
+   609→          optionD: q.optionD,
+   610→          correctAnswer: q.correctAnswer,
+   611→          explanation: q.explanation,
+   612→          subject: q.subject,
+   613→          order: q.order,
+   614→        } as LocalQuestion
+   615→      })
+   616→    },
+   617→    () => {
+   618→      const test = getLocalTestById(testId)
+   619→      return test?.questions ?? []
+   620→    }
+   621→  )
+   622→}
+   623→
+   624→/**
+   625→ * Add a single question.
+   626→ */
+   627→export async function addQuestion(
+   628→  data: Omit<FirestoreQuestion, 'id'>
+   629→): Promise<FirestoreQuestion> {
+   630→  try {
+   631→    const docRef = await addDoc(collection(db, COLLECTIONS.questions), data)
+   632→    return { id: docRef.id, ...data }
+   633→  } catch (error) {
+   634→    console.error('[Firestore] addQuestion error:', error)
+   635→    throw error
+   636→  }
+   637→}
+   638→
+   639→/**
+   640→ * Update an existing question.
+   641→ */
+   642→export async function updateQuestion(
+   643→  id: string,
+   644→  data: Partial<FirestoreQuestion>
+   645→): Promise<void> {
+   646→  try {
+   647→    await updateDoc(doc(db, COLLECTIONS.questions, id), data)
+   648→  } catch (error) {
+   649→    console.error('[Firestore] updateQuestion error:', error)
+   650→    throw error
+   651→  }
+   652→}
+   653→
+   654→/**
+   655→ * Delete a question.
+   656→ */
+   657→export async function deleteQuestion(id: string): Promise<void> {
+   658→  try {
+   659→    await deleteDoc(doc(db, COLLECTIONS.questions, id))
+   660→  } catch (error) {
+   661→    console.error('[Firestore] deleteQuestion error:', error)
+   662→    throw error
+   663→  }
+   664→}
+   665→
+   666→/**
+   667→ * Add multiple questions at once using a Firestore batch write.
+   668→ * Returns the list of created questions with their generated IDs.
+   669→ */
+   670→export async function addBatchQuestions(
+   671→  testId: string,
+   672→  questions: Omit<LocalQuestion, 'id'>[]
+   673→): Promise<LocalQuestion[]> {
+   674→  try {
+   675→    const batch = writeBatch(db)
+   676→    const created: LocalQuestion[] = []
+   677→
+   678→    for (const qData of questions) {
+   679→      const docRef = doc(collection(db, COLLECTIONS.questions))
+   680→      const firestoreQ: FirestoreQuestion = {
+   681→        id: docRef.id,
+   682→        questionText: qData.questionText,
+   683→        questionImage: qData.questionImage ?? null,
+   684→        optionA: qData.optionA,
+   685→        optionB: qData.optionB,
+   686→        optionC: qData.optionC,
+   687→        optionD: qData.optionD,
+   688→        correctAnswer: qData.correctAnswer,
+   689→        explanation: qData.explanation ?? null,
+   690→        subject: qData.subject ?? null,
+   691→        order: qData.order ?? 0,
+   692→        testId,
+   693→      }
+   694→      batch.set(docRef, firestoreQ)
+   695→      created.push({ ...qData, id: docRef.id })
+   696→    }
+   697→
+   698→    await batch.commit()
+   699→    return created
+   700→  } catch (error) {
+   701→    console.error('[Firestore] addBatchQuestions error:', error)
+   702→    throw error
+   703→  }
+   704→}
+   705→
+   706→// ============================================================
+   707→// Result CRUD
+   708→// ============================================================
+   709→
+   710→/**
+   711→ * Get results, optionally filtered by testId and/or userId.
+   712→ */
+   713→export async function getResults(
+   714→  testId?: string,
+   715→  userId?: string
+   716→): Promise<TestResult[]> {
+   717→  return firestoreOperation(
+   718→    async () => {
+   719→      const constraints: QueryConstraint[] = [orderBy('createdAt', 'desc')]
+   720→      if (testId) constraints.push(where('testId', '==', testId))
+   721→      if (userId) constraints.push(where('userId', '==', userId))
+   722→
+   723→      const snap = await getDocs(query(collection(db, COLLECTIONS.results), ...constraints))
+   724→      return snap.docs.map((d) => {
+   725→        const r = d.data() as FirestoreTestResult
+   726→        return {
+   727→          id: d.id,
+   728→          testId: r.testId,
+   729→          testName: r.testName,
+   730→          examName: r.examName,
+   731→          userId: r.userId,
+   732→          correctCount: r.correctCount,
+   733→          wrongCount: r.wrongCount,
+   734→          skippedCount: r.skippedCount,
+   735→          score: r.score,
+   736→          maxScore: r.maxScore,
+   737→          timeTaken: r.timeTaken,
+   738→          totalQuestions: r.totalQuestions,
+   739→          answers: r.answers,
+   740→          createdAt:
+   741→            r.createdAt instanceof Timestamp
+   742→              ? r.createdAt.toDate().toISOString()
+   743→              : String(r.createdAt),
+   744→        } as TestResult
+   745→      })
+   746→    },
+   747→    () => {
+   748→      const allResults = getLocalResults()
+   749→      if (testId) return allResults.filter((r: TestResult) => r.testId === testId)
+   750→      return allResults
+   751→    }
+   752→  )
+   753→}
+   754→
+   755→/**
+   756→ * Save a test result. Works with both Firestore and local storage.
+   757→ */
+   758→export async function saveResult(
+   759→  data: Omit<TestResult, 'id' | 'createdAt'>
+   760→): Promise<TestResult> {
+   761→  if (!useFirestore) {
+   762→    return saveLocalResult(data)
+   763→  }
+   764→  try {
+   765→    const docRef = await addDoc(collection(db, COLLECTIONS.results), {
+   766→      ...data,
+   767→      createdAt: serverTimestamp(),
+   768→    })
+   769→    // Dual-write: also save to localStorage so getUserStats() works synchronously
+   770→    const result: TestResult = {
+   771→      ...data,
+   772→      id: docRef.id,
+   773→      createdAt: new Date().toISOString(),
+   774→    }
+   775→    try {
+   776→      const existing = getLocalResults()
+   777→      if (typeof window !== 'undefined') {
+   778→        localStorage.setItem('mockmaster_results', JSON.stringify([result, ...existing]))
+   779→      }
+   780→    } catch {}
+   781→    return result
+   782→  } catch (error) {
+   783→    console.error('[Firestore] saveResult error, falling back to local:', error)
+   784→    return saveLocalResult(data)
+   785→  }
+   786→}
+   787→
+   788→/**
+   789→ * Get leaderboard for a specific test, sorted by score (desc) then time (asc).
+   790→ */
+   791→export async function getLeaderboard(testId: string): Promise<TestResult[]> {
+   792→  return firestoreOperation(
+   793→    async () => {
+   794→      const snap = await getDocs(
+   795→        query(
+   796→          collection(db, COLLECTIONS.results),
+   797→          where('testId', '==', testId),
+   798→          orderBy('score', 'desc'),
+   799→          limit(50)
+   800→        )
+   801→      )
+   802→      const results: TestResult[] = snap.docs.map((d) => {
+   803→        const r = d.data() as FirestoreTestResult
+   804→        return {
+   805→          id: d.id,
+   806→          testId: r.testId,
+   807→          testName: r.testName,
+   808→          examName: r.examName,
+   809→          userId: r.userId,
+   810→          correctCount: r.correctCount,
+   811→          wrongCount: r.wrongCount,
+   812→          skippedCount: r.skippedCount,
+   813→          score: r.score,
+   814→          maxScore: r.maxScore,
+   815→          timeTaken: r.timeTaken,
+   816→          totalQuestions: r.totalQuestions,
+   817→          answers: r.answers,
+   818→          createdAt:
+   819→            r.createdAt instanceof Timestamp
+   820→              ? r.createdAt.toDate().toISOString()
+   821→              : String(r.createdAt),
+   822→        }
+   823→      })
+   824→      // Secondary sort by timeTaken ascending (Firestore only supports one orderBy)
+   825→      return results.sort((a, b) => b.score - a.score || a.timeTaken - b.timeTaken)
+   826→    },
+   827→    () => getLocalLeaderboard(testId)
+   828→  )
+   829→}
+   830→
+   831→// ============================================================
+   832→// User Management
+   833→// ============================================================
+   834→
+   835→/**
+   836→ * Get a single user profile by ID.
+   837→ */
+   838→export async function getUser(userId: string): Promise<FirestoreUser | null> {
+   839→  try {
+   840→    const userDoc = await getDoc(doc(db, COLLECTIONS.users, userId))
+   841→    if (!userDoc.exists()) return null
+   842→    return { id: userDoc.id, ...userDoc.data() } as FirestoreUser
+   843→  } catch (error) {
+   844→    console.error('[Firestore] getUser error:', error)
+   845→    return null
+   846→  }
+   847→}
+   848→
+   849→/**
+   850→ * Get all users with their stats.
+   851→ */
+   852→export async function getAllUsers(): Promise<FirestoreUser[]> {
+   853→  try {
+   854→    const snap = await getDocs(
+   855→      query(collection(db, COLLECTIONS.users), orderBy('createdAt', 'desc'))
+   856→    )
+   857→    return snap.docs.map((d) => ({ id: d.id, ...d.data() } as FirestoreUser))
+   858→  } catch (error) {
+   859→    console.error('[Firestore] getAllUsers error:', error)
+   860→    return []
+   861→  }
+   862→}
+   863→
+   864→/**
+   865→ * Update a user profile. Creates the document if it doesn't exist.
+   866→ */
+   867→export async function updateUser(
+   868→  userId: string,
+   869→  data: Partial<FirestoreUser>
+   870→): Promise<void> {
+   871→  try {
+   872→    await setDoc(doc(db, COLLECTIONS.users, userId), data, { merge: true })
+   873→  } catch (error) {
+   874→    console.error('[Firestore] updateUser error:', error)
+   875→    throw error
+   876→  }
+   877→}
+   878→
+   879→/**
+   880→ * Delete a user document from Firestore.
+   881→ * Note: This does NOT delete the Firebase Auth user.
+   882→ */
+   883→export async function deleteUser(userId: string): Promise<void> {
+   884→  try {
+   885→    await deleteDoc(doc(db, COLLECTIONS.users, userId))
+   886→  } catch (error) {
+   887→    console.error('[Firestore] deleteUser error:', error)
+   888→    throw error
+   889→  }
+   890→}
+   891→
+   892→// ============================================================
+   893→// Announcement CRUD
+   894→// ============================================================
+   895→
+   896→/**
+   897→ * Get all announcements.
+   898→ */
+   899→export async function getAnnouncements(): Promise<Announcement[]> {
+   900→  return firestoreOperation(
+   901→    async () => {
+   902→      // Check metadata doc to distinguish "never initialized" from "intentionally empty"
+   903→      const metaSnap = await getDoc(doc(db, COLLECTIONS.announcements, '_meta'))
+   904→      if (!metaSnap.exists()) return DEFAULT_ANNOUNCEMENTS // Never initialized → use defaults
+   905→      const snap = await getDocs(collection(db, COLLECTIONS.announcements))
+   906→      return snap.docs.filter(d => d.id !== '_meta').map((d) => ({ id: d.id, ...d.data() } as Announcement))
+   907→    },
+   908→    () => getLocalAnnouncements()
+   909→  )
+   910→}
+   911→
+   912→/**
+   913→ * Save (overwrite) the announcements collection.
+   914→ * Uses a batch to clear existing docs and write new ones.
+   915→ */
+   916→export async function saveAnnouncements(
+   917→  data: Announcement[]
+   918→): Promise<void> {
+   919→  if (!useFirestore) {
+   920→    saveLocalAnnouncements(data)
+   921→    return
+   922→  }
+   923→  try {
+   924→    const batch = writeBatch(db)
+   925→    // Delete existing (skip _meta doc)
+   926→    const existing = await getDocs(collection(db, COLLECTIONS.announcements))
+   927→    existing.docs.forEach((d) => { if (d.id !== '_meta') batch.delete(d.ref) })
+   928→    // Add new items
+   929→    for (const item of data) {
+   930→      const docRef = doc(collection(db, COLLECTIONS.announcements))
+   931→      batch.set(docRef, { ...item, id: docRef.id })
+   932→    }
+   933→    // Write sentinel metadata doc so we know collection has been initialized
+   934→    batch.set(doc(db, COLLECTIONS.announcements, '_meta'), { _initialized: true, updatedAt: serverTimestamp() })
+   935→    await batch.commit()
+   936→    // Also persist locally for offline access
+   937→    saveLocalAnnouncements(data)
+   938→  } catch (error) {
+   939→    console.error('[Firestore] saveAnnouncements error, saving locally:', error)
+   940→    saveLocalAnnouncements(data)
+   941→  }
+   942→}
+   943→
+   944→// ============================================================
+   945→// Notification CRUD
+   946→// ============================================================
+   947→
+   948→/**
+   949→ * Get all notifications.
+   950→ */
+   951→export async function getNotifications(): Promise<Notification[]> {
+   952→  return firestoreOperation(
+   953→    async () => {
+   954→      const metaSnap = await getDoc(doc(db, COLLECTIONS.notifications, '_meta'))
+   955→      if (!metaSnap.exists()) return DEFAULT_NOTIFICATIONS
+   956→      const snap = await getDocs(collection(db, COLLECTIONS.notifications))
+   957→      return snap.docs.filter(d => d.id !== '_meta').map((d) => ({ id: d.id, ...d.data() } as Notification))
+   958→    },
+   959→    () => getLocalNotifications()
+   960→  )
+   961→}
+   962→
+   963→/**
+   964→ * Save (overwrite) the notifications collection.
+   965→ * Uses a batch to clear existing docs and write new ones.
+   966→ */
+   967→export async function saveNotifications(
+   968→  data: Notification[]
+   969→): Promise<void> {
+   970→  if (!useFirestore) {
+   971→    saveLocalNotifications(data)
+   972→    return
+   973→  }
+   974→  try {
+   975→    const batch = writeBatch(db)
+   976→    // Delete existing (skip _meta doc)
+   977→    const existing = await getDocs(collection(db, COLLECTIONS.notifications))
+   978→    existing.docs.forEach((d) => { if (d.id !== '_meta') batch.delete(d.ref) })
+   979→    // Add new items
+   980→    for (const item of data) {
+   981→      const docRef = doc(collection(db, COLLECTIONS.notifications))
+   982→      batch.set(docRef, { ...item, id: docRef.id })
+   983→    }
+   984→    // Write sentinel metadata doc
+   985→    batch.set(doc(db, COLLECTIONS.notifications, '_meta'), { _initialized: true, updatedAt: serverTimestamp() })
+   986→    await batch.commit()
+   987→    // Also persist locally for offline access
+   988→    saveLocalNotifications(data)
+   989→  } catch (error) {
+   990→    console.error('[Firestore] saveNotifications error, saving locally:', error)
+   991→    saveLocalNotifications(data)
+   992→  }
+   993→}
+   994→
+   995→// ============================================================
+   996→// Daily Tips CRUD
+   997→// ============================================================
+   998→
+   999→/**
+  1000→ * Get all daily tips.
+  1001→ */
+  1002→export async function getDailyTips(): Promise<DailyTip[]> {
+  1003→  return firestoreOperation(
+  1004→    async () => {
+  1005→      const metaSnap = await getDoc(doc(db, COLLECTIONS.dailyTips, '_meta'))
+  1006→      if (!metaSnap.exists()) return DEFAULT_DAILY_TIPS
+  1007→      const snap = await getDocs(collection(db, COLLECTIONS.dailyTips))
+  1008→      return snap.docs.filter(d => d.id !== '_meta').map((d) => ({ id: d.id, ...d.data() } as DailyTip))
+  1009→    },
+  1010→    () => getLocalDailyTips()
+  1011→  )
+  1012→}
+  1013→
+  1014→/**
+  1015→ * Save (overwrite) the daily tips collection.
+  1016→ */
+  1017→export async function saveDailyTips(
+  1018→  data: DailyTip[]
+  1019→): Promise<void> {
+  1020→  if (!useFirestore) {
+  1021→    saveLocalDailyTips(data)
+  1022→    return
+  1023→  }
+  1024→  try {
+  1025→    const batch = writeBatch(db)
+  1026→    const existing = await getDocs(collection(db, COLLECTIONS.dailyTips))
+  1027→    existing.docs.forEach((d) => { if (d.id !== '_meta') batch.delete(d.ref) })
+  1028→    for (const item of data) {
+  1029→      const docRef = doc(collection(db, COLLECTIONS.dailyTips))
+  1030→      batch.set(docRef, { ...item, id: docRef.id })
+  1031→    }
+  1032→    batch.set(doc(db, COLLECTIONS.dailyTips, '_meta'), { _initialized: true, updatedAt: serverTimestamp() })
+  1033→    await batch.commit()
+  1034→    saveLocalDailyTips(data)
+  1035→  } catch (error) {
+  1036→    console.error('[Firestore] saveDailyTips error, saving locally:', error)
+  1037→    saveLocalDailyTips(data)
+  1038→  }
+  1039→}
+  1040→
+  1041→// ============================================================
+  1042→// Upcoming Exams CRUD
+  1043→// ============================================================
+  1044→
+  1045→/**
+  1046→ * Get all upcoming exams.
+  1047→ */
+  1048→export async function getUpcomingExams(): Promise<UpcomingExam[]> {
+  1049→  return firestoreOperation(
+  1050→    async () => {
+  1051→      const metaSnap = await getDoc(doc(db, COLLECTIONS.upcomingExams, '_meta'))
+  1052→      if (!metaSnap.exists()) return DEFAULT_UPCOMING_EXAMS
+  1053→      const snap = await getDocs(collection(db, COLLECTIONS.upcomingExams))
+  1054→      return snap.docs.filter(d => d.id !== '_meta').map((d) => ({ id: d.id, ...d.data() } as UpcomingExam))
+  1055→    },
+  1056→    () => getLocalUpcomingExams()
+  1057→  )
+  1058→}
+  1059→
+  1060→/**
+  1061→ * Save (overwrite) the upcoming exams collection.
+  1062→ */
+  1063→export async function saveUpcomingExams(
+  1064→  data: UpcomingExam[]
+  1065→): Promise<void> {
+  1066→  if (!useFirestore) {
+  1067→    saveLocalUpcomingExams(data)
+  1068→    return
+  1069→  }
+  1070→  try {
+  1071→    const batch = writeBatch(db)
+  1072→    const existing = await getDocs(collection(db, COLLECTIONS.upcomingExams))
+  1073→    existing.docs.forEach((d) => { if (d.id !== '_meta') batch.delete(d.ref) })
+  1074→    for (const item of data) {
+  1075→      const docRef = doc(collection(db, COLLECTIONS.upcomingExams))
+  1076→      batch.set(docRef, { ...item, id: docRef.id })
+  1077→    }
+  1078→    batch.set(doc(db, COLLECTIONS.upcomingExams, '_meta'), { _initialized: true, updatedAt: serverTimestamp() })
+  1079→    await batch.commit()
+  1080→    saveLocalUpcomingExams(data)
+  1081→  } catch (error) {
+  1082→    console.error('[Firestore] saveUpcomingExams error, saving locally:', error)
+  1083→    saveLocalUpcomingExams(data)
+  1084→  }
+  1085→}
+  1086→
+  1087→// ============================================================
+  1088→// Analytics
+  1089→// ============================================================
+  1090→
+  1091→/**
+  1092→ * Get dashboard statistics: totalUsers, totalTests, totalResults, avgScore, recentActivity.
+  1093→ */
+  1094→export async function getDashboardStats(): Promise<DashboardStats> {
+  1095→  try {
+  1096→    // Total users
+  1097→    const usersSnap = await getDocs(collection(db, COLLECTIONS.users))
+  1098→    const totalUsers = usersSnap.size
+  1099→
+  1100→    // Total tests
+  1101→    const testsSnap = await getDocs(collection(db, COLLECTIONS.tests))
+  1102→    const totalTests = testsSnap.size
+  1103→
+  1104→    // Total results + avg score + recent activity
+  1105→    const resultsSnap = await getDocs(
+  1106→      query(collection(db, COLLECTIONS.results), orderBy('createdAt', 'desc'), limit(100))
+  1107→    )
+  1108→    const totalResults = resultsSnap.size
+  1109→    let totalScore = 0
+  1110→    const recentActivity: FirestoreTestResult[] = []
+  1111→
+  1112→    // Calculate percentage-based average score
+  1113→    let totalScorePercent = 0
+  1114→    let scoredResults = 0
+  1115→
+  1116→    resultsSnap.docs.forEach((d) => {
+  1117→      const r = d.data() as FirestoreTestResult
+  1118→      if (r.maxScore > 0) {
+  1119→        totalScorePercent += (r.score / r.maxScore) * 100
+  1120→        scoredResults++
+  1121→      }
+  1122→      if (recentActivity.length < 10) {
+  1123→        recentActivity.push({
+  1124→          ...r,
+  1125→          id: d.id,
+  1126→          createdAt:
+  1127→            r.createdAt instanceof Timestamp
+  1128→              ? r.createdAt.toDate().toISOString()
+  1129→              : String(r.createdAt),
+  1130→        })
+  1131→      }
+  1132→    })
+  1133→
+  1134→    const avgScore = scoredResults > 0 ? Math.round(totalScorePercent / scoredResults) : 0
+  1135→
+  1136→    return { totalUsers, totalTests, totalResults, avgScore, recentActivity }
+  1137→  } catch (error) {
+  1138→    console.error('[Firestore] getDashboardStats error, returning defaults:', error)
+  1139→    return {
+  1140→      totalUsers: 0,
+  1141→      totalTests: ALL_TESTS.length,
+  1142→      totalResults: 0,
+  1143→      avgScore: 0,
+  1144→      recentActivity: [],
+  1145→    }
+  1146→  }
+  1147→}
+  1148→
+  1149→/**
+  1150→ * Get daily stats breakdown for the last N days.
+  1151→ * Groups results by date and computes daily averages.
+  1152→ */
+  1153→export async function getDailyStats(days: number = 7): Promise<DailyStats[]> {
+  1154→  try {
+  1155→    const now = new Date()
+  1156→    const since = new Date(now.getTime() - days * 24 * 60 * 60 * 1000)
+  1157→
+  1158→    const resultsSnap = await getDocs(
+  1159→      query(
+  1160→        collection(db, COLLECTIONS.results),
+  1161→        orderBy('createdAt', 'desc'),
+  1162→        limit(500)
+  1163→      )
+  1164→    )
+  1165→
+  1166→    // Group by date
+  1167→    const dailyMap: Record<
+  1168→      string,
+  1169→      { results: number; totalScorePercent: number; users: Set<string> }
+  1170→    > = {}
+  1171→
+  1172→    // Initialize all days with zero
+  1173→    for (let i = 0; i < days; i++) {
+  1174→      const d = new Date(now.getTime() - i * 24 * 60 * 60 * 1000)
+  1175→      const key = d.toISOString().split('T')[0]
+  1176→      dailyMap[key] = { results: 0, totalScorePercent: 0, users: new Set() }
+  1177→    }
+  1178→
+  1179→    resultsSnap.docs.forEach((d) => {
+  1180→      const r = d.data() as FirestoreTestResult
+  1181→      const dateStr =
+  1182→        r.createdAt instanceof Timestamp
+  1183→          ? r.createdAt.toDate().toISOString().split('T')[0]
+  1184→          : String(r.createdAt).split('T')[0]
+  1185→
+  1186→      if (dailyMap[dateStr]) {
+  1187→        dailyMap[dateStr].results++
+  1188→        if (r.maxScore > 0) {
+  1189→          dailyMap[dateStr].totalScorePercent += (r.score / r.maxScore) * 100
+  1190→        }
+  1191→        dailyMap[dateStr].users.add(r.userId)
+  1192→      }
+  1193→    })
+  1194→
+  1195→    return Object.entries(dailyMap)
+  1196→      .sort(([a], [b]) => a.localeCompare(b))
+  1197→      .map(([date, stats]) => ({
+  1198→        date,
+  1199→        results: stats.results,
+  1200→        avgScore: stats.results > 0 ? Math.round(stats.totalScorePercent / stats.results) : 0,
+  1201→        uniqueUsers: stats.users.size,
+  1202→      }))
+  1203→  } catch (error) {
+  1204→    console.error('[Firestore] getDailyStats error:', error)
+  1205→    // Return empty daily stats
+  1206→    const stats: DailyStats[] = []
+  1207→    const now = new Date()
+  1208→    for (let i = days - 1; i >= 0; i--) {
+  1209→      const d = new Date(now.getTime() - i * 24 * 60 * 60 * 1000)
+  1210→      stats.push({
+  1211→        date: d.toISOString().split('T')[0],
+  1212→        results: 0,
+  1213→        avgScore: 0,
+  1214→        uniqueUsers: 0,
+  1215→      })
+  1216→    }
+  1217→    return stats
+  1218→  }
+  1219→}
+  1220→
+  1221→// ============================================================
+  1222→// Initialization / Seeding Helpers
+  1223→// ============================================================
+  1224→
+  1225→/**
+  1226→ * Seed Firestore from local-data.ts if the collections are empty.
+  1227→ * Useful for initial setup.
+  1228→ */
+  1229→export async function seedFirestoreIfEmpty(): Promise<boolean> {
+  1230→  if (!db || !isFirebaseReady()) {
+  1231→    console.error('[Firestore] Cannot seed: Firebase is not configured. Add config to .env.local')
+  1232→    return false
+  1233→  }
+  1234→  try {
+  1235→    const catSnap = await getDocs(collection(db, COLLECTIONS.categories))
+  1236→    if (catSnap.size > 0) return false // Already seeded
+  1237→
+  1238→    const localCategories = getLocalCategories()
+  1239→    let opCount = 0
+  1240→    let batch = writeBatch(db)
+  1241→
+  1242→    const commitIfNeeded = async () => {
+  1243→      if (opCount >= 450) {
+  1244→        await batch.commit()
+  1245→        batch = writeBatch(db)
+  1246→        opCount = 0
+  1247→      }
+  1248→    }
+  1249→
+  1250→    for (const cat of localCategories) {
+  1251→      const catRef = doc(collection(db, COLLECTIONS.categories))
+  1252→      batch.set(catRef, {
+  1253→        name: cat.name, slug: cat.slug, icon: cat.icon,
+  1254→        description: cat.description, order: cat.order,
+  1255→      })
+  1256→      opCount++
+  1257→
+  1258→      for (const exam of cat.exams) {
+  1259→        const examRef = doc(collection(db, COLLECTIONS.exams))
+  1260→        batch.set(examRef, {
+  1261→          name: exam.name, slug: exam.slug, description: exam.description,
+  1262→          totalQuestions: exam.totalQuestions, duration: exam.duration,
+  1263→          markingScheme: exam.markingScheme, order: exam.order,
+  1264→          testCount: exam.testCount, categoryId: catRef.id,
+  1265→        })
+  1266→        opCount++
+  1267→      }
+  1268→      await commitIfNeeded()
+  1269→    }
+  1270→
+  1271→    for (const test of ALL_TESTS) {
+  1272→      const testRef = doc(collection(db, COLLECTIONS.tests))
+  1273→      batch.set(testRef, {
+  1274→        title: test.title, slug: test.slug, description: test.description,
+  1275→        totalQuestions: test.totalQuestions, duration: test.duration,
+  1276→        markingCorrect: test.markingCorrect, markingWrong: test.markingWrong,
+  1277→        markingSkipped: test.markingSkipped, difficulty: test.difficulty,
+  1278→        isFree: test.isFree, isLive: test.isLive,
+  1279→        examId: test.exam.id, examName: test.exam.name, examSlug: test.exam.slug,
+  1280→      })
+  1281→      opCount++
+  1282→
+  1283→      for (const q of test.questions) {
+  1284→        const qRef = doc(collection(db, COLLECTIONS.questions))
+  1285→        batch.set(qRef, {
+  1286→          questionText: q.questionText, questionImage: q.questionImage,
+  1287→          optionA: q.optionA, optionB: q.optionB, optionC: q.optionC, optionD: q.optionD,
+  1288→          correctAnswer: q.correctAnswer, explanation: q.explanation,
+  1289→          subject: q.subject, order: q.order, testId: testRef.id,
+  1290→        })
+  1291→        opCount++
+  1292→      }
+  1293→      await commitIfNeeded()
+  1294→    }
+  1295→
+  1296→    // Seed default announcements
+  1297→    for (const ann of DEFAULT_ANNOUNCEMENTS) {
+  1298→      const annRef = doc(collection(db, COLLECTIONS.announcements))
+  1299→      batch.set(annRef, { ...ann, id: annRef.id })
+  1300→      opCount++
+  1301→      await commitIfNeeded()
+  1302→    }
+  1303→
+  1304→    // Seed default notifications
+  1305→    for (const notif of DEFAULT_NOTIFICATIONS) {
+  1306→      const notifRef = doc(collection(db, COLLECTIONS.notifications))
+  1307→      batch.set(notifRef, { ...notif, id: notifRef.id })
+  1308→      opCount++
+  1309→      await commitIfNeeded()
+  1310→    }
+  1311→
+  1312→    // Seed default daily tips
+  1313→    for (const tip of DEFAULT_DAILY_TIPS) {
+  1314→      const tipRef = doc(collection(db, COLLECTIONS.dailyTips))
+  1315→      batch.set(tipRef, { ...tip, id: tipRef.id })
+  1316→      opCount++
+  1317→      await commitIfNeeded()
+  1318→    }
+  1319→
+  1320→    // Commit any remaining operations
+  1321→    if (opCount > 0) await batch.commit()
+  1322→    console.log('[Firestore] Database seeded successfully')
+  1323→    return true
+  1324→  } catch (error) {
+  1325→    console.error('[Firestore] Seed error:', error)
+  1326→    return false
+  1327→  }
+  1328→}
+  1329→
+  1330→// ============================================================
+  1331→// Page Images Firestore sync
+  1332→// ============================================================
+  1333→
+  1334→/**
+  1335→ * Save page images to Firestore (overwrites the single document).
+  1336→ */
+  1337→export async function savePageImagesToFirestore(images: { id: string; label: string; page: string; section: string; imageUrl: string; updatedAt: string }[]): Promise<void> {
+  1338→  if (!useFirestore || !isFirebaseReady() || !db) return
+  1339→  try {
+  1340→    // Store as a single document with all images
+  1341→    await setDoc(doc(db, COLLECTIONS.pageImages, 'all'), { images, updatedAt: serverTimestamp() })
+  1342→  } catch (error) {
+  1343→    console.error('[Firestore] savePageImages error:', error)
+  1344→  }
+  1345→}
+  1346→
+  1347→/**
+  1348→ * Load page images from Firestore.
+  1349→ */
+  1350→export async function getPageImagesFromFirestore(): Promise<{ id: string; label: string; page: string; section: string; imageUrl: string; updatedAt: string }[]> {
+  1351→  if (!useFirestore || !isFirebaseReady() || !db) return []
+  1352→  try {
+  1353→    const snap = await getDoc(doc(db, COLLECTIONS.pageImages, 'all'))
+  1354→    if (snap.exists()) {
+  1355→      return snap.data().images || []
+  1356→    }
+  1357→    return []
+  1358→  } catch (error) {
+  1359→    console.error('[Firestore] getPageImages error:', error)
+  1360→    return []
+  1361→  }
+  1362→}
+  1363→

@@ -17,6 +17,7 @@ import {
   serverTimestamp,
   Timestamp,
   writeBatch,
+  WriteBatch,
   DocumentData,
   QueryConstraint,
 } from 'firebase/firestore'
@@ -57,6 +58,21 @@ import {
 // ============================================================
 // Configuration
 // ============================================================
+
+/** Firestore batch operation limit (with safety margin) */
+const BATCH_LIMIT = 450
+
+/**
+ * Helper to commit a batch and start a new one when approaching the 500-op limit.
+ * Returns the new batch after committing if the threshold was reached.
+ */
+async function commitIfNeeded(batch: WriteBatch, opCount: number): Promise<{ batch: WriteBatch; opCount: number }> {
+  if (opCount >= BATCH_LIMIT) {
+    await batch.commit()
+    return { batch: writeBatch(db), opCount: 0 }
+  }
+  return { batch, opCount }
+}
 
 /** Global flag to toggle Firestore vs local fallback */
 let useFirestore = false
@@ -326,14 +342,15 @@ export async function updateCategory(
  */
 export async function deleteCategory(id: string): Promise<void> {
   try {
-    // Delete associated exams first
+    // Delete associated exams first (which also deletes their tests and questions)
     const examSnap = await getDocs(
       query(collection(db, COLLECTIONS.exams), where('categoryId', '==', id))
     )
-    const batch = writeBatch(db)
-    examSnap.docs.forEach((d) => batch.delete(d.ref))
-    batch.delete(doc(db, COLLECTIONS.categories, id))
-    await batch.commit()
+    for (const examDoc of examSnap.docs) {
+      await deleteExam(examDoc.id)
+    }
+    // Delete the category document itself
+    await deleteDoc(doc(db, COLLECTIONS.categories, id))
   } catch (error) {
     console.error('[Firestore] deleteCategory error:', error)
     throw error
@@ -414,24 +431,19 @@ export async function updateExam(
 
 /**
  * Delete an exam and all its associated tests and questions.
+ * Handles batch chunking for large exams.
  */
 export async function deleteExam(id: string): Promise<void> {
   try {
-    // Delete associated tests
+    // Delete associated tests and their questions using deleteTest (which chunks)
     const testSnap = await getDocs(
       query(collection(db, COLLECTIONS.tests), where('examId', '==', id))
     )
-    const batch = writeBatch(db)
     for (const testDoc of testSnap.docs) {
-      // Delete associated questions
-      const qSnap = await getDocs(
-        query(collection(db, COLLECTIONS.questions), where('testId', '==', testDoc.id))
-      )
-      qSnap.docs.forEach((q) => batch.delete(q.ref))
-      batch.delete(testDoc.ref)
+      await deleteTest(testDoc.id)
     }
-    batch.delete(doc(db, COLLECTIONS.exams, id))
-    await batch.commit()
+    // Delete the exam document itself
+    await deleteDoc(doc(db, COLLECTIONS.exams, id))
   } catch (error) {
     console.error('[Firestore] deleteExam error:', error)
     throw error
@@ -564,16 +576,28 @@ export async function updateTest(
 
 /**
  * Delete a test and all its associated questions.
+ * Handles batch chunking for tests with many questions (>450).
  */
 export async function deleteTest(id: string): Promise<void> {
   try {
     const qSnap = await getDocs(
       query(collection(db, COLLECTIONS.questions), where('testId', '==', id))
     )
-    const batch = writeBatch(db)
-    qSnap.docs.forEach((q) => batch.delete(q.ref))
+    const BATCH_LIMIT = 450
+    let batch = writeBatch(db)
+    let opCount = 0
+    qSnap.docs.forEach((q) => {
+      batch.delete(q.ref)
+      opCount++
+      if (opCount >= BATCH_LIMIT) {
+        batch.commit()
+        batch = writeBatch(db)
+        opCount = 0
+      }
+    })
     batch.delete(doc(db, COLLECTIONS.tests, id))
-    await batch.commit()
+    opCount++
+    if (opCount > 0) await batch.commit()
   } catch (error) {
     console.error('[Firestore] deleteTest error:', error)
     throw error
@@ -672,8 +696,10 @@ export async function addBatchQuestions(
   questions: Omit<LocalQuestion, 'id'>[]
 ): Promise<LocalQuestion[]> {
   try {
-    const batch = writeBatch(db)
+    const BATCH_LIMIT = 450
     const created: LocalQuestion[] = []
+    let batch = writeBatch(db)
+    let opCount = 0
 
     for (const qData of questions) {
       const docRef = doc(collection(db, COLLECTIONS.questions))
@@ -693,9 +719,16 @@ export async function addBatchQuestions(
       }
       batch.set(docRef, firestoreQ)
       created.push({ ...qData, id: docRef.id })
+      opCount++
+
+      if (opCount >= BATCH_LIMIT) {
+        await batch.commit()
+        batch = writeBatch(db)
+        opCount = 0
+      }
     }
 
-    await batch.commit()
+    if (opCount > 0) await batch.commit()
     return created
   } catch (error) {
     console.error('[Firestore] addBatchQuestions error:', error)
@@ -766,11 +799,19 @@ export async function saveResult(
       ...data,
       createdAt: serverTimestamp(),
     })
-    return {
+    // Dual-write: also save to localStorage so getUserStats() works synchronously
+    const result: TestResult = {
       ...data,
       id: docRef.id,
       createdAt: new Date().toISOString(),
     }
+    try {
+      const existing = getLocalResults()
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('mockmaster_results', JSON.stringify([result, ...existing]))
+      }
+    } catch {}
+    return result
   } catch (error) {
     console.error('[Firestore] saveResult error, falling back to local:', error)
     return saveLocalResult(data)

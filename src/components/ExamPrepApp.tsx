@@ -2,10 +2,9 @@
 
 import React, { useState, useEffect, useRef, useCallback } from 'react'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Progress } from '@/components/ui/progress'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Separator } from '@/components/ui/separator'
 import {
@@ -148,17 +147,38 @@ export default function ExamPrepApp() {
 
   // --- Bookmarks ---
   const [bookmarkedQuestions, setBookmarkedQuestions] = useState<Set<string>>(new Set())
+  const [bookmarkContext, setBookmarkContext] = useState<Record<string, { testId: string; testName: string }>>({})
   useEffect(() => {
     try {
       const stored = localStorage.getItem('examprep_bookmarks')
       if (stored) setBookmarkedQuestions(new Set(JSON.parse(stored)))
+      const ctxStored = localStorage.getItem('examprep_bookmark_context')
+      if (ctxStored) setBookmarkContext(JSON.parse(ctxStored))
     } catch {}
   }, [])
-  function toggleBookmark(questionId: string) {
+  function toggleBookmark(questionId: string, testId?: string, testName?: string) {
     setBookmarkedQuestions(prev => {
       const next = new Set(prev)
-      if (next.has(questionId)) next.delete(questionId)
-      else next.add(questionId)
+      if (next.has(questionId)) {
+        next.delete(questionId)
+        // Also remove context
+        setBookmarkContext(prevCtx => {
+          const nextCtx = { ...prevCtx }
+          delete nextCtx[questionId]
+          try { localStorage.setItem('examprep_bookmark_context', JSON.stringify(nextCtx)) } catch {}
+          return nextCtx
+        })
+      } else {
+        next.add(questionId)
+        // Also save context if provided
+        if (testId && testName) {
+          setBookmarkContext(prevCtx => {
+            const nextCtx = { ...prevCtx, [questionId]: { testId, testName } }
+            try { localStorage.setItem('examprep_bookmark_context', JSON.stringify(nextCtx)) } catch {}
+            return nextCtx
+          })
+        }
+      }
       try { localStorage.setItem('examprep_bookmarks', JSON.stringify([...next])) } catch {}
       return next
     })
@@ -168,6 +188,7 @@ export default function ExamPrepApp() {
   const [showLoginModal, setShowLoginModal] = useState(false)
   const [showBackConfirm, setShowBackConfirm] = useState(false)
   const [showGuestWarning, setShowGuestWarning] = useState(false)
+  const [isLoadingData, setIsLoadingData] = useState(false)
   const [selectedUpcomingExam, setSelectedUpcomingExam] = useState<UpcomingExam | null>(null)
   const [showLanguageSheet, setShowLanguageSheet] = useState(false)
   const [showAboutSheet, setShowAboutSheet] = useState(false)
@@ -555,15 +576,20 @@ export default function ExamPrepApp() {
 
   // --- Test Functions ---
   async function startTest(test: LocalTest) {
-    const fullTest = await fetchTestById(test.id)
-    if (!fullTest) return
-    setSelectedTest(fullTest)
-    setAnswers({})
-    setMarkedForReview(new Set())
-    setCurrentQuestionIndex(0)
-    setTimeLeft(fullTest.duration * 60)
-    setTestActive(true)
-    navigateTo('test-taking')
+    setIsLoadingData(true)
+    try {
+      const fullTest = await fetchTestById(test.id)
+      if (!fullTest) return
+      setSelectedTest(fullTest)
+      setAnswers({})
+      setMarkedForReview(new Set())
+      setCurrentQuestionIndex(0)
+      setTimeLeft(fullTest.duration * 60)
+      setTestActive(true)
+      navigateTo('test-taking')
+    } finally {
+      setIsLoadingData(false)
+    }
   }
 
   async function handleFinishTest() {
@@ -591,7 +617,7 @@ export default function ExamPrepApp() {
 
     const score = correctCount * test.markingCorrect - wrongCount * Math.abs(test.markingWrong)
     const maxScore = totalQuestions * test.markingCorrect
-    const timeTaken = test.duration * 60 - timeLeft
+    const timeTaken = test.duration * 60 - timeLeftRef.current
 
     const result = await storeResult({
       testId: test.id,
@@ -636,17 +662,16 @@ export default function ExamPrepApp() {
   // --- Stats from localStorage ---
   function getUserStats() {
     try {
-      const data = localStorage.getItem('examprep_results')
-      if (!data) return { testsTaken: 0, avgScore: 0, bestRank: 0 }
-      const results: TestResult[] = JSON.parse(data)
+      // Use getLocalResults() which reads from the correct 'mockmaster_results' key
+      const allData: TestResult[] = getLocalResults()
+      if (allData.length === 0) return { testsTaken: 0, avgScore: 0, bestRank: 0 }
       const userId = auth.getUserId()
-      const userResults = userId ? results.filter((r: TestResult) => r.userId === userId) : results
+      const userResults = userId ? allData.filter((r: TestResult) => r.userId === userId) : allData
       const testsTaken = userResults.length
-      const avgScore = testsTaken > 0 ? Math.round(userResults.reduce((sum: number, r: TestResult) => sum + (r.score / r.maxScore) * 100, 0) / testsTaken) : 0
+      const avgScore = testsTaken > 0 ? Math.round(userResults.reduce((sum: number, r: TestResult) => sum + (r.maxScore > 0 ? (r.score / r.maxScore) * 100 : 0), 0) / testsTaken) : 0
       // Calculate best rank from leaderboard data across all tests taken by user
       let bestRank = 0
       if (testsTaken > 0) {
-        const allData: TestResult[] = JSON.parse(data)
         const uniqueTests = [...new Set(userResults.map(r => r.testId))]
         uniqueTests.forEach(testId => {
           const testResults = allData
@@ -663,7 +688,14 @@ export default function ExamPrepApp() {
   }
 
   // --- Bottom nav handler ---
+  // Pages that require authentication
+  const AUTH_REQUIRED_PAGES: Page[] = ['practice', 'leaderboard', 'profile']
   function handleBottomNav(page: Page) {
+    // Auth gate: require login for protected pages
+    if (AUTH_REQUIRED_PAGES.includes(page) && !auth.isLoggedIn) {
+      setShowLoginModal(true)
+      return
+    }
     // Save scroll before switching
     scrollPositionsRef.current[currentPage] = window.scrollY
     // Push current page to history so back button works
@@ -674,25 +706,40 @@ export default function ExamPrepApp() {
 
   // --- Exam select handler ---
   async function openExam(exam: LocalExam, category: LocalExamCategory) {
-    setSelectedExam(exam)
-    setSelectedCategory(category)
-    const tests = await fetchTestsByExam(exam.id)
-    setExamTests(tests)
-    navigateTo('tests')
+    setIsLoadingData(true)
+    try {
+      setSelectedExam(exam)
+      setSelectedCategory(category)
+      const tests = await fetchTestsByExam(exam.id)
+      setExamTests(tests)
+      navigateTo('tests')
+    } finally {
+      setIsLoadingData(false)
+    }
   }
 
   async function openTestInfo(test: LocalTest) {
-    const fullTest = await fetchTestById(test.id)
-    if (fullTest) {
-      setSelectedTest(fullTest)
-      navigateTo('test-info')
+    setIsLoadingData(true)
+    try {
+      const fullTest = await fetchTestById(test.id)
+      if (fullTest) {
+        setSelectedTest(fullTest)
+        navigateTo('test-info')
+      }
+    } finally {
+      setIsLoadingData(false)
     }
   }
 
   async function openLeaderboard(testId: string) {
-    setLeaderboardTestId(testId)
-    setLeaderboardData(await fetchLeaderboard(testId))
-    navigateTo('leaderboard')
+    setIsLoadingData(true)
+    try {
+      setLeaderboardTestId(testId)
+      setLeaderboardData(await fetchLeaderboard(testId))
+      navigateTo('leaderboard')
+    } finally {
+      setIsLoadingData(false)
+    }
   }
 
   // --- Avatar display ---
@@ -1665,7 +1712,7 @@ export default function ExamPrepApp() {
               variant="outline"
               size="sm"
               className={`rounded-xl flex-1 ${bookmarkedQuestions.has(question.id) ? 'bg-amber-50 border-amber-300 text-amber-700' : ''}`}
-              onClick={() => toggleBookmark(question.id)}
+              onClick={() => toggleBookmark(question.id, selectedTest?.id, selectedTest?.title)}
             >
               <BookmarkPlus className="w-4 h-4 mr-1" />
               {bookmarkedQuestions.has(question.id) ? _t('testTaking.unbookmark') : _t('testTaking.bookmark')}
@@ -2084,12 +2131,54 @@ export default function ExamPrepApp() {
                   <p className="text-gray-400 text-[11px] mt-1">{_t('practice.topicWiseSub')}</p>
                 </CardContent>
               </Card>
-              <Card className="border-0 shadow-sm cursor-pointer hover:shadow-md transition-shadow" onClick={() => {
+              <Card className="border-0 shadow-sm cursor-pointer hover:shadow-md transition-shadow" onClick={async () => {
                 if (!requireAuth()) return
-                // Bookmarked - show bookmarked questions or redirect to practice
+                // Bookmarked - collect bookmarked questions and start a practice session
                 if (bookmarkedQuestions.size > 0) {
-                  // Start a quick practice session with bookmarked questions
-                  navigateTo('practice')
+                  try {
+                    // Search all categories/exams/tests for bookmarked questions
+                    const allQuestions: LocalQuestion[] = []
+                    for (const cat of categories) {
+                      for (const exam of cat.exams) {
+                        const tests = await fetchTestsByExam(exam.id)
+                        for (const test of tests) {
+                          const fullTest = await fetchTestById(test.id)
+                          if (fullTest) {
+                            fullTest.questions.forEach(q => {
+                              if (bookmarkedQuestions.has(q.id)) {
+                                allQuestions.push(q)
+                              }
+                            })
+                          }
+                        }
+                      }
+                    }
+                    if (allQuestions.length > 0) {
+                      // Create a virtual test with bookmarked questions
+                      const virtualTest: LocalTest = {
+                        id: 'bookmarked-practice',
+                        title: _t('practice.bookmarked'),
+                        slug: 'bookmarked-practice',
+                        description: `Practice with ${allQuestions.length} bookmarked questions`,
+                        totalQuestions: allQuestions.length,
+                        duration: Math.max(5, Math.ceil(allQuestions.length * 1.5)), // 1.5 min per question, min 5
+                        markingCorrect: 1,
+                        markingWrong: -0.25,
+                        markingSkipped: 0,
+                        difficulty: 'mixed',
+                        isFree: true,
+                        isLive: true,
+                        exam: { id: 'bookmarked', name: _t('practice.bookmarked'), slug: 'bookmarked' },
+                        questions: allQuestions.slice(0, 30), // Max 30 questions per session
+                      }
+                      await startTest(virtualTest)
+                    }
+                  } catch (e) {
+                    console.error('Error starting bookmarked practice:', e)
+                    // Fallback - go to exams page
+                    setSelectedCategory(null)
+                    navigateTo('exams')
+                  }
                 } else {
                   // No bookmarks yet, go to exams to start practicing
                   setSelectedCategory(null)
@@ -2780,6 +2869,15 @@ export default function ExamPrepApp() {
 
   return (
     <div className="min-h-screen min-h-dvh bg-gray-50 relative w-full overflow-x-hidden" style={{ touchAction: 'manipulation' }}>
+      {/* Global Loading Overlay */}
+      {isLoadingData && (
+        <div className="fixed inset-0 z-[200] bg-black/30 backdrop-blur-sm flex items-center justify-center">
+          <div className="bg-white rounded-2xl p-6 shadow-2xl flex flex-col items-center gap-3">
+            <Loader2 className="w-8 h-8 text-orange-500 animate-spin" />
+            <p className="text-gray-600 text-sm font-medium">{_t('common.loading') || 'Loading...'}</p>
+          </div>
+        </div>
+      )}
       {renderPage()}
       {renderBottomNav()}
 
