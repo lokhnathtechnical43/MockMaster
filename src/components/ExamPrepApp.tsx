@@ -658,15 +658,21 @@ export default function ExamPrepApp() {
                       }`}
                     >
                       <div className="flex items-start gap-3">
-                        <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 ${
-                          notification.type === 'update' ? 'bg-blue-100' :
-                          notification.type === 'alert' ? 'bg-amber-100' :
-                          'bg-green-100'
-                        }`}>
-                          {notification.type === 'update' ? <Zap className="w-4 h-4 text-blue-500" /> :
-                           notification.type === 'alert' ? <AlertTriangle className="w-4 h-4 text-amber-500" /> :
-                           <Gift className="w-4 h-4 text-green-500" />}
-                        </div>
+                        {(notification as any).imageUrl ? (
+                          <div className="w-8 h-8 rounded-xl overflow-hidden flex-shrink-0 mt-0.5">
+                            <img src={(notification as any).imageUrl} alt={notification.title} className="w-full h-full object-cover" />
+                          </div>
+                        ) : (
+                          <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 ${
+                            notification.type === 'update' ? 'bg-blue-100' :
+                            notification.type === 'alert' ? 'bg-amber-100' :
+                            'bg-green-100'
+                          }`}>
+                            {notification.type === 'update' ? <Zap className="w-4 h-4 text-blue-500" /> :
+                             notification.type === 'alert' ? <AlertTriangle className="w-4 h-4 text-amber-500" /> :
+                             <Gift className="w-4 h-4 text-green-500" />}
+                          </div>
+                        )}
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2">
                             <p className={`text-sm ${!notification.read ? 'font-bold text-gray-900' : 'font-medium text-gray-700'}`}>
@@ -850,9 +856,15 @@ export default function ExamPrepApp() {
                     }}
                   >
                     <CardContent className="p-4">
-                      <div className={`w-10 h-10 rounded-xl ${color.light} flex items-center justify-center ${color.text} mb-2`}>
-                        {getCatIcon(cat.slug)}
-                      </div>
+                      {(cat as any).imageUrl ? (
+                        <div className="w-10 h-10 rounded-xl overflow-hidden mb-2">
+                          <img src={(cat as any).imageUrl} alt={cat.name} className="w-full h-full object-cover" />
+                        </div>
+                      ) : (
+                        <div className={`w-10 h-10 rounded-xl ${color.light} flex items-center justify-center ${color.text} mb-2`}>
+                          {getCatIcon(cat.slug)}
+                        </div>
+                      )}
                       <p className="font-semibold text-sm">{cat.name}</p>
                       <p className="text-gray-400 text-xs mt-1">{cat.exams.length} {_t('home.exams')}</p>
                     </CardContent>
@@ -911,9 +923,20 @@ export default function ExamPrepApp() {
               >
                 <CardContent className="p-4">
                   <div className="flex items-start gap-3">
-                    <div className="w-8 h-8 rounded-full bg-amber-100 flex items-center justify-center flex-shrink-0 mt-0.5">
-                      <Lightbulb className="w-4 h-4 text-amber-500" />
-                    </div>
+                    {(() => {
+                      const activeTips = dailyTips.filter(tip => tip.isActive)
+                      const dayIndex = Math.floor(Date.now() / 86400000) % activeTips.length
+                      const currentTip = activeTips[dayIndex]
+                      return currentTip?.imageUrl ? (
+                        <div className="w-8 h-8 rounded-xl overflow-hidden flex-shrink-0 mt-0.5">
+                          <img src={currentTip.imageUrl} alt="Tip" className="w-full h-full object-cover" />
+                        </div>
+                      ) : (
+                        <div className="w-8 h-8 rounded-full bg-amber-100 flex items-center justify-center flex-shrink-0 mt-0.5">
+                          <Lightbulb className="w-4 h-4 text-amber-500" />
+                        </div>
+                      )
+                    })()}
                     <div className="flex-1 min-w-0">
                       <p className="text-sm text-gray-700 leading-relaxed">
                         {(() => {
@@ -922,6 +945,16 @@ export default function ExamPrepApp() {
                           return activeTips[dayIndex]?.text || _t('home.dailyTip')
                         })()}
                       </p>
+                      {(() => {
+                        const activeTips = dailyTips.filter(tip => tip.isActive)
+                        const dayIndex = Math.floor(Date.now() / 86400000) % activeTips.length
+                        const currentTip = activeTips[dayIndex]
+                        return currentTip?.imageUrl ? (
+                          <div className="mt-2">
+                            <img src={currentTip.imageUrl} alt="Tip" className="max-h-20 rounded-lg object-contain" />
+                          </div>
+                        ) : null
+                      })()}
                       <p className="text-[10px] text-amber-500 mt-1">{_t('home.tapExplore')}</p>
                     </div>
                   </div>
@@ -1046,9 +1079,15 @@ export default function ExamPrepApp() {
             return (
               <div key={cat.id}>
                 <div className="flex items-center gap-2 mb-3">
-                  <div className={`w-8 h-8 rounded-lg ${color.light} flex items-center justify-center ${color.text}`}>
-                    {getCatIcon(cat.slug)}
-                  </div>
+                  {(cat as any).imageUrl ? (
+                    <div className="w-8 h-8 rounded-lg overflow-hidden">
+                      <img src={(cat as any).imageUrl} alt={cat.name} className="w-full h-full object-cover" />
+                    </div>
+                  ) : (
+                    <div className={`w-8 h-8 rounded-lg ${color.light} flex items-center justify-center ${color.text}`}>
+                      {getCatIcon(cat.slug)}
+                    </div>
+                  )}
                   <h2 className="font-bold text-base">{cat.name}</h2>
                   <Badge variant="secondary" className="text-xs">{cat.exams.length}</Badge>
                 </div>
@@ -1060,6 +1099,15 @@ export default function ExamPrepApp() {
                       onClick={() => openExam(exam, cat)}
                     >
                       <CardContent className="p-3 flex items-center gap-3">
+                        {(exam as any).imageUrl ? (
+                          <div className="w-10 h-10 rounded-xl overflow-hidden flex-shrink-0">
+                            <img src={(exam as any).imageUrl} alt={exam.name} className="w-full h-full object-cover" />
+                          </div>
+                        ) : (
+                          <div className={`w-10 h-10 rounded-xl ${color.light} flex items-center justify-center ${color.text} flex-shrink-0`}>
+                            {getCatIcon(cat.slug)}
+                          </div>
+                        )}
                         <div className="flex-1 min-w-0">
                           <p className="font-semibold text-sm">{exam.name}</p>
                           <p className="text-gray-400 text-xs">{exam.testCount} {_t('exams.tests')} · {exam.totalQuestions} {_t('tests.Qs')} · {exam.duration} {_t('tests.min')}</p>
@@ -1118,9 +1166,16 @@ export default function ExamPrepApp() {
               <Card key={test.id} className="border-0 shadow-sm">
                 <CardContent className="p-4">
                   <div className="flex items-start justify-between mb-2">
-                    <div className="flex-1 min-w-0 mr-2">
-                      <p className="font-semibold text-sm">{test.title}</p>
-                      <p className="text-gray-400 text-xs mt-1">{test.description}</p>
+                    <div className="flex items-start gap-3 flex-1 min-w-0 mr-2">
+                      {(test as any).imageUrl ? (
+                        <div className="w-12 h-12 rounded-xl overflow-hidden flex-shrink-0">
+                          <img src={(test as any).imageUrl} alt={test.title} className="w-full h-full object-cover" />
+                        </div>
+                      ) : null}
+                      <div className="flex-1 min-w-0">
+                        <p className="font-semibold text-sm">{test.title}</p>
+                        <p className="text-gray-400 text-xs mt-1">{test.description}</p>
+                      </div>
                     </div>
                     {test.isFree && <Badge className="bg-emerald-100 text-emerald-700 text-xs border-0">{_t('tests.free')}</Badge>}
                   </div>
@@ -1290,6 +1345,11 @@ export default function ExamPrepApp() {
                 </Badge>
               )}
               <p className="text-sm font-medium leading-relaxed mt-2">{question.questionText}</p>
+              {question.questionImage && (
+                <div className="mt-3">
+                  <img src={question.questionImage} alt="Question" className="max-h-40 rounded-xl object-contain mx-auto" />
+                </div>
+              )}
             </div>
 
             {/* Options */}

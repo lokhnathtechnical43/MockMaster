@@ -222,3 +222,41 @@ Stage Summary:
 - Notifications now have optional link field; clicking shows detail modal with link button
 - Both features work with Firestore and localStorage fallback
 - Build passes successfully with no errors
+
+---
+Task ID: image-add-all-pages
+Agent: Main Agent
+Task: Add image upload capability to all admin pages so admin can add images everywhere
+
+Work Log:
+- Added `imageUrl` optional field to FirestoreExamCategory, FirestoreExam, FirestoreTest, FirestoreNotification, FirestoreAnnouncement types in firestore-service.ts
+- Added `imageUrl` optional field to Notification and DailyTip types in admin-data.ts
+- Created reusable ImageUploadSection component and handleImageFileUpload helper in ExamsTab.tsx
+- Rewrote ExamsTab.tsx with image upload support for:
+  - Categories: add/edit with imageUrl, display image in list instead of emoji icon
+  - Exams: add/edit with imageUrl, display image in list instead of BookOpen icon
+  - Tests: add/edit with imageUrl, display image in list instead of ListChecks icon
+  - Questions: add with questionImage (was already in type but no UI), display question image in list
+- Rewrote NotificationsTab.tsx with image upload:
+  - Upload image or paste URL when sending notification
+  - Display notification image instead of type icon when imageUrl exists
+- Rewrote DailyTipsTab.tsx with image upload:
+  - Upload image or paste URL when adding tip
+  - Display tip image in list instead of Lightbulb icon when imageUrl exists
+- Updated ExamPrepApp.tsx to display images from all updated types:
+  - Notification list: show imageUrl instead of type icon
+  - Category cards on home: show imageUrl instead of getCatIcon
+  - Category headers in exams page: show imageUrl instead of getCatIcon
+  - Exam cards in exams page: show imageUrl instead of icon
+  - Test cards in tests page: show imageUrl as thumbnail
+  - Question display in test-taking: show questionImage below question text
+  - Daily tips section: show imageUrl instead of Lightbulb icon, and show image below tip text
+- All image uploads support: file upload (max 2MB, converts to base64), paste URL, and remove image
+- Build passes successfully with no errors
+
+Stage Summary:
+- All admin pages now support image upload: Categories, Exams, Tests, Questions, Notifications, Daily Tips
+- Announcements already had image upload from before
+- Images display properly in both admin panel and user-facing app
+- Supports both file upload (base64) and URL paste for images
+- Build passes, no errors

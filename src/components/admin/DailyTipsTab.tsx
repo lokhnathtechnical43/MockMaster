@@ -1,10 +1,11 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import {
-  Lightbulb, Plus, Trash2, RefreshCw, ExternalLink, ToggleLeft, ToggleRight
+  Lightbulb, Plus, Trash2, RefreshCw, ExternalLink, ToggleLeft, ToggleRight,
+  ImagePlus, X
 } from 'lucide-react'
 import {
   type DailyTip,
@@ -19,18 +20,36 @@ interface DailyTipsTabProps {
 export default function DailyTipsTab({ tips, onUpdate }: DailyTipsTabProps) {
   const [newTipText, setNewTipText] = useState('')
   const [newTipLink, setNewTipLink] = useState('')
+  const [newTipImageUrl, setNewTipImageUrl] = useState('')
+  const fileInputRef = useRef<HTMLInputElement>(null)
+
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    if (file.size > 2 * 1024 * 1024) {
+      alert('Image size must be less than 2MB')
+      return
+    }
+    const reader = new FileReader()
+    reader.onloadend = () => {
+      setNewTipImageUrl(reader.result as string)
+    }
+    reader.readAsDataURL(file)
+  }
 
   const handleAdd = () => {
     const newTip: DailyTip = {
       id: Date.now().toString(),
       text: newTipText,
       link: newTipLink || undefined,
+      imageUrl: newTipImageUrl || undefined,
       isActive: true,
       createdAt: new Date().toISOString(),
     }
     onUpdate([newTip, ...tips])
     setNewTipText('')
     setNewTipLink('')
+    setNewTipImageUrl('')
   }
 
   const handleDelete = (index: number) => {
@@ -68,6 +87,48 @@ export default function DailyTipsTab({ tips, onUpdate }: DailyTipsTabProps) {
               placeholder="Link (optional, e.g. https://example.com or 'exams')"
               className="w-full px-3 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-amber-300"
             />
+
+            {/* Image Upload Section */}
+            <div>
+              <p className="text-xs text-gray-500 mb-1.5">Image (optional)</p>
+              {newTipImageUrl ? (
+                <div className="relative rounded-xl overflow-hidden mb-2">
+                  <img src={newTipImageUrl} alt="Preview" className="w-full h-28 object-cover rounded-xl" />
+                  <button
+                    type="button"
+                    onClick={() => setNewTipImageUrl('')}
+                    className="absolute top-2 right-2 w-6 h-6 rounded-full bg-black/50 flex items-center justify-center"
+                  >
+                    <X className="w-3 h-3 text-white" />
+                  </button>
+                </div>
+              ) : (
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl border-2 border-dashed border-gray-200 hover:border-amber-300 hover:bg-amber-50/50 transition-colors text-xs text-gray-500"
+                  >
+                    <ImagePlus className="w-4 h-4" /> Upload Image
+                  </button>
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={handleImageUpload}
+                  />
+                  <input
+                    type="text"
+                    placeholder="Or paste URL..."
+                    value={newTipImageUrl}
+                    onChange={e => setNewTipImageUrl(e.target.value)}
+                    className="flex-1 px-3 py-2 rounded-xl border border-gray-200 text-xs focus:outline-none focus:ring-2 focus:ring-amber-300"
+                  />
+                </div>
+              )}
+            </div>
+
             <Button
               className="w-full bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white rounded-xl h-11 font-semibold"
               disabled={!newTipText}
@@ -109,11 +170,22 @@ export default function DailyTipsTab({ tips, onUpdate }: DailyTipsTabProps) {
             tips.map((tip, i) => (
               <Card key={tip.id} className={`border-0 shadow-sm hover:shadow-md transition-shadow ${!tip.isActive ? 'opacity-50' : 'border-l-4 border-l-amber-400'}`}>
                 <CardContent className="p-3 flex items-start gap-3">
-                  <div className="w-8 h-8 rounded-full bg-amber-100 flex items-center justify-center flex-shrink-0 mt-0.5">
-                    <Lightbulb className="w-4 h-4 text-amber-500" />
-                  </div>
+                  {tip.imageUrl ? (
+                    <div className="w-10 h-10 rounded-xl overflow-hidden flex-shrink-0 mt-0.5">
+                      <img src={tip.imageUrl} alt="Tip" className="w-full h-full object-cover" />
+                    </div>
+                  ) : (
+                    <div className="w-8 h-8 rounded-full bg-amber-100 flex items-center justify-center flex-shrink-0 mt-0.5">
+                      <Lightbulb className="w-4 h-4 text-amber-500" />
+                    </div>
+                  )}
                   <div className="flex-1 min-w-0">
                     <p className="text-sm text-gray-700 leading-relaxed">{tip.text}</p>
+                    {tip.imageUrl && (
+                      <div className="mt-1.5">
+                        <img src={tip.imageUrl} alt="Tip" className="max-h-20 rounded-lg object-contain" />
+                      </div>
+                    )}
                     {tip.link && (
                       <p className="text-xs text-blue-500 mt-1 flex items-center gap-1 truncate">
                         <ExternalLink className="w-3 h-3" /> {tip.link}

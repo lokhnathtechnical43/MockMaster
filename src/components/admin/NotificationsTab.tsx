@@ -1,12 +1,12 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import {
   Bell, Zap, AlertTriangle, Gift, Plus,
-  Trash2, RefreshCw, ExternalLink
+  Trash2, RefreshCw, ExternalLink, ImagePlus, X
 } from 'lucide-react'
 import {
   type Notification,
@@ -23,6 +23,22 @@ export default function NotificationsTab({ notifications, onUpdate }: Notificati
   const [newNotifMessage, setNewNotifMessage] = useState('')
   const [newNotifType, setNewNotifType] = useState<'update' | 'alert' | 'info'>('info')
   const [newNotifLink, setNewNotifLink] = useState('')
+  const [newNotifImageUrl, setNewNotifImageUrl] = useState('')
+  const fileInputRef = useRef<HTMLInputElement>(null)
+
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    if (file.size > 2 * 1024 * 1024) {
+      alert('Image size must be less than 2MB')
+      return
+    }
+    const reader = new FileReader()
+    reader.onloadend = () => {
+      setNewNotifImageUrl(reader.result as string)
+    }
+    reader.readAsDataURL(file)
+  }
 
   const handleSend = () => {
     const newNotif: Notification = {
@@ -33,11 +49,13 @@ export default function NotificationsTab({ notifications, onUpdate }: Notificati
       read: false,
       type: newNotifType,
       link: newNotifLink || undefined,
+      imageUrl: newNotifImageUrl || undefined,
     }
     onUpdate([newNotif, ...notifications])
     setNewNotifTitle('')
     setNewNotifMessage('')
     setNewNotifLink('')
+    setNewNotifImageUrl('')
   }
 
   const handleDelete = (index: number) => {
@@ -80,6 +98,48 @@ export default function NotificationsTab({ notifications, onUpdate }: Notificati
               placeholder="Link (optional, e.g. https://example.com or 'exams')"
               className="w-full px-3 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-orange-300"
             />
+
+            {/* Image Upload Section */}
+            <div>
+              <p className="text-xs text-gray-500 mb-1.5">Image (optional)</p>
+              {newNotifImageUrl ? (
+                <div className="relative rounded-xl overflow-hidden mb-2">
+                  <img src={newNotifImageUrl} alt="Preview" className="w-full h-28 object-cover rounded-xl" />
+                  <button
+                    type="button"
+                    onClick={() => setNewNotifImageUrl('')}
+                    className="absolute top-2 right-2 w-6 h-6 rounded-full bg-black/50 flex items-center justify-center"
+                  >
+                    <X className="w-3 h-3 text-white" />
+                  </button>
+                </div>
+              ) : (
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl border-2 border-dashed border-gray-200 hover:border-orange-300 hover:bg-orange-50/50 transition-colors text-xs text-gray-500"
+                  >
+                    <ImagePlus className="w-4 h-4" /> Upload Image
+                  </button>
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={handleImageUpload}
+                  />
+                  <input
+                    type="text"
+                    placeholder="Or paste URL..."
+                    value={newNotifImageUrl}
+                    onChange={e => setNewNotifImageUrl(e.target.value)}
+                    className="flex-1 px-3 py-2 rounded-xl border border-gray-200 text-xs focus:outline-none focus:ring-2 focus:ring-orange-300"
+                  />
+                </div>
+              )}
+            </div>
+
             <div>
               <p className="text-xs text-gray-500 mb-1.5">Type</p>
               <div className="flex gap-2">
@@ -137,19 +197,26 @@ export default function NotificationsTab({ notifications, onUpdate }: Notificati
             notifications.map((n, i) => (
               <Card key={n.id} className={`border-0 shadow-sm hover:shadow-md transition-shadow ${!n.read ? 'border-l-4 border-l-orange-400' : ''}`}>
                 <CardContent className="p-3 flex items-start gap-3">
-                  <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 ${
-                    n.type === 'update' ? 'bg-blue-100' :
-                    n.type === 'alert' ? 'bg-amber-100' :
-                    'bg-green-100'
-                  }`}>
-                    {n.type === 'update' ? <Zap className="w-4 h-4 text-blue-500" /> :
-                     n.type === 'alert' ? <AlertTriangle className="w-4 h-4 text-amber-500" /> :
-                     <Gift className="w-4 h-4 text-green-500" />}
-                  </div>
+                  {n.imageUrl ? (
+                    <div className="w-10 h-10 rounded-xl overflow-hidden flex-shrink-0">
+                      <img src={n.imageUrl} alt={n.title} className="w-full h-full object-cover" />
+                    </div>
+                  ) : (
+                    <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 ${
+                      n.type === 'update' ? 'bg-blue-100' :
+                      n.type === 'alert' ? 'bg-amber-100' :
+                      'bg-green-100'
+                    }`}>
+                      {n.type === 'update' ? <Zap className="w-4 h-4 text-blue-500" /> :
+                       n.type === 'alert' ? <AlertTriangle className="w-4 h-4 text-amber-500" /> :
+                       <Gift className="w-4 h-4 text-green-500" />}
+                    </div>
+                  )}
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
                       <p className="font-semibold text-sm truncate">{n.title}</p>
                       {!n.read && <div className="w-2 h-2 rounded-full bg-orange-500 flex-shrink-0" />}
+                      {n.imageUrl && <Badge className="text-[8px] bg-blue-100 text-blue-700">Image</Badge>}
                     </div>
                     <p className="text-gray-400 text-xs truncate">{n.message}</p>
                     {n.link && (

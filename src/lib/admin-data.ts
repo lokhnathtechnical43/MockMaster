@@ -19,12 +19,14 @@ export interface Notification {
   read: boolean
   type: 'update' | 'alert' | 'info'
   link?: string // Optional link URL - admin can set this so users can navigate on click
+  imageUrl?: string // Optional custom image (base64 data URL or external URL)
 }
 
 export interface DailyTip {
   id: string
   text: string // The tip text shown to users
   link?: string // Optional link URL
+  imageUrl?: string // Optional custom image (base64 data URL or external URL)
   isActive: boolean // Only active tips are shown
   createdAt: string
 }

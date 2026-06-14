@@ -92,6 +92,7 @@ export interface FirestoreExamCategory {
   icon: string
   description: string
   order: number
+  imageUrl?: string // Optional custom image (base64 data URL or external URL)
 }
 
 export interface FirestoreExam {
@@ -105,6 +106,7 @@ export interface FirestoreExam {
   order: number
   testCount: number
   categoryId: string
+  imageUrl?: string // Optional custom image (base64 data URL or external URL)
 }
 
 export interface FirestoreTest {
@@ -123,6 +125,7 @@ export interface FirestoreTest {
   examId: string
   examName: string
   examSlug: string
+  imageUrl?: string // Optional custom image (base64 data URL or external URL)
 }
 
 export interface FirestoreQuestion {
@@ -173,6 +176,7 @@ export interface FirestoreUser {
 export interface FirestoreAnnouncement {
   id: string
   image: string
+  imageUrl?: string // Optional custom image (base64 data URL or external URL)
   title: string
   subtitle: string
   action: string
@@ -186,6 +190,7 @@ export interface FirestoreNotification {
   time: string
   read: boolean
   type: 'update' | 'alert' | 'info'
+  imageUrl?: string // Optional custom image (base64 data URL or external URL)
 }
 
 // ============================================================
