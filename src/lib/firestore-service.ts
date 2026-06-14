@@ -39,15 +39,19 @@ import {
   Announcement,
   Notification,
   DailyTip,
+  UpcomingExam,
   getAnnouncements as getLocalAnnouncements,
   getNotifications as getLocalNotifications,
   saveAnnouncements as saveLocalAnnouncements,
   saveNotifications as saveLocalNotifications,
   getDailyTips as getLocalDailyTips,
   saveDailyTips as saveLocalDailyTips,
+  getUpcomingExams as getLocalUpcomingExams,
+  saveUpcomingExams as saveLocalUpcomingExams,
   DEFAULT_ANNOUNCEMENTS,
   DEFAULT_NOTIFICATIONS,
   DEFAULT_DAILY_TIPS,
+  DEFAULT_UPCOMING_EXAMS,
 } from '@/lib/admin-data'
 
 // ============================================================
@@ -79,6 +83,7 @@ const COLLECTIONS = {
   announcements: 'announcements',
   notifications: 'notifications',
   dailyTips: 'daily_tips',
+  upcomingExams: 'upcoming_exams',
 } as const
 
 // ============================================================
@@ -1007,6 +1012,53 @@ export async function saveDailyTips(
   } catch (error) {
     console.error('[Firestore] saveDailyTips error, saving locally:', error)
     saveLocalDailyTips(data)
+  }
+}
+
+// ============================================================
+// Upcoming Exams CRUD
+// ============================================================
+
+/**
+ * Get all upcoming exams.
+ */
+export async function getUpcomingExams(): Promise<UpcomingExam[]> {
+  return firestoreOperation(
+    async () => {
+      const snap = await getDocs(collection(db, COLLECTIONS.upcomingExams))
+      if (snap.empty) return DEFAULT_UPCOMING_EXAMS
+      return snap.docs.map((d) => ({ id: d.id, ...d.data() } as UpcomingExam))
+    },
+    () => getLocalUpcomingExams()
+  )
+}
+
+/**
+ * Save (overwrite) the upcoming exams collection.
+ */
+export async function saveUpcomingExams(
+  data: UpcomingExam[]
+): Promise<void> {
+  if (!useFirestore) {
+    saveLocalUpcomingExams(data)
+    return
+  }
+  try {
+    const batch = writeBatch(db)
+    // Delete existing
+    const existing = await getDocs(collection(db, COLLECTIONS.upcomingExams))
+    existing.docs.forEach((d) => batch.delete(d.ref))
+    // Add new
+    for (const item of data) {
+      const docRef = doc(collection(db, COLLECTIONS.upcomingExams))
+      batch.set(docRef, { ...item, id: docRef.id })
+    }
+    await batch.commit()
+    // Also persist locally for offline access
+    saveLocalUpcomingExams(data)
+  } catch (error) {
+    console.error('[Firestore] saveUpcomingExams error, saving locally:', error)
+    saveLocalUpcomingExams(data)
   }
 }
 

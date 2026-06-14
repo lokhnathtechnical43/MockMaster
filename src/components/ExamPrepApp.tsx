@@ -36,7 +36,7 @@ import {
 import { useFirebaseAuth } from '@/lib/use-firebase-auth'
 import LoginModal from '@/components/LoginModal'
 import { App } from '@capacitor/app'
-import { getAnnouncements as getLocalAnnouncements, getNotifications as getLocalNotifications, getDailyTips as getLocalDailyTips, type DailyTip, getPageImage } from '@/lib/admin-data'
+import { getAnnouncements as getLocalAnnouncements, getNotifications as getLocalNotifications, getDailyTips as getLocalDailyTips, type DailyTip, getPageImage, getActiveUpcomingExams, type UpcomingExam } from '@/lib/admin-data'
 import { t, type Lang } from '@/lib/i18n'
 
 // ===== Types =====
@@ -170,6 +170,9 @@ export default function ExamPrepApp() {
   const [dailyTips, setDailyTips] = useState<DailyTip[]>([])
   const [selectedTip, setSelectedTip] = useState<DailyTip | null>(null)
 
+  // --- Upcoming Exams (loaded from shared admin storage) ---
+  const [upcomingExams, setUpcomingExams] = useState<UpcomingExam[]>([])
+
   // --- Page Images (loaded from admin storage) ---
   const [pageImages, setPageImages] = useState<Record<string, string>>({})
 
@@ -216,6 +219,8 @@ export default function ExamPrepApp() {
           setNotifications(getLocalNotifications())
           setDailyTips(getLocalDailyTips())
         }
+        // Load upcoming exams
+        setUpcomingExams(getActiveUpcomingExams())
         // Load page images
         loadPageImages()
       } catch (e) {
@@ -224,6 +229,7 @@ export default function ExamPrepApp() {
         setAnnouncements(getLocalAnnouncements().map(a => ({ ...a, action: a.action as Page })))
         setNotifications(getLocalNotifications())
         setDailyTips(getLocalDailyTips())
+        setUpcomingExams(getActiveUpcomingExams())
         loadPageImages()
       }
     }
@@ -243,6 +249,8 @@ export default function ExamPrepApp() {
           setAnnouncements(getLocalAnnouncements().map(a => ({ ...a, action: a.action as Page })))
           setNotifications(getLocalNotifications())
         }
+        // Always refresh upcoming exams from local storage
+        setUpcomingExams(getActiveUpcomingExams())
       } catch {}
     }
     // Refresh from Firestore every 10 seconds so admin changes show up
@@ -252,6 +260,7 @@ export default function ExamPrepApp() {
       if (!isFirestore()) {
         setAnnouncements(getLocalAnnouncements().map(a => ({ ...a, action: a.action as Page })))
         setNotifications(getLocalNotifications())
+        setUpcomingExams(getActiveUpcomingExams())
         loadPageImages()
       }
     }
@@ -1022,12 +1031,8 @@ export default function ExamPrepApp() {
               </div>
             )}
             <div className="space-y-2">
-              {[
-                { name: _t('upcoming.sscCgl'), date: _t('upcoming.sscCglDate'), status: _t('upcoming.sscCglStatus'), statusType: 'open', catSlug: 'ssc' },
-                { name: _t('upcoming.ibpsPo'), date: _t('upcoming.ibpsPoDate'), status: _t('upcoming.ibpsPoStatus'), statusType: 'coming', catSlug: 'banking' },
-                { name: _t('upcoming.rrbNtpc'), date: _t('upcoming.rrbNtpcDate'), status: _t('upcoming.rrbNtpcStatus'), statusType: 'admit', catSlug: 'railways' },
-              ].map((exam, i) => (
-                <Card key={i} className="border-0 shadow-sm cursor-pointer hover:shadow-md transition-shadow"
+              {upcomingExams.map((exam, i) => (
+                <Card key={exam.id} className="border-0 shadow-sm cursor-pointer hover:shadow-md transition-shadow"
                   onClick={() => {
                     const cat = categories.find(c => c.slug === exam.catSlug)
                     if (cat && cat.exams.length > 0) {
@@ -1038,9 +1043,15 @@ export default function ExamPrepApp() {
                   }}
                 >
                   <CardContent className="p-3 flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center">
-                      <Calendar className="w-5 h-5 text-blue-500" />
-                    </div>
+                    {exam.imageUrl ? (
+                      <div className="w-10 h-10 rounded-xl overflow-hidden flex-shrink-0">
+                        <img src={exam.imageUrl} alt={exam.name} className="w-full h-full object-cover" />
+                      </div>
+                    ) : (
+                      <div className="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center">
+                        <Calendar className="w-5 h-5 text-blue-500" />
+                      </div>
+                    )}
                     <div className="flex-1 min-w-0">
                       <p className="font-semibold text-sm truncate">{exam.name}</p>
                       <p className="text-gray-400 text-xs">{exam.date}</p>
@@ -1048,6 +1059,7 @@ export default function ExamPrepApp() {
                     <Badge variant={exam.statusType === 'open' ? 'default' : 'secondary'} className={`text-[10px] ${
                       exam.statusType === 'open' ? 'bg-green-100 text-green-700' :
                       exam.statusType === 'admit' ? 'bg-amber-100 text-amber-700' :
+                      exam.statusType === 'closed' ? 'bg-red-100 text-red-700' :
                       'bg-gray-100 text-gray-600'
                     }`}>
                       {exam.status}

@@ -6,10 +6,10 @@ import { Card, CardContent } from '@/components/ui/card'
 import {
   Shield, LogOut, Lock, ArrowLeft, Eye, EyeOff,
   BarChart3, Users, FileText, Settings, Home,
-  BookOpen, Bell, Flame, PieChart
+  BookOpen, Bell, Flame, PieChart, Calendar
 } from 'lucide-react'
 import {
-  type Announcement, type Notification, type DailyTip, type PageImage,
+  type Announcement, type Notification, type DailyTip, type PageImage, type UpcomingExam,
   getAnnouncements as getLocalAnnouncements,
   getNotifications as getLocalNotifications,
   saveAnnouncements as saveLocalAnnouncements,
@@ -18,6 +18,8 @@ import {
   saveDailyTips as saveLocalDailyTips,
   getPageImages as getLocalPageImages,
   savePageImages as saveLocalPageImages,
+  getUpcomingExams as getLocalUpcomingExams,
+  saveUpcomingExams as saveLocalUpcomingExams,
 } from '@/lib/admin-data'
 import {
   getAnnouncements as getFsAnnouncements,
@@ -26,6 +28,8 @@ import {
   saveNotifications as saveFsNotifications,
   getDailyTips as getFsDailyTips,
   saveDailyTips as saveFsDailyTips,
+  getUpcomingExams as getFsUpcomingExams,
+  saveUpcomingExams as saveFsUpcomingExams,
   getResults as getFsResults,
   getUseFirestore,
 } from '@/lib/firestore-service'
@@ -41,9 +45,10 @@ import AnnouncementsTab from './AnnouncementsTab'
 import NotificationsTab from './NotificationsTab'
 import DailyTipsTab from './DailyTipsTab'
 import PageImagesTab from './PageImagesTab'
+import UpcomingExamsTab from './UpcomingExamsTab'
 import SettingsTab from './SettingsTab'
 
-type AdminTab = 'dashboard' | 'exams' | 'users' | 'analytics' | 'announcements' | 'notifications' | 'dailyTips' | 'pageImages' | 'settings'
+type AdminTab = 'dashboard' | 'exams' | 'users' | 'analytics' | 'announcements' | 'notifications' | 'dailyTips' | 'pageImages' | 'upcomingExams' | 'settings'
 
 export default function AdminPanel() {
   // --- Auth ---
@@ -61,6 +66,7 @@ export default function AdminPanel() {
   const [notifications, setNotifications] = useState<Notification[]>([])
   const [dailyTips, setDailyTips] = useState<DailyTip[]>([])
   const [pageImages, setPageImages] = useState<PageImage[]>([])
+  const [upcomingExams, setUpcomingExams] = useState<UpcomingExam[]>([])
 
   // --- Load data on mount (always from Firestore if available) ---
   useEffect(() => {
@@ -74,21 +80,24 @@ export default function AdminPanel() {
     const loadAdminData = async () => {
       try {
         if (getUseFirestore() && isFirebaseReady()) {
-          const [anns, notifs, tips, results] = await Promise.all([
+          const [anns, notifs, tips, uExams, results] = await Promise.all([
             getFsAnnouncements(),
             getFsNotifications(),
             getFsDailyTips(),
+            getFsUpcomingExams(),
             getFsResults(),
           ])
           setAnnouncements(anns)
           setNotifications(notifs)
           setDailyTips(tips)
+          setUpcomingExams(uExams)
           setAllResults(results)
         } else {
           setAnnouncements(getLocalAnnouncements())
           setNotifications(getLocalNotifications())
           setDailyTips(getLocalDailyTips())
           setPageImages(getLocalPageImages())
+          setUpcomingExams(getLocalUpcomingExams())
           setAllResults(getLocalResults())
         }
       } catch (e) {
@@ -97,6 +106,7 @@ export default function AdminPanel() {
         setNotifications(getLocalNotifications())
         setDailyTips(getLocalDailyTips())
         setPageImages(getLocalPageImages())
+        setUpcomingExams(getLocalUpcomingExams())
         setAllResults(getLocalResults())
       }
     }
@@ -157,6 +167,18 @@ export default function AdminPanel() {
   useEffect(() => {
     saveLocalPageImages(pageImages)
   }, [pageImages])
+
+  // Save upcoming exams to Firestore + localStorage when changed
+  useEffect(() => {
+    if (upcomingExams.length > 0) {
+      saveLocalUpcomingExams(upcomingExams)
+      if (getUseFirestore() && isFirebaseReady()) {
+        saveFsUpcomingExams(upcomingExams).catch(e =>
+          console.error('[Admin] Failed to save upcoming exams to Firestore:', e)
+        )
+      }
+    }
+  }, [upcomingExams])
 
   const ADMIN_PASSWORD = 'admin123'
 
@@ -281,6 +303,7 @@ export default function AdminPanel() {
     { id: 'notifications', icon: Bell, label: 'Notify' },
     { id: 'dailyTips', icon: FileText, label: 'Tips' },
     { id: 'pageImages', icon: Home, label: 'Images' },
+    { id: 'upcomingExams', icon: Calendar, label: 'Upcoming' },
     { id: 'settings', icon: Settings, label: 'Settings' },
   ]
 
@@ -380,6 +403,13 @@ export default function AdminPanel() {
           <PageImagesTab
             images={pageImages}
             onUpdate={setPageImages}
+          />
+        )}
+
+        {adminTab === 'upcomingExams' && (
+          <UpcomingExamsTab
+            exams={upcomingExams}
+            onUpdate={setUpcomingExams}
           />
         )}
 

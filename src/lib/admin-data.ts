@@ -40,12 +40,25 @@ export interface PageImage {
   updatedAt: string
 }
 
+export interface UpcomingExam {
+  id: string
+  name: string // Exam name shown to users
+  date: string // Display date string (e.g. "15 Jul 2025")
+  status: string // Status label (e.g. "Registration Open", "Coming Soon", "Admit Card Out")
+  statusType: 'open' | 'coming' | 'admit' | 'closed' // Determines badge color
+  catSlug: string // Category slug to navigate to on click (e.g. 'ssc', 'banking', 'railways')
+  isActive: boolean // Only active exams are shown to users
+  order: number // Display order
+  imageUrl?: string // Optional custom image (base64 data URL or external URL)
+}
+
 export const STORAGE_KEYS = {
   announcements: 'examprep_announcements',
   notifications: 'examprep_notifications',
   dailyTips: 'examprep_daily_tips',
   adminAuth: 'examprep_admin_auth',
   pageImages: 'examprep_page_images',
+  upcomingExams: 'examprep_upcoming_exams',
 } as const
 
 export const DEFAULT_ANNOUNCEMENTS: Announcement[] = [
@@ -145,4 +158,32 @@ export function savePageImages(images: PageImage[]): void {
 export function getPageImage(id: string): string | undefined {
   const images = getPageImages()
   return images.find(img => img.id === id)?.imageUrl
+}
+
+// Upcoming Exams - allow admin to manage upcoming exams shown on home page
+export const DEFAULT_UPCOMING_EXAMS: UpcomingExam[] = [
+  { id: '1', name: 'SSC CGL 2025', date: '15 Jul 2025', status: 'Registration Open', statusType: 'open', catSlug: 'ssc', isActive: true, order: 1 },
+  { id: '2', name: 'IBPS PO 2025', date: '20 Aug 2025', status: 'Coming Soon', statusType: 'coming', catSlug: 'banking', isActive: true, order: 2 },
+  { id: '3', name: 'RRB NTPC 2025', date: '10 Sep 2025', status: 'Admit Card Out', statusType: 'admit', catSlug: 'railways', isActive: true, order: 3 },
+]
+
+export function getUpcomingExams(): UpcomingExam[] {
+  if (typeof window === 'undefined') return DEFAULT_UPCOMING_EXAMS
+  try {
+    const stored = localStorage.getItem(STORAGE_KEYS.upcomingExams)
+    return stored ? JSON.parse(stored) : DEFAULT_UPCOMING_EXAMS
+  } catch {
+    return DEFAULT_UPCOMING_EXAMS
+  }
+}
+
+export function saveUpcomingExams(exams: UpcomingExam[]): void {
+  if (typeof window === 'undefined') return
+  localStorage.setItem(STORAGE_KEYS.upcomingExams, JSON.stringify(exams))
+}
+
+export function getActiveUpcomingExams(): UpcomingExam[] {
+  return getUpcomingExams()
+    .filter(e => e.isActive)
+    .sort((a, b) => a.order - b.order)
 }
