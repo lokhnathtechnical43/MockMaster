@@ -1,0 +1,975 @@
+  2000→                      <div className={`w-10 h-10 rounded-xl ${color.light} flex items-center justify-center ${color.text}`}>
+  2001→                        {getCatIcon(cat.slug)}
+  2002→                      </div>
+  2003→                      <div className="flex-1 min-w-0">
+  2004→                        <p className="font-semibold text-sm">{cat.name}</p>
+  2005→                        <p className="text-gray-400 text-xs">{cat.exams.length} {_t('home.exams')} · {totalQs} {_t('about.questions')}</p>
+  2006→                      </div>
+  2007→                      <Button size="sm" variant="outline" className="rounded-xl text-orange-600 border-orange-200 text-xs">
+  2008→                        {_t('home.start')}
+  2009→                      </Button>
+  2010→                    </CardContent>
+  2011→                  </Card>
+  2012→                )
+  2013→              })}
+  2014→            </div>
+  2015→          </div>
+  2016→
+  2017→          {/* Previous Practice Sessions */}
+  2018→          <div>
+  2019→            <h2 className="font-bold text-lg mb-3">{_t('practice.recent')}</h2>
+  2020→            {auth.isLoggedIn ? (
+  2021→              <Card className="border-0 shadow-sm">
+  2022→                <CardContent className="p-4 text-center">
+  2023→                  <Clock className="w-8 h-8 text-gray-300 mx-auto mb-2" />
+  2024→                  <p className="text-gray-400 text-sm">{_t('practice.historyEmpty')}</p>
+  2025→                </CardContent>
+  2026→              </Card>
+  2027→            ) : (
+  2028→              <Card className="border-0 shadow-sm bg-gradient-to-r from-orange-50 to-red-50">
+  2029→                <CardContent className="p-4 text-center">
+  2030→                  <PenTool className="w-8 h-8 text-orange-400 mx-auto mb-2" />
+  2031→                  <p className="font-semibold text-sm text-gray-700">{_t('practice.loginSave')}</p>
+  2032→                  <Button size="sm" className="bg-gradient-to-r from-orange-500 to-red-500 text-white rounded-xl mt-2" onClick={() => setShowLoginModal(true)}>
+  2033→                    {_t('home.loginNow')}
+  2034→                  </Button>
+  2035→                </CardContent>
+  2036→              </Card>
+  2037→            )}
+  2038→          </div>
+  2039→        </div>
+  2040→      </div>
+  2041→    )
+  2042→  }
+  2043→
+  2044→  // ===== RENDER: Profile Page =====
+  2045→  function renderProfile() {
+  2046→    const stats = getUserStats()
+  2047→    const userDisplay = auth.getUserDisplay()
+  2048→    const userEmail = auth.getUserEmail()
+  2049→    const isEmailUser = !auth.isGuest && auth.isLoggedIn
+  2050→
+  2051→    return (
+  2052→      <div className="pb-20">
+  2053→        {/* Header with gradient */}
+  2054→        <div className="bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 px-5 pt-[calc(env(safe-area-inset-top,0px)+3rem)] pb-10 rounded-b-[28px] relative overflow-hidden">
+  2055→          {/* Page Image - Profile Header Background */}
+  2056→          {getPageImg('profile_header') && (
+  2057→            <img src={getPageImg('profile_header')} alt="" className="absolute inset-0 w-full h-full object-cover opacity-20" />
+  2058→          )}
+  2059→          {/* Decorative circles */}
+  2060→          <div className="absolute top-0 right-0 w-40 h-40 bg-orange-500/10 rounded-full -translate-y-1/2 translate-x-1/4" />
+  2061→          <div className="absolute bottom-0 left-0 w-32 h-32 bg-orange-500/10 rounded-full translate-y-1/2 -translate-x-1/4" />
+  2062→
+  2063→          {/* Top bar */}
+  2064→          <div className="flex items-center justify-between mb-6 relative z-10">
+  2065→            <h1 className="text-white text-xl font-bold">{_t('profile.title')}</h1>
+  2066→            <button
+  2067→              onClick={() => setShowAboutSheet(true)}
+  2068→              className="w-9 h-9 rounded-full bg-white/10 backdrop-blur flex items-center justify-center"
+  2069→            >
+  2070→              <Settings className="w-4 h-4 text-white/70" />
+  2071→            </button>
+  2072→          </div>
+  2073→
+  2074→          {/* Profile Card */}
+  2075→          <div className="bg-white/10 backdrop-blur-md rounded-2xl p-5 border border-white/10 relative z-10">
+  2076→            <div className="flex items-center gap-4">
+  2077→              <div className="relative">
+  2078→                <div className="w-16 h-16 rounded-full bg-gradient-to-br from-orange-400 to-red-500 flex items-center justify-center shadow-lg shadow-orange-500/20">
+  2079→                  <span className="text-white font-bold text-xl">{getAvatarDisplay()}</span>
+  2080→                </div>
+  2081→                {isEmailUser && (
+  2082→                  <div className="absolute -bottom-1 -right-1 w-6 h-6 rounded-full bg-emerald-500 flex items-center justify-center border-2 border-slate-900">
+  2083→                    <CheckCircle2 className="w-3 h-3 text-white" />
+  2084→                  </div>
+  2085→                )}
+  2086→              </div>
+  2087→              <div className="flex-1 min-w-0">
+  2088→                <p className="text-white font-bold text-lg truncate">
+  2089→                  {isEmailUser ? (userDisplay || userEmail) : _t('profile.guestUser')}
+  2090→                </p>
+  2091→                <div className="flex items-center gap-2 mt-1">
+  2092→                  {isEmailUser ? (
+  2093→                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 text-xs font-medium">
+  2094→                      <Shield className="w-3 h-3" /> {_t('profile.verified')}
+  2095→                    </span>
+  2096→                  ) : (
+  2097→                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-400 text-xs font-medium">
+  2098→                      <AlertTriangle className="w-3 h-3" /> {_t('profile.guestMode')}
+  2099→                    </span>
+  2100→                  )}
+  2101→                </div>
+  2102→              </div>
+  2103→              {auth.isLoggedIn && !auth.isGuest && (
+  2104→                <button
+  2105→                  onClick={() => auth.logout()}
+  2106→                  className="w-9 h-9 rounded-full bg-white/10 flex items-center justify-center"
+  2107→                >
+  2108→                  <LogOut className="w-4 h-4 text-white/60" />
+  2109→                </button>
+  2110→              )}
+  2111→            </div>
+  2112→
+  2113→            {/* Stats Row */}
+  2114→            <div className="mt-5 pt-4 border-t border-white/10 grid grid-cols-3 gap-2">
+  2115→              <div className="text-center">
+  2116→                <p className="text-white font-bold text-xl">{stats.testsTaken}</p>
+  2117→                <p className="text-white/40 text-[10px] font-medium uppercase tracking-wider">{_t('profile.tests')}</p>
+  2118→              </div>
+  2119→              <div className="text-center border-x border-white/10">
+  2120→                <p className="text-white font-bold text-xl">{stats.avgScore}%</p>
+  2121→                <p className="text-white/40 text-[10px] font-medium uppercase tracking-wider">{_t('profile.avgScore')}</p>
+  2122→              </div>
+  2123→              <div className="text-center">
+  2124→                <p className="text-white font-bold text-xl">#{stats.bestRank}</p>
+  2125→                <p className="text-white/40 text-[10px] font-medium uppercase tracking-wider">{_t('profile.bestRank')}</p>
+  2126→              </div>
+  2127→            </div>
+  2128→          </div>
+  2129→        </div>
+  2130→
+  2131→        <div className="px-4 -mt-5 space-y-4 relative z-20">
+  2132→          {/* Guest Upgrade Banner */}
+  2133→          {auth.isGuest && (
+  2134→            <Card className="border-0 shadow-lg bg-gradient-to-r from-amber-500 to-orange-500 overflow-hidden">
+  2135→              <CardContent className="p-4">
+  2136→                <div className="flex items-center gap-3">
+  2137→                  <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center flex-shrink-0">
+  2138→                    <Crown className="w-5 h-5 text-white" />
+  2139→                  </div>
+  2140→                  <div className="flex-1 min-w-0">
+  2141→                    <p className="text-white font-bold text-sm">{_t('profile.upgradeTitle')}</p>
+  2142→                    <p className="text-white/80 text-xs mt-0.5">{_t('profile.upgradeSub')}</p>
+  2143→                  </div>
+  2144→                  <Button
+  2145→                    size="sm"
+  2146→                    className="bg-white text-orange-600 hover:bg-white/90 rounded-xl font-bold px-3"
+  2147→                    onClick={() => setShowLoginModal(true)}
+  2148→                  >
+  2149→                    <Mail className="w-3 h-3 mr-1" /> {_t('profile.login')}
+  2150→                  </Button>
+  2151→                </div>
+  2152→              </CardContent>
+  2153→            </Card>
+  2154→          )}
+  2155→
+  2156→          {/* Not logged in - Login Card */}
+  2157→          {!auth.isLoggedIn && (
+  2158→            <Card className="border-0 shadow-lg overflow-hidden">
+  2159→              <CardContent className="p-5">
+  2160→                <div className="text-center mb-4">
+  2161→                  <div className="w-14 h-14 rounded-full bg-orange-50 flex items-center justify-center mx-auto mb-3">
+  2162→                    <User className="w-7 h-7 text-orange-500" />
+  2163→                  </div>
+  2164→                  <p className="font-bold text-base">{_t('profile.loginUnlock')}</p>
+  2165→                  <p className="text-gray-400 text-xs mt-1">{_t('profile.loginUnlockSub')}</p>
+  2166→                </div>
+  2167→                <Button
+  2168→                  className="w-full h-11 bg-gradient-to-r from-orange-500 to-red-500 text-white rounded-xl font-semibold"
+  2169→                  onClick={() => setShowLoginModal(true)}
+  2170→                >
+  2171→                  <Mail className="w-4 h-4 mr-2" /> {_t('profile.loginEmail')}
+  2172→                </Button>
+  2173→              </CardContent>
+  2174→            </Card>
+  2175→          )}
+  2176→
+  2177→          {/* Quick Actions Grid */}
+  2178→          <div className="grid grid-cols-2 gap-3">
+  2179→            <Card
+  2180→              className="border-0 shadow-sm cursor-pointer hover:shadow-md transition-all active:scale-[0.98]"
+  2181→              onClick={() => { pageHistoryRef.current.push(currentPage); setCurrentPage('exams') }}
+  2182→            >
+  2183→              <CardContent className="p-4">
+  2184→                <div className="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center mb-2">
+  2185→                  <BookOpen className="w-5 h-5 text-blue-600" />
+  2186→                </div>
+  2187→                <p className="font-semibold text-sm">{_t('profile.myExams')}</p>
+  2188→                <p className="text-gray-400 text-[10px] mt-0.5">{categories.length} {_t('profile.categories')}</p>
+  2189→              </CardContent>
+  2190→            </Card>
+  2191→            <Card
+  2192→              className="border-0 shadow-sm cursor-pointer hover:shadow-md transition-all active:scale-[0.98]"
+  2193→              onClick={async () => {
+  2194→                try {
+  2195→                  const fsResults = isFirestore() ? await getFsResults() : []
+  2196→                  const localResults = getLocalResults()
+  2197→                  const allResults = [...fsResults, ...localResults]
+  2198→                  const uniqueResults = allResults.filter((r, i, arr) => arr.findIndex(x => x.id === r.id) === i)
+  2199→                  setLeaderboardData(uniqueResults.sort((a, b) => b.score - a.score).slice(0, 50))
+  2200→                  setLeaderboardTestId('all')
+  2201→                } catch {
+  2202→                  setLeaderboardData(getLocalResults().sort((a, b) => b.score - a.score).slice(0, 50))
+  2203→                  setLeaderboardTestId('all')
+  2204→                }
+  2205→                pageHistoryRef.current.push(currentPage)
+  2206→                setCurrentPage('leaderboard')
+  2207→              }}
+  2208→            >
+  2209→              <CardContent className="p-4">
+  2210→                <div className="w-10 h-10 rounded-xl bg-amber-50 flex items-center justify-center mb-2">
+  2211→                  <Trophy className="w-5 h-5 text-amber-600" />
+  2212→                </div>
+  2213→                <p className="font-semibold text-sm">{_t('leaderboard.title')}</p>
+  2214→                <p className="text-gray-400 text-[10px] mt-0.5">{_t('profile.viewRankings')}</p>
+  2215→              </CardContent>
+  2216→            </Card>
+  2217→          </div>
+  2218→
+  2219→          {/* Settings Section */}
+  2220→          <div>
+  2221→            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider px-1 mb-2">{_t('profile.settings')}</p>
+  2222→            <Card className="border-0 shadow-sm overflow-hidden">
+  2223→              <CardContent className="p-0">
+  2224→                {/* Language */}
+  2225→                <button
+  2226→                  className="w-full flex items-center gap-3 p-4 hover:bg-gray-50/80 transition-colors active:bg-gray-100"
+  2227→                  onClick={() => setShowLanguageSheet(true)}
+  2228→                >
+  2229→                  <div className="w-9 h-9 rounded-xl bg-indigo-50 flex items-center justify-center">
+  2230→                    <BookOpen className="w-4 h-4 text-indigo-600" />
+  2231→                  </div>
+  2232→                  <div className="flex-1 text-left">
+  2233→                    <p className="font-semibold text-[13px]">{_t('profile.language')}</p>
+  2234→                    <p className="text-gray-400 text-[11px]">{lng === 'en' ? _t('lang.english') : lng === 'hi' ? _t('lang.hindi') : _t('lang.bangla')}</p>
+  2235→                  </div>
+  2236→                  <ChevronRight className="w-4 h-4 text-gray-300" />
+  2237→                </button>
+  2238→                <div className="mx-4 border-t border-gray-100" />
+  2239→                {/* About */}
+  2240→                <button
+  2241→                  className="w-full flex items-center gap-3 p-4 hover:bg-gray-50/80 transition-colors active:bg-gray-100"
+  2242→                  onClick={() => setShowAboutSheet(true)}
+  2243→                >
+  2244→                  <div className="w-9 h-9 rounded-xl bg-purple-50 flex items-center justify-center">
+  2245→                    <Shield className="w-4 h-4 text-purple-600" />
+  2246→                  </div>
+  2247→                  <div className="flex-1 text-left">
+  2248→                    <p className="font-semibold text-[13px]">{_t('profile.about')}</p>
+  2249→                    <p className="text-gray-400 text-[11px]">{_t('profile.aboutSub')}</p>
+  2250→                  </div>
+  2251→                  <ChevronRight className="w-4 h-4 text-gray-300" />
+  2252→                </button>
+  2253→              </CardContent>
+  2254→            </Card>
+  2255→          </div>
+  2256→
+  2257→          {/* Support Section */}
+  2258→          <div>
+  2259→            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider px-1 mb-2">{_t('profile.support')}</p>
+  2260→            <Card className="border-0 shadow-sm overflow-hidden">
+  2261→              <CardContent className="p-0">
+  2262→                <button
+  2263→                  className="w-full flex items-center gap-3 p-4 hover:bg-gray-50/80 transition-colors active:bg-gray-100"
+  2264→                  onClick={() => setShowHelpSheet(true)}
+  2265→                >
+  2266→                  <div className="w-9 h-9 rounded-xl bg-teal-50 flex items-center justify-center">
+  2267→                    <HelpCircle className="w-4 h-4 text-teal-600" />
+  2268→                  </div>
+  2269→                  <div className="flex-1 text-left">
+  2270→                    <p className="font-semibold text-[13px]">{_t('profile.helpFaq')}</p>
+  2271→                    <p className="text-gray-400 text-[11px]">{_t('profile.helpFaqSub')}</p>
+  2272→                  </div>
+  2273→                  <ChevronRight className="w-4 h-4 text-gray-300" />
+  2274→                </button>
+  2275→                <div className="mx-4 border-t border-gray-100" />
+  2276→                <button
+  2277→                  className="w-full flex items-center gap-3 p-4 hover:bg-gray-50/80 transition-colors active:bg-gray-100"
+  2278→                  onClick={() => {
+  2279→                    if (navigator.share) {
+  2280→                      navigator.share({ title: _t('app.name'), text: _t('share.text'), url: window.location.href })
+  2281→                    }
+  2282→                  }}
+  2283→                >
+  2284→                  <div className="w-9 h-9 rounded-xl bg-pink-50 flex items-center justify-center">
+  2285→                    <Share2 className="w-4 h-4 text-pink-600" />
+  2286→                  </div>
+  2287→                  <div className="flex-1 text-left">
+  2288→                    <p className="font-semibold text-[13px]">{_t('profile.shareApp')}</p>
+  2289→                    <p className="text-gray-400 text-[11px]">{_t('profile.shareAppSub')}</p>
+  2290→                  </div>
+  2291→                  <ChevronRight className="w-4 h-4 text-gray-300" />
+  2292→                </button>
+  2293→              </CardContent>
+  2294→            </Card>
+  2295→          </div>
+  2296→
+  2297→          {/* Logout Button */}
+  2298→          {auth.isLoggedIn && !auth.isGuest && (
+  2299→            <Button
+  2300→              variant="outline"
+  2301→              className="w-full rounded-xl border-red-200 text-red-500 hover:bg-red-50 hover:text-red-600 h-11 font-semibold"
+  2302→              onClick={() => auth.logout()}
+  2303→            >
+  2304→              <LogOut className="w-4 h-4 mr-2" /> {_t('profile.logout')}
+  2305→            </Button>
+  2306→          )}
+  2307→
+  2308→          {/* App Version */}
+  2309→          <p className="text-center text-gray-300 text-[10px] pt-2 pb-4">{_t('app.versionFull')}</p>
+  2310→        </div>
+  2311→
+  2312→        {/* Language Sheet */}
+  2313→        {showLanguageSheet && (
+  2314→          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-end justify-center" onClick={() => setShowLanguageSheet(false)}>
+  2315→            <div className="bg-white rounded-t-[28px] w-full p-6 animate-slide-up" onClick={e => e.stopPropagation()}>
+  2316→              <div className="w-10 h-1 rounded-full bg-gray-200 mx-auto mb-5" />
+  2317→              <h3 className="font-bold text-lg mb-4">{_t('lang.select')}</h3>
+  2318→              <div className="space-y-1">
+  2319→                {[
+  2320→                  { code: 'en', name: _t('lang.english'), flag: '🇬🇧', available: true },
+  2321→                  { code: 'hi', name: _t('lang.hindi'), flag: '🇮🇳', available: true },
+  2322→                  { code: 'bn', name: _t('lang.bangla'), flag: '🇧🇩', available: true },
+  2323→                ].map(lang => (
+  2324→                  <button
+  2325→                    key={lang.code}
+  2326→                    className={`w-full flex items-center gap-3 p-4 rounded-xl transition-colors ${
+  2327→                      lang.available ? 'hover:bg-gray-50 active:bg-gray-100' : 'opacity-50'
+  2328→                    }`}
+  2329→                    onClick={() => {
+  2330→                      if (lang.available) {
+  2331→                        setSelectedLanguage(lang.code)
+  2332→                        setShowLanguageSheet(false)
+  2333→                      }
+  2334→                    }}
+  2335→                    onTouchEnd={(e) => {
+  2336→                      if (lang.available) {
+  2337→                        e.preventDefault()
+  2338→                        setSelectedLanguage(lang.code)
+  2339→                        setShowLanguageSheet(false)
+  2340→                      }
+  2341→                    }}
+  2342→                  >
+  2343→                    <span className="text-xl">{lang.flag}</span>
+  2344→                    <span className="font-medium text-sm flex-1">{lang.name}</span>
+  2345→                    {!lang.available && <Badge variant="secondary" className="text-[10px]">{_t('lang.comingSoon')}</Badge>}
+  2346→                    {selectedLanguage === lang.code && (
+  2347→                      <div className="w-6 h-6 rounded-full bg-orange-500 flex items-center justify-center">
+  2348→                        <CheckCircle2 className="w-4 h-4 text-white" />
+  2349→                      </div>
+  2350→                    )}
+  2351→                  </button>
+  2352→                ))}
+  2353→              </div>
+  2354→              <Button
+  2355→                variant="outline"
+  2356→                className="w-full mt-5 rounded-xl h-11"
+  2357→                onClick={() => setShowLanguageSheet(false)}
+  2358→              >
+  2359→                {_t('lang.cancel')}
+  2360→              </Button>
+  2361→            </div>
+  2362→          </div>
+  2363→        )}
+  2364→
+  2365→        {/* About Sheet */}
+  2366→        {showAboutSheet && (
+  2367→          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-end justify-center" onClick={() => setShowAboutSheet(false)}>
+  2368→            <div className="bg-white rounded-t-[28px] w-full p-6 animate-slide-up" onClick={e => e.stopPropagation()}>
+  2369→              <div className="w-10 h-1 rounded-full bg-gray-200 mx-auto mb-5" />
+  2370→              <div className="text-center mb-5">
+  2371→                <div className="w-16 h-16 bg-gradient-to-br from-orange-500 to-red-500 rounded-2xl flex items-center justify-center mx-auto mb-3 shadow-lg shadow-orange-500/20">
+  2372→                  <span className="text-white text-2xl font-bold">E</span>
+  2373→                </div>
+  2374→                <h3 className="font-bold text-lg">{_t('app.name')}</h3>
+  2375→                <p className="text-gray-400 text-sm">{_t('app.version')}</p>
+  2376→              </div>
+  2377→              <div className="space-y-2">
+  2378→                {[
+  2379→                  { label: _t('about.version'), value: '1.0' },
+  2380→                  { label: _t('about.size'), value: '~5 MB' },
+  2381→                  { label: _t('about.exams'), value: '21+' },
+  2382→                  { label: _t('about.questions'), value: '210+' },
+  2383→                  { label: _t('about.offline'), value: _t('about.yes'), green: true },
+  2384→                  { label: _t('about.ads'), value: _t('about.no'), green: true },
+  2385→                ].map(item => (
+  2386→                  <div key={item.label} className="flex justify-between text-sm p-3 bg-gray-50 rounded-xl">
+  2387→                    <span className="text-gray-500">{item.label}</span>
+  2388→                    <span className={`font-medium ${item.green ? 'text-emerald-600' : ''}`}>{item.value}</span>
+  2389→                  </div>
+  2390→                ))}
+  2391→              </div>
+  2392→              <p className="text-center text-sm text-gray-400 mt-5">{_t('app.madeIn')}</p>
+  2393→              <Button
+  2394→                variant="outline"
+  2395→                className="w-full mt-4 rounded-xl h-11"
+  2396→                onClick={() => setShowAboutSheet(false)}
+  2397→              >
+  2398→                {_t('about.close')}
+  2399→              </Button>
+  2400→            </div>
+  2401→          </div>
+  2402→        )}
+  2403→
+  2404→        {/* Help & FAQ Sheet */}
+  2405→        {showHelpSheet && (
+  2406→          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-end justify-center" onClick={() => setShowHelpSheet(false)}>
+  2407→            <div className="bg-white rounded-t-[28px] w-full max-h-[80vh] overflow-y-auto p-6 animate-slide-up" onClick={e => e.stopPropagation()}>
+  2408→              <div className="w-10 h-1 rounded-full bg-gray-200 mx-auto mb-5" />
+  2409→              <div className="text-center mb-5">
+  2410→                <div className="w-16 h-16 bg-gradient-to-br from-teal-500 to-emerald-500 rounded-2xl flex items-center justify-center mx-auto mb-3 shadow-lg">
+  2411→                  <HelpCircle className="w-8 h-8 text-white" />
+  2412→                </div>
+  2413→                <h3 className="font-bold text-lg">{_t('profile.helpFaq')}</h3>
+  2414→              </div>
+  2415→              <div className="space-y-3">
+  2416→                {[
+  2417→                  { q: 'How do I start a test?', a: 'Go to the Exams page, select an exam category, choose a test and tap "Start Test". You can also use Quick Practice for a random test.' },
+  2418→                  { q: 'How is my score calculated?', a: 'Your score is calculated based on correct answers (marks added) and wrong answers (negative marking as per test scheme). Skipped questions get zero marks.' },
+  2419→                  { q: 'Can I review my answers?', a: 'Yes! After completing a test, you can see the full Answer Key with explanations for each question.' },
+  2420→                  { q: 'How do I track my progress?', a: 'Login with email to save your progress. Your test scores, accuracy, and rankings are tracked in your Profile page.' },
+  2421→                  { q: 'Is offline mode available?', a: 'You can download tests for offline use from the Offline Mode section in the side menu.' },
+  2422→                  { q: 'How do I change the language?', a: 'Go to Profile > Language or use the side menu > Language option. We support English, Hindi, and Bangla.' },
+  2423→                  { q: 'How do I bookmark questions?', a: 'During a test, use the "Mark for Review" button to flag questions. You can review them before submitting.' },
+  2424→                  { q: 'Can I retry a test?', a: 'Yes! After seeing your results, tap "Retry" to take the test again and improve your score.' },
+  2425→                ].map((item, i) => (
+  2426→                  <details key={i} className="group bg-gray-50 rounded-xl overflow-hidden">
+  2427→                    <summary className="flex items-center justify-between p-4 cursor-pointer font-medium text-sm text-gray-800 hover:bg-gray-100 transition-colors">
+  2428→                      {item.q}
+  2429→                      <ChevronDown className="w-4 h-4 text-gray-400 group-open:rotate-180 transition-transform" />
+  2430→                    </summary>
+  2431→                    <div className="px-4 pb-4 text-sm text-gray-600 leading-relaxed">{item.a}</div>
+  2432→                  </details>
+  2433→                ))}
+  2434→              </div>
+  2435→              <Button
+  2436→                variant="outline"
+  2437→                className="w-full mt-5 rounded-xl h-11"
+  2438→                onClick={() => setShowHelpSheet(false)}
+  2439→              >
+  2440→                {_t('about.close')}
+  2441→              </Button>
+  2442→            </div>
+  2443→          </div>
+  2444→        )}
+  2445→
+  2446→        {/* Offline Mode Sheet */}
+  2447→        {showOfflineSheet && (
+  2448→          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-end justify-center" onClick={() => setShowOfflineSheet(false)}>
+  2449→            <div className="bg-white rounded-t-[28px] w-full p-6 animate-slide-up" onClick={e => e.stopPropagation()}>
+  2450→              <div className="w-10 h-1 rounded-full bg-gray-200 mx-auto mb-5" />
+  2451→              <div className="text-center mb-5">
+  2452→                <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-indigo-500 rounded-2xl flex items-center justify-center mx-auto mb-3 shadow-lg">
+  2453→                  <Wifi className="w-8 h-8 text-white" />
+  2454→                </div>
+  2455→                <h3 className="font-bold text-lg">{_t('menu.offlineMode')}</h3>
+  2456→                <p className="text-gray-400 text-sm mt-1">{_t('menu.downloadTests')}</p>
+  2457→              </div>
+  2458→              <div className="space-y-3">
+  2459→                {categories.map(cat => {
+  2460→                  const color = getCatColor(cat.slug)
+  2461→                  const testCount = cat.exams.reduce((sum, e) => sum + (e as any).testCount || 0, 0)
+  2462→                  return (
+  2463→                    <div key={cat.id} className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl">
+  2464→                      <div className={`w-10 h-10 rounded-xl ${color.light} flex items-center justify-center ${color.text}`}>
+  2465→                        {getCatIcon(cat.slug)}
+  2466→                      </div>
+  2467→                      <div className="flex-1 min-w-0">
+  2468→                        <p className="font-semibold text-sm">{cat.name}</p>
+  2469→                        <p className="text-gray-400 text-xs">{cat.exams.length} {_t('home.exams')}</p>
+  2470→                      </div>
+  2471→                      <Button size="sm" variant="outline" className="rounded-xl text-xs" onClick={() => {
+  2472→                        // Download/sync category data to localStorage
+  2473→                        try {
+  2474→                          const key = `examprep_offline_${cat.slug}`
+  2475→                          localStorage.setItem(key, JSON.stringify(cat))
+  2476→                        } catch {}
+  2477→                      }}>
+  2478→                        <Download className="w-3 h-3 mr-1" /> Save
+  2479→                      </Button>
+  2480→                    </div>
+  2481→                  )
+  2482→                })}
+  2483→              </div>
+  2484→              <Button
+  2485→                variant="outline"
+  2486→                className="w-full mt-5 rounded-xl h-11"
+  2487→                onClick={() => setShowOfflineSheet(false)}
+  2488→              >
+  2489→                {_t('about.close')}
+  2490→              </Button>
+  2491→            </div>
+  2492→          </div>
+  2493→        )}
+  2494→      </div>
+  2495→    )
+  2496→  }
+  2497→
+  2498→  // ===== RENDER: Bottom Navigation =====
+  2499→  function renderBottomNav() {
+  2500→    const pages: Page[] = ['home', 'practice', 'tests', 'leaderboard']
+  2501→    if (!pages.includes(currentPage)) return null
+  2502→
+  2503→    const navItems = [
+  2504→      { page: 'home' as Page, icon: Home, label: _t('nav.home') },
+  2505→      { page: 'practice' as Page, icon: Zap, label: _t('nav.practice') },
+  2506→      { page: 'tests' as Page, icon: ClipboardList, label: _t('nav.tests') },
+  2507→      { page: 'leaderboard' as Page, icon: Trophy, label: _t('nav.ranks') },
+  2508→    ]
+  2509→
+  2510→    return (
+  2511→      <div className="fixed bottom-0 left-0 right-0 z-40 safe-area-pb" style={{ touchAction: 'manipulation' }}>
+  2512→        <div className="bg-white/95 backdrop-blur-lg border-t border-gray-100 w-full">
+  2513→          <div className="flex items-center justify-around py-2">
+  2514→            {navItems.map(item => {
+  2515→              const isActive = currentPage === item.page
+  2516→              const Icon = item.icon
+  2517→              return (
+  2518→                <button
+  2519→                  key={item.page}
+  2520→                  onClick={() => handleBottomNav(item.page)}
+  2521→                  onTouchEnd={(e) => { e.preventDefault(); handleBottomNav(item.page) }}
+  2522→                  className={`flex flex-col items-center gap-0.5 py-1 px-4 rounded-xl transition-all ${
+  2523→                    isActive ? 'text-orange-600' : 'text-gray-400 active:text-gray-600'
+  2524→                  }`}
+  2525→                  style={{ touchAction: 'manipulation', WebkitTapHighlightColor: 'transparent' }}
+  2526→                >
+  2527→                  <div className={`relative ${isActive ? '' : ''}`}>
+  2528→                    <Icon className={`w-5 h-5 ${isActive ? 'text-orange-600' : ''}`} />
+  2529→                    {isActive && (
+  2530→                      <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-orange-500" />
+  2531→                    )}
+  2532→                  </div>
+  2533→                  <span className={`text-[10px] font-medium ${isActive ? 'text-orange-600' : ''}`}>{item.label}</span>
+  2534→                </button>
+  2535→              )
+  2536→            })}
+  2537→          </div>
+  2538→        </div>
+  2539→      </div>
+  2540→    )
+  2541→  }
+  2542→
+  2543→  // ===== MAIN RENDER =====
+  2544→  const renderPage = () => {
+  2545→    switch (currentPage) {
+  2546→      case 'home': return renderHome()
+  2547→      case 'exams': return renderExams()
+  2548→      case 'tests': return renderTests()
+  2549→      case 'test-info': return renderTestInfo()
+  2550→      case 'test-taking': return renderTestTaking()
+  2551→      case 'results': return renderResults()
+  2552→      case 'leaderboard': return renderLeaderboard()
+  2553→      case 'profile': return renderProfile()
+  2554→      case 'practice': return renderPractice()
+  2555→      default: return renderHome()
+  2556→    }
+  2557→  }
+  2558→
+  2559→  return (
+  2560→    <div className="min-h-screen min-h-dvh bg-gray-50 relative w-full overflow-x-hidden" style={{ touchAction: 'manipulation' }}>
+  2561→      {renderPage()}
+  2562→      {renderBottomNav()}
+  2563→
+  2564→      {/* ===== Side Menu Drawer ===== */}
+  2565→      {showSideMenu && (
+  2566→        <div className="fixed inset-0 z-[100]">
+  2567→          {/* Backdrop */}
+  2568→          <div
+  2569→            className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+  2570→            onClick={() => setShowSideMenu(false)}
+  2571→            onTouchEnd={(e) => { e.preventDefault(); setShowSideMenu(false) }}
+  2572→            style={{ touchAction: 'manipulation' }}
+  2573→          />
+  2574→          {/* Drawer Panel */}
+  2575→          <div className="absolute left-0 top-0 bottom-0 w-[280px] bg-white shadow-2xl flex flex-col" style={{ touchAction: 'manipulation' }}>
+  2576→            {/* Drawer Header */}
+  2577→            <div className="bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 px-5 pt-[calc(env(safe-area-inset-top,0px)+1.5rem)] pb-5">
+  2578→              <div className="flex items-center justify-between mb-4">
+  2579→                <div className="w-10 h-10 bg-gradient-to-br from-orange-400 to-red-500 rounded-xl flex items-center justify-center shadow-lg shadow-orange-500/20">
+  2580→                  <span className="text-white font-bold text-sm">E</span>
+  2581→                </div>
+  2582→                <button
+  2583→                  onClick={() => setShowSideMenu(false)}
+  2584→                  onTouchEnd={(e) => { e.preventDefault(); setShowSideMenu(false) }}
+  2585→                  className="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center"
+  2586→                  style={{ touchAction: 'manipulation', WebkitTapHighlightColor: 'transparent' }}
+  2587→                >
+  2588→                  <X className="w-4 h-4 text-white/60" />
+  2589→                </button>
+  2590→              </div>
+  2591→              <p className="text-white font-bold text-base">{_t('app.name')}</p>
+  2592→              <p className="text-white/40 text-xs mt-0.5">{_t('app.partner')}</p>
+  2593→            </div>
+  2594→
+  2595→            {/* Menu Items */}
+  2596→            <div className="flex-1 overflow-y-auto py-2">
+  2597→              {/* Main Navigation */}
+  2598→              <div className="px-3 py-2">
+  2599→                <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider px-3 mb-1">{_t('menu.navigation')}</p>
+  2600→                {[
+  2601→                  { icon: Home, label: _t('menu.home'), page: 'home' as Page, active: currentPage === 'home' },
+  2602→                  { icon: BookOpen, label: _t('menu.allExams'), page: 'exams' as Page, active: currentPage === 'exams' },
+  2603→                  { icon: Trophy, label: _t('menu.leaderboard'), page: 'leaderboard' as Page, active: currentPage === 'leaderboard' },
+  2604→                  { icon: User, label: _t('menu.myProfile'), page: 'profile' as Page, active: currentPage === 'profile' },
+  2605→                ].map(item => (
+  2606→                  <button
+  2607→                    key={item.page}
+  2608→                    onClick={() => { handleBottomNav(item.page); setShowSideMenu(false) }}
+  2609→                    className={`w-full flex items-center gap-3 px-3 py-3 rounded-xl transition-colors ${
+  2610→                      item.active ? 'bg-orange-50 text-orange-600' : 'text-gray-600 hover:bg-gray-50 active:bg-gray-100'
+  2611→                    }`}
+  2612→                  >
+  2613→                    <item.icon className={`w-5 h-5 ${item.active ? 'text-orange-500' : 'text-gray-400'}`} />
+  2614→                    <span className={`font-medium text-sm ${item.active ? 'font-semibold' : ''}`}>{item.label}</span>
+  2615→                    {item.active && <div className="ml-auto w-1.5 h-1.5 rounded-full bg-orange-500" />}
+  2616→                  </button>
+  2617→                ))}
+  2618→              </div>
+  2619→
+  2620→              <div className="mx-5 border-t border-gray-100 my-1" />
+  2621→
+  2622→              {/* Quick Actions */}
+  2623→              <div className="px-3 py-2">
+  2624→                <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider px-3 mb-1">{_t('menu.quickActions')}</p>
+  2625→                {[
+  2626→                  { icon: Zap, label: _t('menu.quickPractice'), soon: false, action: () => {
+  2627→                    const allCats = categories
+  2628→                    const allExams = allCats.flatMap(c => c.exams)
+  2629→                    if (allExams.length > 0) {
+  2630→                      const randomExam = allExams[Math.floor(Math.random() * allExams.length)]
+  2631→                      const randomCat = allCats.find(c => c.exams.some(e => e.id === randomExam.id))!
+  2632→                      openExam(randomExam, randomCat)
+  2633→                    }
+  2634→                  }},
+  2635→                  { icon: BookmarkPlus, label: _t('menu.bookmarkedQ'), soon: false, action: () => {
+  2636→                    if (auth.isLoggedIn) {
+  2637→                      handleBottomNav('tests')
+  2638→                    } else {
+  2639→                      setShowLoginModal(true)
+  2640→                    }
+  2641→                  }},
+  2642→                  { icon: Download, label: _t('menu.offlineTests'), soon: false, action: () => {
+  2643→                    handleBottomNav('exams')
+  2644→                  }},
+  2645→                  { icon: BarChart3, label: _t('menu.perfReport'), soon: false, action: () => {
+  2646→                    if (auth.isLoggedIn) {
+  2647→                      handleBottomNav('profile')
+  2648→                    } else {
+  2649→                      setShowLoginModal(true)
+  2650→                    }
+  2651→                  }},
+  2652→                ].map((item, i) => (
+  2653→                  <button
+  2654→                    key={i}
+  2655→                    onClick={() => { item.action(); setShowSideMenu(false) }}
+  2656→                    className="w-full flex items-center gap-3 px-3 py-3 rounded-xl text-gray-600 hover:bg-gray-50 active:bg-gray-100 transition-colors"
+  2657→                  >
+  2658→                    <item.icon className="w-5 h-5 text-gray-400" />
+  2659→                    <span className="font-medium text-sm">{item.label}</span>
+  2660→                    {item.soon && (
+  2661→                      <Badge variant="secondary" className="text-[9px] ml-auto">{_t('menu.soon')}</Badge>
+  2662→                    )}
+  2663→                  </button>
+  2664→                ))}
+  2665→              </div>
+  2666→
+  2667→              <div className="mx-5 border-t border-gray-100 my-1" />
+  2668→
+  2669→              {/* Settings & Support */}
+  2670→              <div className="px-3 py-2">
+  2671→                <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider px-3 mb-1">{_t('menu.settings')}</p>
+  2672→                {[
+  2673→                  { icon: BookOpen, id: 'language', label: _t('profile.language'), sub: lng === 'en' ? _t('lang.english') : lng === 'hi' ? _t('lang.hindi') : _t('lang.bangla'), action: () => setShowLanguageSheet(true) },
+  2674→                  { icon: Bell, id: 'notifications', label: _t('menu.notifications'), sub: unreadCount > 0 ? `${unreadCount} ${_t('menu.unread')}` : _t('menu.manageAlerts'), action: () => { setShowSideMenu(false); setCurrentPage('home'); setTimeout(() => setShowNotificationPanel(true), 300) } },
+  2675→                  { icon: Wifi, id: 'offline', label: _t('menu.offlineMode'), sub: _t('menu.downloadTests'), action: () => { setShowSideMenu(false); setShowOfflineSheet(true) } },
+  2676→                  { icon: HelpCircle, id: 'help', label: _t('menu.helpFaq'), sub: _t('menu.getSupport'), action: () => { setShowSideMenu(false); setShowHelpSheet(true) } },
+  2677→                  { icon: Share2, id: 'share', label: _t('menu.shareApp'), sub: _t('menu.tellFriends'), action: () => {
+  2678→                    if (navigator.share) {
+  2679→                      navigator.share({ title: _t('app.name'), text: _t('share.text'), url: window.location.href })
+  2680→                    }
+  2681→                  }},
+  2682→                  { icon: Shield, id: 'about', label: _t('menu.about'), sub: _t('app.version'), action: () => setShowAboutSheet(true) },
+  2683→                ].map((item, i) => (
+  2684→                  <button
+  2685→                    key={i}
+  2686→                    onClick={() => { item.action(); setShowSideMenu(false) }}
+  2687→                    className="w-full flex items-center gap-3 px-3 py-3 rounded-xl text-gray-600 hover:bg-gray-50 active:bg-gray-100 transition-colors"
+  2688→                  >
+  2689→                    <item.icon className="w-5 h-5 text-gray-400" />
+  2690→                    <div className="flex-1 text-left">
+  2691→                      <span className="font-medium text-sm block">{item.label}</span>
+  2692→                      {item.sub && <span className="text-gray-400 text-[11px]">{item.sub}</span>}
+  2693→                    </div>
+  2694→                    {item.id === 'notifications' && unreadCount > 0 ? (
+  2695→                      <span className="w-5 h-5 bg-orange-500 rounded-full flex items-center justify-center text-white text-[10px] font-bold">{unreadCount}</span>
+  2696→                    ) : (
+  2697→                      <ChevronRight className="w-4 h-4 text-gray-300" />
+  2698→                    )}
+  2699→                  </button>
+  2700→                ))}
+  2701→              </div>
+  2702→            </div>
+  2703→
+  2704→            {/* Drawer Footer */}
+  2705→            <div className="border-t border-gray-100 px-5 py-4">
+  2706→              {auth.isLoggedIn ? (
+  2707→                <button
+  2708→                  onClick={() => { auth.logout(); setShowSideMenu(false) }}
+  2709→                  className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-red-500 hover:bg-red-50 active:bg-red-100 transition-colors"
+  2710→                >
+  2711→                  <LogOut className="w-5 h-5" />
+  2712→                  <span className="font-medium text-sm">{_t('menu.logout')}</span>
+  2713→                </button>
+  2714→              ) : (
+  2715→                <button
+  2716→                  onClick={() => { setShowLoginModal(true); setShowSideMenu(false) }}
+  2717→                  className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-gradient-to-r from-orange-500 to-red-500 text-white rounded-xl font-semibold text-sm"
+  2718→                >
+  2719→                  <Mail className="w-4 h-4" /> {_t('profile.login')}
+  2720→                </button>
+  2721→              )}
+  2722→            </div>
+  2723→          </div>
+  2724→        </div>
+  2725→      )}
+  2726→
+  2727→      {/* Login Modal */}
+  2728→      {showLoginModal && (
+  2729→        <LoginModal
+  2730→          error={auth.error}
+  2731→          loginLoading={auth.loginLoading}
+  2732→          signupLoading={auth.signupLoading}
+  2733→          guestLoading={auth.guestLoading}
+  2734→          onLogin={auth.loginWithEmail}
+  2735→          onSignUp={auth.signUpWithEmail}
+  2736→          onGuestLogin={auth.loginAsGuest}
+  2737→          onClose={() => setShowLoginModal(false)}
+  2738→        />
+  2739→      )}
+  2740→
+  2741→      {/* Notification Detail Modal */}
+  2742→      {selectedNotification && (
+  2743→        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40" onClick={() => setSelectedNotification(null)}>
+  2744→          <div className="bg-white w-full max-w-lg rounded-t-3xl shadow-2xl animate-in slide-in-from-bottom duration-300" onClick={e => e.stopPropagation()}>
+  2745→            <div className="p-6">
+  2746→              <div className="flex items-start gap-4 mb-4">
+  2747→                <div className={`w-12 h-12 rounded-2xl flex items-center justify-center flex-shrink-0 ${
+  2748→                  selectedNotification.type === 'update' ? 'bg-blue-100' :
+  2749→                  selectedNotification.type === 'alert' ? 'bg-amber-100' :
+  2750→                  'bg-green-100'
+  2751→                }`}>
+  2752→                  {selectedNotification.type === 'update' ? <Zap className="w-6 h-6 text-blue-500" /> :
+  2753→                   selectedNotification.type === 'alert' ? <AlertTriangle className="w-6 h-6 text-amber-500" /> :
+  2754→                   <Gift className="w-6 h-6 text-green-500" />}
+  2755→                </div>
+  2756→                <div className="flex-1 min-w-0">
+  2757→                  <h3 className="font-bold text-lg text-gray-900">{selectedNotification.title}</h3>
+  2758→                  <p className="text-gray-400 text-xs mt-0.5">{selectedNotification.time}</p>
+  2759→                </div>
+  2760→                <button onClick={() => setSelectedNotification(null)} className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center flex-shrink-0">
+  2761→                  <X className="w-4 h-4 text-gray-500" />
+  2762→                </button>
+  2763→              </div>
+  2764→              <p className="text-gray-700 text-sm leading-relaxed mb-4">{selectedNotification.message}</p>
+  2765→              {selectedNotification.link && (
+  2766→                <Button
+  2767→                  className="w-full bg-gradient-to-r from-orange-500 to-red-500 text-white rounded-xl h-11 font-semibold"
+  2768→                  onClick={() => {
+  2769→                    const link = selectedNotification.link!
+  2770→                    setSelectedNotification(null)
+  2771→                    setShowNotificationPanel(false)
+  2772→                    // Check if it's an internal app page
+  2773→                    if (['home', 'exams', 'tests', 'practice', 'leaderboard', 'profile'].includes(link)) {
+  2774→                      handleBottomNav(link as Page)
+  2775→                    } else {
+  2776→                      // External URL - open in new tab
+  2777→                      window.open(link.startsWith('http') ? link : `https://${link}`, '_blank')
+  2778→                    }
+  2779→                  }}
+  2780→                >
+  2781→                  <ExternalLink className="w-4 h-4 mr-2" /> Open Link
+  2782→                </Button>
+  2783→              )}
+  2784→              {!selectedNotification.link && (
+  2785→                <Button
+  2786→                  className="w-full bg-gray-100 text-gray-700 hover:bg-gray-200 rounded-xl h-11 font-medium"
+  2787→                  onClick={() => setSelectedNotification(null)}
+  2788→                >
+  2789→                  Close
+  2790→                </Button>
+  2791→              )}
+  2792→            </div>
+  2793→          </div>
+  2794→        </div>
+  2795→      )}
+  2796→
+  2797→      {/* Daily Tip Detail Modal */}
+  2798→      {selectedTip && (
+  2799→        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40" onClick={() => setSelectedTip(null)}>
+  2800→          <div className="bg-white w-full max-w-lg rounded-t-3xl shadow-2xl animate-in slide-in-from-bottom duration-300" onClick={e => e.stopPropagation()}>
+  2801→            <div className="p-6">
+  2802→              <div className="flex items-start gap-4 mb-4">
+  2803→                <div className="w-12 h-12 rounded-2xl bg-amber-100 flex items-center justify-center flex-shrink-0">
+  2804→                  <Lightbulb className="w-6 h-6 text-amber-500" />
+  2805→                </div>
+  2806→                <div className="flex-1 min-w-0">
+  2807→                  <h3 className="font-bold text-lg text-gray-900">{_t('home.dailyTips')}</h3>
+  2808→                  <p className="text-gray-400 text-xs mt-0.5">Daily Tip</p>
+  2809→                </div>
+  2810→                <button onClick={() => setSelectedTip(null)} className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center flex-shrink-0">
+  2811→                  <X className="w-4 h-4 text-gray-500" />
+  2812→                </button>
+  2813→              </div>
+  2814→              <p className="text-gray-700 text-sm leading-relaxed mb-4">{selectedTip.text}</p>
+  2815→              {selectedTip.link && (
+  2816→                <Button
+  2817→                  className="w-full bg-gradient-to-r from-amber-500 to-orange-500 text-white rounded-xl h-11 font-semibold"
+  2818→                  onClick={() => {
+  2819→                    const link = selectedTip.link!
+  2820→                    setSelectedTip(null)
+  2821→                    if (['home', 'exams', 'tests', 'practice', 'leaderboard', 'profile'].includes(link)) {
+  2822→                      handleBottomNav(link as Page)
+  2823→                    } else {
+  2824→                      window.open(link.startsWith('http') ? link : `https://${link}`, '_blank')
+  2825→                    }
+  2826→                  }}
+  2827→                >
+  2828→                  <ExternalLink className="w-4 h-4 mr-2" /> Open Link
+  2829→                </Button>
+  2830→              )}
+  2831→              {!selectedTip.link && (
+  2832→                <Button
+  2833→                  className="w-full bg-gray-100 text-gray-700 hover:bg-gray-200 rounded-xl h-11 font-medium"
+  2834→                  onClick={() => setSelectedTip(null)}
+  2835→                >
+  2836→                  Close
+  2837→                </Button>
+  2838→              )}
+  2839→            </div>
+  2840→          </div>
+  2841→        </div>
+  2842→      )}
+  2843→
+  2844→      {/* Guest Warning Modal */}
+  2845→      {showGuestWarning && (
+  2846→        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-5">
+  2847→          <div className="bg-white rounded-3xl w-full max-w-sm shadow-2xl overflow-hidden animate-scale-in">
+  2848→            <div className="p-6 pb-4 text-center">
+  2849→              <div className="w-16 h-16 rounded-full bg-gradient-to-br from-orange-100 to-red-50 flex items-center justify-center mx-auto mb-4">
+  2850→                <Crown className="w-8 h-8 text-orange-500" />
+  2851→              </div>
+  2852→              <h3 className="font-bold text-xl text-gray-900">Create Account to Continue</h3>
+  2853→              <p className="text-gray-500 text-sm mt-2 leading-relaxed">
+  2854→                Guest users can try one free Quick Practice. Sign up now to unlock unlimited mock tests, track progress, and compete on the leaderboard!
+  2855→              </p>
+  2856→            </div>
+  2857→            <div className="px-6 pb-6 space-y-2.5">
+  2858→              <Button
+  2859→                className="w-full h-11 bg-gradient-to-r from-orange-500 to-red-500 text-white rounded-xl font-semibold text-sm"
+  2860→                onClick={() => { setShowGuestWarning(false); setShowLoginModal(true) }}
+  2861→              >
+  2862→                <Mail className="w-4 h-4 mr-2" /> Sign Up / Login
+  2863→              </Button>
+  2864→              <Button
+  2865→                variant="outline"
+  2866→                className="w-full h-11 rounded-xl border-gray-200 font-semibold text-sm"
+  2867→                onClick={() => setShowGuestWarning(false)}
+  2868→              >
+  2869→                Maybe Later
+  2870→              </Button>
+  2871→            </div>
+  2872→          </div>
+  2873→        </div>
+  2874→      )}
+  2875→
+  2876→      {/* Upcoming Exam Detail Modal */}
+  2877→      {selectedUpcomingExam && (
+  2878→        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40" onClick={() => setSelectedUpcomingExam(null)}>
+  2879→          <div className="bg-white w-full max-w-lg rounded-t-3xl shadow-2xl animate-in slide-in-from-bottom duration-300 max-h-[80vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+  2880→            <div className="p-6">
+  2881→              <div className="flex items-start gap-4 mb-4">
+  2882→                {selectedUpcomingExam.imageUrl ? (
+  2883→                  <div className="w-12 h-12 rounded-2xl overflow-hidden flex-shrink-0">
+  2884→                    <img src={selectedUpcomingExam.imageUrl} alt={selectedUpcomingExam.name} className="w-full h-full object-cover" />
+  2885→                  </div>
+  2886→                ) : (
+  2887→                  <div className="w-12 h-12 rounded-2xl bg-blue-100 flex items-center justify-center flex-shrink-0">
+  2888→                    <Calendar className="w-6 h-6 text-blue-500" />
+  2889→                  </div>
+  2890→                )}
+  2891→                <div className="flex-1 min-w-0">
+  2892→                  <h3 className="font-bold text-lg text-gray-900">{selectedUpcomingExam.name}</h3>
+  2893→                  <p className="text-gray-400 text-xs mt-0.5">{selectedUpcomingExam.date}</p>
+  2894→                </div>
+  2895→                <button onClick={() => setSelectedUpcomingExam(null)} className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center flex-shrink-0">
+  2896→                  <X className="w-4 h-4 text-gray-500" />
+  2897→                </button>
+  2898→              </div>
+  2899→
+  2900→              {/* Status Badge */}
+  2901→              <div className="mb-4">
+  2902→                <Badge variant="secondary" className={`text-xs ${
+  2903→                  selectedUpcomingExam.statusType === 'open' ? 'bg-green-100 text-green-700' :
+  2904→                  selectedUpcomingExam.statusType === 'admit' ? 'bg-amber-100 text-amber-700' :
+  2905→                  selectedUpcomingExam.statusType === 'closed' ? 'bg-red-100 text-red-700' :
+  2906→                  'bg-gray-100 text-gray-600'
+  2907→                }`}>
+  2908→                  {selectedUpcomingExam.status}
+  2909→                </Badge>
+  2910→              </div>
+  2911→
+  2912→              {/* Detail Info */}
+  2913→              <div className="space-y-3 mb-4">
+  2914→                <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl">
+  2915→                  <Calendar className="w-5 h-5 text-blue-500" />
+  2916→                  <div>
+  2917→                    <p className="text-xs text-gray-500">Exam Date</p>
+  2918→                    <p className="font-semibold text-sm">{selectedUpcomingExam.date}</p>
+  2919→                  </div>
+  2920→                </div>
+  2921→                {selectedUpcomingExam.catSlug && (
+  2922→                  <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl">
+  2923→                    <BookOpen className="w-5 h-5 text-orange-500" />
+  2924→                    <div>
+  2925→                      <p className="text-xs text-gray-500">Category</p>
+  2926→                      <p className="font-semibold text-sm capitalize">{selectedUpcomingExam.catSlug}</p>
+  2927→                    </div>
+  2928→                  </div>
+  2929→                )}
+  2930→                {selectedUpcomingExam.description && (
+  2931→                  <div className="p-3 bg-blue-50 rounded-xl">
+  2932→                    <p className="text-xs text-blue-500 font-medium mb-1">Details</p>
+  2933→                    <p className="text-sm text-gray-700 leading-relaxed">{selectedUpcomingExam.description}</p>
+  2934→                  </div>
+  2935→                )}
+  2936→              </div>
+  2937→
+  2938→              {/* Action Button */}
+  2939→              <Button
+  2940→                className="w-full bg-gradient-to-r from-blue-500 to-indigo-500 text-white rounded-xl h-11 font-semibold"
+  2941→                onClick={() => {
+  2942→                  const exam = selectedUpcomingExam
+  2943→                  setSelectedUpcomingExam(null)
+  2944→                  const cat = categories.find(c => c.slug === exam.catSlug)
+  2945→                  if (cat && cat.exams.length > 0) {
+  2946→                    openExam(cat.exams[0], cat)
+  2947→                  } else {
+  2948→                    handleBottomNav('exams')
+  2949→                  }
+  2950→                }}
+  2951→              >
+  2952→                <BookOpen className="w-4 h-4 mr-2" /> Start Practicing
+  2953→              </Button>
+  2954→            </div>
+  2955→          </div>
+  2956→        </div>
+  2957→      )}
+  2958→    </div>
+  2959→  )
+  2960→}
+  2961→
+  2962→// Missing icon helper
+  2963→function FileText(props: React.SVGProps<SVGSVGElement>) {
+  2964→  return (
+  2965→    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
+  2966→      <path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z" />
+  2967→      <path d="M14 2v4a2 2 0 0 0 2 2h4" />
+  2968→      <path d="M10 9H8" />
+  2969→      <path d="M16 13H8" />
+  2970→      <path d="M16 17H8" />
+  2971→    </svg>
+  2972→  )
+  2973→}
+  2974→

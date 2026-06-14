@@ -924,12 +924,14 @@ export default function ExamPrepApp() {
                     if (allExams.length > 0) {
                       const randomExam = allExams[Math.floor(Math.random() * allExams.length)]
                       const randomCat = allCats.find(c => c.exams.some(e => e.id === randomExam.id))!
-                      await openExam(randomExam, randomCat)
-                      // Auto-start first test if available
+                      incrementGuestPractice()
+                      // Fetch tests and auto-start the first one
                       const tests = await fetchTestsByExam(randomExam.id)
                       if (tests.length > 0) {
-                        incrementGuestPractice()
-                        startTest(tests[0])
+                        await startTest(tests[0])
+                      } else {
+                        // No tests available, just navigate to exam
+                        openExam(randomExam, randomCat)
                       }
                     }
                   }}
@@ -961,7 +963,7 @@ export default function ExamPrepApp() {
                     key={cat.id}
                     className="border-0 shadow-sm cursor-pointer hover:shadow-md transition-shadow"
                     onClick={() => {
-                      if (!requireAuth()) return
+                      // Allow browsing categories without auth - only require auth for starting tests
                       setSelectedCategory(cat)
                       navigateTo('exams')
                     }}
@@ -1000,7 +1002,7 @@ export default function ExamPrepApp() {
                     key={exam.id}
                     className="border-0 shadow-sm cursor-pointer hover:shadow-md transition-shadow"
                     onClick={() => {
-                      if (!requireAuth()) return
+                      // Allow browsing exams - only require auth for starting tests
                       openExam(exam, cat)
                     }}
                   >
@@ -1103,10 +1105,7 @@ export default function ExamPrepApp() {
               {upcomingExams.map((exam, i) => (
                 <Card key={exam.id} className="border-0 shadow-sm cursor-pointer hover:shadow-md transition-shadow"
                   onClick={() => {
-                    if (!auth.isLoggedIn && !auth.isGuest) {
-                      setShowGuestWarning(true)
-                      return
-                    }
+                    // Anyone can view upcoming exam details
                     setSelectedUpcomingExam(exam)
                   }}
                 >
@@ -1240,7 +1239,7 @@ export default function ExamPrepApp() {
                       key={exam.id}
                       className="border-0 shadow-sm cursor-pointer hover:shadow-md transition-shadow"
                       onClick={() => {
-                        if (!requireAuth()) return
+                        // Allow browsing exams - only require auth for starting tests
                         openExam(exam, cat)
                       }}
                     >
@@ -1334,7 +1333,11 @@ export default function ExamPrepApp() {
                     <Button
                       size="sm"
                       className={`bg-gradient-to-r ${color.gradient} text-white rounded-xl flex-1`}
-                      onClick={() => openTestInfo(test)}
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        if (!requireAuth()) return
+                        openTestInfo(test)
+                      }}
                     >
                       <Play className="w-4 h-4 mr-1" /> {_t('tests.startTest')}
                     </Button>
@@ -1342,7 +1345,10 @@ export default function ExamPrepApp() {
                       size="sm"
                       variant="outline"
                       className="rounded-xl"
-                      onClick={() => openLeaderboard(test.id)}
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        openLeaderboard(test.id)
+                      }}
                     >
                       <Trophy className="w-4 h-4" />
                     </Button>
@@ -1426,7 +1432,10 @@ export default function ExamPrepApp() {
           {/* Start Button */}
           <Button
             className="w-full h-12 bg-gradient-to-r from-orange-500 to-red-500 text-white rounded-2xl text-base font-semibold"
-            onClick={() => startTest(selectedTest)}
+            onClick={() => {
+              if (!requireAuth()) return
+              startTest(selectedTest)
+            }}
           >
             <Play className="w-5 h-5 mr-2" /> {_t('testInfo.startNow')}
           </Button>
@@ -1824,7 +1833,7 @@ export default function ExamPrepApp() {
             className="w-full rounded-xl bg-gradient-to-r from-orange-500 to-red-500 text-white"
             onClick={goBack}
           >
-            <Home className="w-4 h-4 mr-2" /> {_t('results.backHome')}
+            <ArrowLeft className="w-4 h-4 mr-2" /> {_t('testInfo.goBack')}
           </Button>
         </div>
       </div>
@@ -1912,7 +1921,7 @@ export default function ExamPrepApp() {
           <div>
             <h2 className="font-bold text-lg mb-3">{_t('practice.chooseMode')}</h2>
             <div className="grid grid-cols-2 gap-3">
-              <Card className="border-0 shadow-sm cursor-pointer hover:shadow-md transition-shadow" onClick={() => {
+              <Card className="border-0 shadow-sm cursor-pointer hover:shadow-md transition-shadow" onClick={async () => {
                 if (!canGuestPractice()) {
                   setShowGuestWarning(true)
                   return
@@ -1921,9 +1930,14 @@ export default function ExamPrepApp() {
                 const allExams = allCats.flatMap(c => c.exams)
                 if (allExams.length > 0) {
                   const randomExam = allExams[Math.floor(Math.random() * allExams.length)]
-                  const randomCat = allCats.find(c => c.exams.some(e => e.id === randomExam.id))!
                   incrementGuestPractice()
-                  openExam(randomExam, randomCat)
+                  const tests = await fetchTestsByExam(randomExam.id)
+                  if (tests.length > 0) {
+                    await startTest(tests[0])
+                  } else {
+                    const randomCat = allCats.find(c => c.exams.some(e => e.id === randomExam.id))!
+                    openExam(randomExam, randomCat)
+                  }
                 }
               }}>
                 <CardContent className="p-4 text-center">
@@ -1936,7 +1950,9 @@ export default function ExamPrepApp() {
               </Card>
               <Card className="border-0 shadow-sm cursor-pointer hover:shadow-md transition-shadow" onClick={() => {
                 if (!requireAuth()) return
-                handleBottomNav('exams')
+                // Topic Wise - go to exams page to pick a category/exam
+                setSelectedCategory(null)
+                navigateTo('exams')
               }}>
                 <CardContent className="p-4 text-center">
                   <div className="w-12 h-12 rounded-2xl bg-blue-50 flex items-center justify-center mx-auto mb-2">
@@ -1948,12 +1964,14 @@ export default function ExamPrepApp() {
               </Card>
               <Card className="border-0 shadow-sm cursor-pointer hover:shadow-md transition-shadow" onClick={() => {
                 if (!requireAuth()) return
-                // Show bookmarked/reviewed questions from past tests
+                // Bookmarked - show past test results
                 const results = getUserStats()
                 if (results.testsTaken > 0) {
-                  handleBottomNav('tests')
+                  openLeaderboard('all')
                 } else {
-                  handleBottomNav('exams')
+                  // No past tests, redirect to exams
+                  setSelectedCategory(null)
+                  navigateTo('exams')
                 }
               }}>
                 <CardContent className="p-4 text-center">
@@ -1964,9 +1982,43 @@ export default function ExamPrepApp() {
                   <p className="text-gray-400 text-[11px] mt-1">{_t('practice.bookmarkedSub')}</p>
                 </CardContent>
               </Card>
-              <Card className="border-0 shadow-sm cursor-pointer hover:shadow-md transition-shadow" onClick={() => {
+              <Card className="border-0 shadow-sm cursor-pointer hover:shadow-md transition-shadow" onClick={async () => {
                 if (!requireAuth()) return
-                handleBottomNav('tests')
+                // Weak Areas - find weakest category and start practice there
+                try {
+                  const localResults = getLocalResults()
+                  if (localResults.length > 0) {
+                    // Find category with lowest average score
+                    const catScores: Record<string, {total: number, count: number}> = {}
+                    localResults.forEach(r => {
+                      const cat = categories.find(c => c.exams.some(e => e.name === r.examName))
+                      if (cat) {
+                        if (!catScores[cat.id]) catScores[cat.id] = {total: 0, count: 0}
+                        catScores[cat.id].total += (r.score / r.maxScore) * 100
+                        catScores[cat.id].count++
+                      }
+                    })
+                    let weakestCat: LocalExamCategory | null = null
+                    let lowestAvg = 101
+                    Object.entries(catScores).forEach(([catId, data]) => {
+                      const avg = data.total / data.count
+                      if (avg < lowestAvg) {
+                        lowestAvg = avg
+                        weakestCat = categories.find(c => c.id === catId) || null
+                      }
+                    })
+                    if (weakestCat && weakestCat.exams.length > 0) {
+                      const tests = await fetchTestsByExam(weakestCat.exams[0].id)
+                      if (tests.length > 0) {
+                        await startTest(tests[0])
+                        return
+                      }
+                    }
+                  }
+                } catch {}
+                // Fallback - go to exams page
+                setSelectedCategory(null)
+                navigateTo('exams')
               }}>
                 <CardContent className="p-4 text-center">
                   <div className="w-12 h-12 rounded-2xl bg-purple-50 flex items-center justify-center mx-auto mb-2">
@@ -1991,7 +2043,7 @@ export default function ExamPrepApp() {
                     key={cat.id}
                     className="border-0 shadow-sm cursor-pointer hover:shadow-md transition-shadow"
                     onClick={() => {
-                      if (!requireAuth()) return
+                      // Allow browsing - only require auth for starting tests
                       setSelectedCategory(cat)
                       navigateTo('exams')
                     }}

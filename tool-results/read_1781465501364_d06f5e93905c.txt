@@ -1,0 +1,502 @@
+   100→  2099→                    </span>
+   101→  2100→                  )}
+   102→  2101→                </div>
+   103→  2102→              </div>
+   104→  2103→              {auth.isLoggedIn && !auth.isGuest && (
+   105→  2104→                <button
+   106→  2105→                  onClick={() => auth.logout()}
+   107→  2106→                  className="w-9 h-9 rounded-full bg-white/10 flex items-center justify-center"
+   108→  2107→                >
+   109→  2108→                  <LogOut className="w-4 h-4 text-white/60" />
+   110→  2109→                </button>
+   111→  2110→              )}
+   112→  2111→            </div>
+   113→  2112→
+   114→  2113→            {/* Stats Row */}
+   115→  2114→            <div className="mt-5 pt-4 border-t border-white/10 grid grid-cols-3 gap-2">
+   116→  2115→              <div className="text-center">
+   117→  2116→                <p className="text-white font-bold text-xl">{stats.testsTaken}</p>
+   118→  2117→                <p className="text-white/40 text-[10px] font-medium uppercase tracking-wider">{_t('profile.tests')}</p>
+   119→  2118→              </div>
+   120→  2119→              <div className="text-center border-x border-white/10">
+   121→  2120→                <p className="text-white font-bold text-xl">{stats.avgScore}%</p>
+   122→  2121→                <p className="text-white/40 text-[10px] font-medium uppercase tracking-wider">{_t('profile.avgScore')}</p>
+   123→  2122→              </div>
+   124→  2123→              <div className="text-center">
+   125→  2124→                <p className="text-white font-bold text-xl">#{stats.bestRank}</p>
+   126→  2125→                <p className="text-white/40 text-[10px] font-medium uppercase tracking-wider">{_t('profile.bestRank')}</p>
+   127→  2126→              </div>
+   128→  2127→            </div>
+   129→  2128→          </div>
+   130→  2129→        </div>
+   131→  2130→
+   132→  2131→        <div className="px-4 -mt-5 space-y-4 relative z-20">
+   133→  2132→          {/* Guest Upgrade Banner */}
+   134→  2133→          {auth.isGuest && (
+   135→  2134→            <Card className="border-0 shadow-lg bg-gradient-to-r from-amber-500 to-orange-500 overflow-hidden">
+   136→  2135→              <CardContent className="p-4">
+   137→  2136→                <div className="flex items-center gap-3">
+   138→  2137→                  <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center flex-shrink-0">
+   139→  2138→                    <Crown className="w-5 h-5 text-white" />
+   140→  2139→                  </div>
+   141→  2140→                  <div className="flex-1 min-w-0">
+   142→  2141→                    <p className="text-white font-bold text-sm">{_t('profile.upgradeTitle')}</p>
+   143→  2142→                    <p className="text-white/80 text-xs mt-0.5">{_t('profile.upgradeSub')}</p>
+   144→  2143→                  </div>
+   145→  2144→                  <Button
+   146→  2145→                    size="sm"
+   147→  2146→                    className="bg-white text-orange-600 hover:bg-white/90 rounded-xl font-bold px-3"
+   148→  2147→                    onClick={() => setShowLoginModal(true)}
+   149→  2148→                  >
+   150→  2149→                    <Mail className="w-3 h-3 mr-1" /> {_t('profile.login')}
+   151→  2150→                  </Button>
+   152→  2151→                </div>
+   153→  2152→              </CardContent>
+   154→  2153→            </Card>
+   155→  2154→          )}
+   156→  2155→
+   157→  2156→          {/* Not logged in - Login Card */}
+   158→  2157→          {!auth.isLoggedIn && (
+   159→  2158→            <Card className="border-0 shadow-lg overflow-hidden">
+   160→  2159→              <CardContent className="p-5">
+   161→  2160→                <div className="text-center mb-4">
+   162→  2161→                  <div className="w-14 h-14 rounded-full bg-orange-50 flex items-center justify-center mx-auto mb-3">
+   163→  2162→                    <User className="w-7 h-7 text-orange-500" />
+   164→  2163→                  </div>
+   165→  2164→                  <p className="font-bold text-base">{_t('profile.loginUnlock')}</p>
+   166→  2165→                  <p className="text-gray-400 text-xs mt-1">{_t('profile.loginUnlockSub')}</p>
+   167→  2166→                </div>
+   168→  2167→                <Button
+   169→  2168→                  className="w-full h-11 bg-gradient-to-r from-orange-500 to-red-500 text-white rounded-xl font-semibold"
+   170→  2169→                  onClick={() => setShowLoginModal(true)}
+   171→  2170→                >
+   172→  2171→                  <Mail className="w-4 h-4 mr-2" /> {_t('profile.loginEmail')}
+   173→  2172→                </Button>
+   174→  2173→              </CardContent>
+   175→  2174→            </Card>
+   176→  2175→          )}
+   177→  2176→
+   178→  2177→          {/* Quick Actions Grid */}
+   179→  2178→          <div className="grid grid-cols-2 gap-3">
+   180→  2179→            <Card
+   181→  2180→              className="border-0 shadow-sm cursor-pointer hover:shadow-md transition-all active:scale-[0.98]"
+   182→  2181→              onClick={() => { pageHistoryRef.current.push(currentPage); setCurrentPage('exams') }}
+   183→  2182→            >
+   184→  2183→              <CardContent className="p-4">
+   185→  2184→                <div className="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center mb-2">
+   186→  2185→                  <BookOpen className="w-5 h-5 text-blue-600" />
+   187→  2186→                </div>
+   188→  2187→                <p className="font-semibold text-sm">{_t('profile.myExams')}</p>
+   189→  2188→                <p className="text-gray-400 text-[10px] mt-0.5">{categories.length} {_t('profile.categories')}</p>
+   190→  2189→              </CardContent>
+   191→  2190→            </Card>
+   192→  2191→            <Card
+   193→  2192→              className="border-0 shadow-sm cursor-pointer hover:shadow-md transition-all active:scale-[0.98]"
+   194→  2193→              onClick={async () => {
+   195→  2194→                try {
+   196→  2195→                  const fsResults = isFirestore() ? await getFsResults() : []
+   197→  2196→                  const localResults = getLocalResults()
+   198→  2197→                  const allResults = [...fsResults, ...localResults]
+   199→  2198→                  const uniqueResults = allResults.filter((r, i, arr) => arr.findIndex(x => x.id === r.id) === i)
+   200→  2199→                  setLeaderboardData(uniqueResults.sort((a, b) => b.score - a.score).slice(0, 50))
+   201→  2200→                  setLeaderboardTestId('all')
+   202→  2201→                } catch {
+   203→  2202→                  setLeaderboardData(getLocalResults().sort((a, b) => b.score - a.score).slice(0, 50))
+   204→  2203→                  setLeaderboardTestId('all')
+   205→  2204→                }
+   206→  2205→                pageHistoryRef.current.push(currentPage)
+   207→  2206→                setCurrentPage('leaderboard')
+   208→  2207→              }}
+   209→  2208→            >
+   210→  2209→              <CardContent className="p-4">
+   211→  2210→                <div className="w-10 h-10 rounded-xl bg-amber-50 flex items-center justify-center mb-2">
+   212→  2211→                  <Trophy className="w-5 h-5 text-amber-600" />
+   213→  2212→                </div>
+   214→  2213→                <p className="font-semibold text-sm">{_t('leaderboard.title')}</p>
+   215→  2214→                <p className="text-gray-400 text-[10px] mt-0.5">{_t('profile.viewRankings')}</p>
+   216→  2215→              </CardContent>
+   217→  2216→            </Card>
+   218→  2217→          </div>
+   219→  2218→
+   220→  2219→          {/* Settings Section */}
+   221→  2220→          <div>
+   222→  2221→            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider px-1 mb-2">{_t('profile.settings')}</p>
+   223→  2222→            <Card className="border-0 shadow-sm overflow-hidden">
+   224→  2223→              <CardContent className="p-0">
+   225→  2224→                {/* Language */}
+   226→  2225→                <button
+   227→  2226→                  className="w-full flex items-center gap-3 p-4 hover:bg-gray-50/80 transition-colors active:bg-gray-100"
+   228→  2227→                  onClick={() => setShowLanguageSheet(true)}
+   229→  2228→                >
+   230→  2229→                  <div className="w-9 h-9 rounded-xl bg-indigo-50 flex items-center justify-center">
+   231→  2230→                    <BookOpen className="w-4 h-4 text-indigo-600" />
+   232→  2231→                  </div>
+   233→  2232→                  <div className="flex-1 text-left">
+   234→  2233→                    <p className="font-semibold text-[13px]">{_t('profile.language')}</p>
+   235→  2234→                    <p className="text-gray-400 text-[11px]">{lng === 'en' ? _t('lang.english') : lng === 'hi' ? _t('lang.hindi') : _t('lang.bangla')}</p>
+   236→  2235→                  </div>
+   237→  2236→                  <ChevronRight className="w-4 h-4 text-gray-300" />
+   238→  2237→                </button>
+   239→  2238→                <div className="mx-4 border-t border-gray-100" />
+   240→  2239→                {/* About */}
+   241→  2240→                <button
+   242→  2241→                  className="w-full flex items-center gap-3 p-4 hover:bg-gray-50/80 transition-colors active:bg-gray-100"
+   243→  2242→                  onClick={() => setShowAboutSheet(true)}
+   244→  2243→                >
+   245→  2244→                  <div className="w-9 h-9 rounded-xl bg-purple-50 flex items-center justify-center">
+   246→  2245→                    <Shield className="w-4 h-4 text-purple-600" />
+   247→  2246→                  </div>
+   248→  2247→                  <div className="flex-1 text-left">
+   249→  2248→                    <p className="font-semibold text-[13px]">{_t('profile.about')}</p>
+   250→  2249→                    <p className="text-gray-400 text-[11px]">{_t('profile.aboutSub')}</p>
+   251→  2250→                  </div>
+   252→  2251→                  <ChevronRight className="w-4 h-4 text-gray-300" />
+   253→  2252→                </button>
+   254→  2253→              </CardContent>
+   255→  2254→            </Card>
+   256→  2255→          </div>
+   257→  2256→
+   258→  2257→          {/* Support Section */}
+   259→  2258→          <div>
+   260→  2259→            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider px-1 mb-2">{_t('profile.support')}</p>
+   261→  2260→            <Card className="border-0 shadow-sm overflow-hidden">
+   262→  2261→              <CardContent className="p-0">
+   263→  2262→                <button
+   264→  2263→                  className="w-full flex items-center gap-3 p-4 hover:bg-gray-50/80 transition-colors active:bg-gray-100"
+   265→  2264→                  onClick={() => setShowHelpSheet(true)}
+   266→  2265→                >
+   267→  2266→                  <div className="w-9 h-9 rounded-xl bg-teal-50 flex items-center justify-center">
+   268→  2267→                    <HelpCircle className="w-4 h-4 text-teal-600" />
+   269→  2268→                  </div>
+   270→  2269→                  <div className="flex-1 text-left">
+   271→  2270→                    <p className="font-semibold text-[13px]">{_t('profile.helpFaq')}</p>
+   272→  2271→                    <p className="text-gray-400 text-[11px]">{_t('profile.helpFaqSub')}</p>
+   273→  2272→                  </div>
+   274→  2273→                  <ChevronRight className="w-4 h-4 text-gray-300" />
+   275→  2274→                </button>
+   276→  2275→                <div className="mx-4 border-t border-gray-100" />
+   277→  2276→                <button
+   278→  2277→                  className="w-full flex items-center gap-3 p-4 hover:bg-gray-50/80 transition-colors active:bg-gray-100"
+   279→  2278→                  onClick={() => {
+   280→  2279→                    if (navigator.share) {
+   281→  2280→                      navigator.share({ title: _t('app.name'), text: _t('share.text'), url: window.location.href })
+   282→  2281→                    }
+   283→  2282→                  }}
+   284→  2283→                >
+   285→  2284→                  <div className="w-9 h-9 rounded-xl bg-pink-50 flex items-center justify-center">
+   286→  2285→                    <Share2 className="w-4 h-4 text-pink-600" />
+   287→  2286→                  </div>
+   288→  2287→                  <div className="flex-1 text-left">
+   289→  2288→                    <p className="font-semibold text-[13px]">{_t('profile.shareApp')}</p>
+   290→  2289→                    <p className="text-gray-400 text-[11px]">{_t('profile.shareAppSub')}</p>
+   291→  2290→                  </div>
+   292→  2291→                  <ChevronRight className="w-4 h-4 text-gray-300" />
+   293→  2292→                </button>
+   294→  2293→              </CardContent>
+   295→  2294→            </Card>
+   296→  2295→          </div>
+   297→  2296→
+   298→  2297→          {/* Logout Button */}
+   299→  2298→          {auth.isLoggedIn && !auth.isGuest && (
+   300→  2299→            <Button
+   301→  2300→              variant="outline"
+   302→  2301→              className="w-full rounded-xl border-red-200 text-red-500 hover:bg-red-50 hover:text-red-600 h-11 font-semibold"
+   303→  2302→              onClick={() => auth.logout()}
+   304→  2303→            >
+   305→  2304→              <LogOut className="w-4 h-4 mr-2" /> {_t('profile.logout')}
+   306→  2305→            </Button>
+   307→  2306→          )}
+   308→  2307→
+   309→  2308→          {/* App Version */}
+   310→  2309→          <p className="text-center text-gray-300 text-[10px] pt-2 pb-4">{_t('app.versionFull')}</p>
+   311→  2310→        </div>
+   312→  2311→
+   313→  2312→        {/* Language Sheet */}
+   314→  2313→        {showLanguageSheet && (
+   315→  2314→          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-end justify-center" onClick={() => setShowLanguageSheet(false)}>
+   316→  2315→            <div className="bg-white rounded-t-[28px] w-full p-6 animate-slide-up" onClick={e => e.stopPropagation()}>
+   317→  2316→              <div className="w-10 h-1 rounded-full bg-gray-200 mx-auto mb-5" />
+   318→  2317→              <h3 className="font-bold text-lg mb-4">{_t('lang.select')}</h3>
+   319→  2318→              <div className="space-y-1">
+   320→  2319→                {[
+   321→  2320→                  { code: 'en', name: _t('lang.english'), flag: '🇬🇧', available: true },
+   322→  2321→                  { code: 'hi', name: _t('lang.hindi'), flag: '🇮🇳', available: true },
+   323→  2322→                  { code: 'bn', name: _t('lang.bangla'), flag: '🇧🇩', available: true },
+   324→  2323→                ].map(lang => (
+   325→  2324→                  <button
+   326→  2325→                    key={lang.code}
+   327→  2326→                    className={`w-full flex items-center gap-3 p-4 rounded-xl transition-colors ${
+   328→  2327→                      lang.available ? 'hover:bg-gray-50 active:bg-gray-100' : 'opacity-50'
+   329→  2328→                    }`}
+   330→  2329→                    onClick={() => {
+   331→  2330→                      if (lang.available) {
+   332→  2331→                        setSelectedLanguage(lang.code)
+   333→  2332→                        setShowLanguageSheet(false)
+   334→  2333→                      }
+   335→  2334→                    }}
+   336→  2335→                    onTouchEnd={(e) => {
+   337→  2336→                      if (lang.available) {
+   338→  2337→                        e.preventDefault()
+   339→  2338→                        setSelectedLanguage(lang.code)
+   340→  2339→                        setShowLanguageSheet(false)
+   341→  2340→                      }
+   342→  2341→                    }}
+   343→  2342→                  >
+   344→  2343→                    <span className="text-xl">{lang.flag}</span>
+   345→  2344→                    <span className="font-medium text-sm flex-1">{lang.name}</span>
+   346→  2345→                    {!lang.available && <Badge variant="secondary" className="text-[10px]">{_t('lang.comingSoon')}</Badge>}
+   347→  2346→                    {selectedLanguage === lang.code && (
+   348→  2347→                      <div className="w-6 h-6 rounded-full bg-orange-500 flex items-center justify-center">
+   349→  2348→                        <CheckCircle2 className="w-4 h-4 text-white" />
+   350→  2349→                      </div>
+   351→  2350→                    )}
+   352→  2351→                  </button>
+   353→  2352→                ))}
+   354→  2353→              </div>
+   355→  2354→              <Button
+   356→  2355→                variant="outline"
+   357→  2356→                className="w-full mt-5 rounded-xl h-11"
+   358→  2357→                onClick={() => setShowLanguageSheet(false)}
+   359→  2358→              >
+   360→  2359→                {_t('lang.cancel')}
+   361→  2360→              </Button>
+   362→  2361→            </div>
+   363→  2362→          </div>
+   364→  2363→        )}
+   365→  2364→
+   366→  2365→        {/* About Sheet */}
+   367→  2366→        {showAboutSheet && (
+   368→  2367→          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-end justify-center" onClick={() => setShowAboutSheet(false)}>
+   369→  2368→            <div className="bg-white rounded-t-[28px] w-full p-6 animate-slide-up" onClick={e => e.stopPropagation()}>
+   370→  2369→              <div className="w-10 h-1 rounded-full bg-gray-200 mx-auto mb-5" />
+   371→  2370→              <div className="text-center mb-5">
+   372→  2371→                <div className="w-16 h-16 bg-gradient-to-br from-orange-500 to-red-500 rounded-2xl flex items-center justify-center mx-auto mb-3 shadow-lg shadow-orange-500/20">
+   373→  2372→                  <span className="text-white text-2xl font-bold">E</span>
+   374→  2373→                </div>
+   375→  2374→                <h3 className="font-bold text-lg">{_t('app.name')}</h3>
+   376→  2375→                <p className="text-gray-400 text-sm">{_t('app.version')}</p>
+   377→  2376→              </div>
+   378→  2377→              <div className="space-y-2">
+   379→  2378→                {[
+   380→  2379→                  { label: _t('about.version'), value: '1.0' },
+   381→  2380→                  { label: _t('about.size'), value: '~5 MB' },
+   382→  2381→                  { label: _t('about.exams'), value: '21+' },
+   383→  2382→                  { label: _t('about.questions'), value: '210+' },
+   384→  2383→                  { label: _t('about.offline'), value: _t('about.yes'), green: true },
+   385→  2384→                  { label: _t('about.ads'), value: _t('about.no'), green: true },
+   386→  2385→                ].map(item => (
+   387→  2386→                  <div key={item.label} className="flex justify-between text-sm p-3 bg-gray-50 rounded-xl">
+   388→  2387→                    <span className="text-gray-500">{item.label}</span>
+   389→  2388→                    <span className={`font-medium ${item.green ? 'text-emerald-600' : ''}`}>{item.value}</span>
+   390→  2389→                  </div>
+   391→  2390→                ))}
+   392→  2391→              </div>
+   393→  2392→              <p className="text-center text-sm text-gray-400 mt-5">{_t('app.madeIn')}</p>
+   394→  2393→              <Button
+   395→  2394→                variant="outline"
+   396→  2395→                className="w-full mt-4 rounded-xl h-11"
+   397→  2396→                onClick={() => setShowAboutSheet(false)}
+   398→  2397→              >
+   399→  2398→                {_t('about.close')}
+   400→  2399→              </Button>
+   401→  2400→            </div>
+   402→  2401→          </div>
+   403→  2402→        )}
+   404→  2403→
+   405→  2404→        {/* Help & FAQ Sheet */}
+   406→  2405→        {showHelpSheet && (
+   407→  2406→          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-end justify-center" onClick={() => setShowHelpSheet(false)}>
+   408→  2407→            <div className="bg-white rounded-t-[28px] w-full max-h-[80vh] overflow-y-auto p-6 animate-slide-up" onClick={e => e.stopPropagation()}>
+   409→  2408→              <div className="w-10 h-1 rounded-full bg-gray-200 mx-auto mb-5" />
+   410→  2409→              <div className="text-center mb-5">
+   411→  2410→                <div className="w-16 h-16 bg-gradient-to-br from-teal-500 to-emerald-500 rounded-2xl flex items-center justify-center mx-auto mb-3 shadow-lg">
+   412→  2411→                  <HelpCircle className="w-8 h-8 text-white" />
+   413→  2412→                </div>
+   414→  2413→                <h3 className="font-bold text-lg">{_t('profile.helpFaq')}</h3>
+   415→  2414→              </div>
+   416→  2415→              <div className="space-y-3">
+   417→  2416→                {[
+   418→  2417→                  { q: 'How do I start a test?', a: 'Go to the Exams page, select an exam category, choose a test and tap "Start Test". You can also use Quick Practice for a random test.' },
+   419→  2418→                  { q: 'How is my score calculated?', a: 'Your score is calculated based on correct answers (marks added) and wrong answers (negative marking as per test scheme). Skipped questions get zero marks.' },
+   420→  2419→                  { q: 'Can I review my answers?', a: 'Yes! After completing a test, you can see the full Answer Key with explanations for each question.' },
+   421→  2420→                  { q: 'How do I track my progress?', a: 'Login with email to save your progress. Your test scores, accuracy, and rankings are tracked in your Profile page.' },
+   422→  2421→                  { q: 'Is offline mode available?', a: 'You can download tests for offline use from the Offline Mode section in the side menu.' },
+   423→  2422→                  { q: 'How do I change the language?', a: 'Go to Profile > Language or use the side menu > Language option. We support English, Hindi, and Bangla.' },
+   424→  2423→                  { q: 'How do I bookmark questions?', a: 'During a test, use the "Mark for Review" button to flag questions. You can review them before submitting.' },
+   425→  2424→                  { q: 'Can I retry a test?', a: 'Yes! After seeing your results, tap "Retry" to take the test again and improve your score.' },
+   426→  2425→                ].map((item, i) => (
+   427→  2426→                  <details key={i} className="group bg-gray-50 rounded-xl overflow-hidden">
+   428→  2427→                    <summary className="flex items-center justify-between p-4 cursor-pointer font-medium text-sm text-gray-800 hover:bg-gray-100 transition-colors">
+   429→  2428→                      {item.q}
+   430→  2429→                      <ChevronDown className="w-4 h-4 text-gray-400 group-open:rotate-180 transition-transform" />
+   431→  2430→                    </summary>
+   432→  2431→                    <div className="px-4 pb-4 text-sm text-gray-600 leading-relaxed">{item.a}</div>
+   433→  2432→                  </details>
+   434→  2433→                ))}
+   435→  2434→              </div>
+   436→  2435→              <Button
+   437→  2436→                variant="outline"
+   438→  2437→                className="w-full mt-5 rounded-xl h-11"
+   439→  2438→                onClick={() => setShowHelpSheet(false)}
+   440→  2439→              >
+   441→  2440→                {_t('about.close')}
+   442→  2441→              </Button>
+   443→  2442→            </div>
+   444→  2443→          </div>
+   445→  2444→        )}
+   446→  2445→
+   447→  2446→        {/* Offline Mode Sheet */}
+   448→  2447→        {showOfflineSheet && (
+   449→  2448→          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-end justify-center" onClick={() => setShowOfflineSheet(false)}>
+   450→  2449→            <div className="bg-white rounded-t-[28px] w-full p-6 animate-slide-up" onClick={e => e.stopPropagation()}>
+   451→  2450→              <div className="w-10 h-1 rounded-full bg-gray-200 mx-auto mb-5" />
+   452→  2451→              <div className="text-center mb-5">
+   453→  2452→                <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-indigo-500 rounded-2xl flex items-center justify-center mx-auto mb-3 shadow-lg">
+   454→  2453→                  <Wifi className="w-8 h-8 text-white" />
+   455→  2454→                </div>
+   456→  2455→                <h3 className="font-bold text-lg">{_t('menu.offlineMode')}</h3>
+   457→  2456→                <p className="text-gray-400 text-sm mt-1">{_t('menu.downloadTests')}</p>
+   458→  2457→              </div>
+   459→  2458→              <div className="space-y-3">
+   460→  2459→                {categories.map(cat => {
+   461→  2460→                  const color = getCatColor(cat.slug)
+   462→  2461→                  const testCount = cat.exams.reduce((sum, e) => sum + (e as any).testCount || 0, 0)
+   463→  2462→                  return (
+   464→  2463→                    <div key={cat.id} className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl">
+   465→  2464→                      <div className={`w-10 h-10 rounded-xl ${color.light} flex items-center justify-center ${color.text}`}>
+   466→  2465→                        {getCatIcon(cat.slug)}
+   467→  2466→                      </div>
+   468→  2467→                      <div className="flex-1 min-w-0">
+   469→  2468→                        <p className="font-semibold text-sm">{cat.name}</p>
+   470→  2469→                        <p className="text-gray-400 text-xs">{cat.exams.length} {_t('home.exams')}</p>
+   471→  2470→                      </div>
+   472→  2471→                      <Button size="sm" variant="outline" className="rounded-xl text-xs" onClick={() => {
+   473→  2472→                        // Download/sync category data to localStorage
+   474→  2473→                        try {
+   475→  2474→                          const key = `examprep_offline_${cat.slug}`
+   476→  2475→                          localStorage.setItem(key, JSON.stringify(cat))
+   477→  2476→                        } catch {}
+   478→  2477→                      }}>
+   479→  2478→                        <Download className="w-3 h-3 mr-1" /> Save
+   480→  2479→                      </Button>
+   481→  2480→                    </div>
+   482→  2481→                  )
+   483→  2482→                })}
+   484→  2483→              </div>
+   485→  2484→              <Button
+   486→  2485→                variant="outline"
+   487→  2486→                className="w-full mt-5 rounded-xl h-11"
+   488→  2487→                onClick={() => setShowOfflineSheet(false)}
+   489→  2488→              >
+   490→  2489→                {_t('about.close')}
+   491→  2490→              </Button>
+   492→  2491→            </div>
+   493→  2492→          </div>
+   494→  2493→        )}
+   495→  2494→      </div>
+   496→  2495→    )
+   497→  2496→  }
+   498→  2497→
+   499→  2498→  // ===== RENDER: Bottom Navigation =====
+   500→  2499→  function renderBottomNav() {
+   501→  2500→    const pages: Page[] = ['home', 'practice', 'tests', 'leaderboard']
+   502→  2501→    if (!pages.includes(currentPage)) return null
+   503→  2502→
+   504→  2503→    const navItems = [
+   505→  2504→      { page: 'home' as Page, icon: Home, label: _t('nav.home') },
+   506→  2505→      { page: 'practice' as Page, icon: Zap, label: _t('nav.practice') },
+   507→  2506→      { page: 'tests' as Page, icon: ClipboardList, label: _t('nav.tests') },
+   508→  2507→      { page: 'leaderboard' as Page, icon: Trophy, label: _t('nav.ranks') },
+   509→  2508→    ]
+   510→  2509→
+   511→  2510→    return (
+   512→  2511→      <div className="fixed bottom-0 left-0 right-0 z-40 safe-area-pb" style={{ touchAction: 'manipulation' }}>
+   513→  2512→        <div className="bg-white/95 backdrop-blur-lg border-t border-gray-100 w-full">
+   514→  2513→          <div className="flex items-center justify-around py-2">
+   515→  2514→            {navItems.map(item => {
+   516→  2515→              const isActive = currentPage === item.page
+   517→  2516→              const Icon = item.icon
+   518→  2517→              return (
+   519→  2518→                <button
+   520→  2519→                  key={item.page}
+   521→  2520→                  onClick={() => handleBottomNav(item.page)}
+   522→  2521→                  onTouchEnd={(e) => { e.preventDefault(); handleBottomNav(item.page) }}
+   523→  2522→                  className={`flex flex-col items-center gap-0.5 py-1 px-4 rounded-xl transition-all ${
+   524→  2523→                    isActive ? 'text-orange-600' : 'text-gray-400 active:text-gray-600'
+   525→  2524→                  }`}
+   526→  2525→                  style={{ touchAction: 'manipulation', WebkitTapHighlightColor: 'transparent' }}
+   527→  2526→                >
+   528→  2527→                  <div className={`relative ${isActive ? '' : ''}`}>
+   529→  2528→                    <Icon className={`w-5 h-5 ${isActive ? 'text-orange-600' : ''}`} />
+   530→  2529→                    {isActive && (
+   531→  2530→                      <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-orange-500" />
+   532→  2531→                    )}
+   533→  2532→                  </div>
+   534→  2533→                  <span className={`text-[10px] font-medium ${isActive ? 'text-orange-600' : ''}`}>{item.label}</span>
+   535→  2534→                </button>
+   536→  2535→              )
+   537→  2536→            })}
+   538→  2537→          </div>
+   539→  2538→        </div>
+   540→  2539→      </div>
+   541→  2540→    )
+   542→  2541→  }
+   543→  2542→
+   544→  2543→  // ===== MAIN RENDER =====
+   545→  2544→  const renderPage = () => {
+   546→  2545→    switch (currentPage) {
+   547→  2546→      case 'home': return renderHome()
+   548→  2547→      case 'exams': return renderExams()
+   549→  2548→      case 'tests': return renderTests()
+   550→  2549→      case 'test-info': return renderTestInfo()
+   551→  2550→      case 'test-taking': return renderTestTaking()
+   552→  2551→      case 'results': return renderResults()
+   553→  2552→      case 'leaderboard': return renderLeaderboard()
+   554→  2553→      case 'profile': return renderProfile()
+   555→  2554→      case 'practice': return renderPractice()
+   556→  2555→      default: return renderHome()
+   557→  2556→    }
+   558→  2557→  }
+   559→  2558→
+   560→  2559→  return (
+   561→  2560→    <div className="min-h-screen min-h-dvh bg-gray-50 relative w-full overflow-x-hidden" style={{ touchAction: 'manipulation' }}>
+   562→  2561→      {renderPage()}
+   563→  2562→      {renderBottomNav()}
+   564→  2563→
+   565→  2564→      {/* ===== Side Menu Drawer ===== */}
+   566→  2565→      {showSideMenu && (
+   567→  2566→        <div className="fixed inset-0 z-[100]">
+   568→  2567→          {/* Backdrop */}
+   569→  2568→          <div
+   570→  2569→            className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+   571→  2570→            onClick={() => setShowSideMenu(false)}
+   572→  2571→            onTouchEnd={(e) => { e.preventDefault(); setShowSideMenu(false) }}
+   573→  2572→            style={{ touchAction: 'manipulation' }}
+   574→  2573→          />
+   575→  2574→          {/* Drawer Panel */}
+   576→  2575→          <div className="absolute left-0 top-0 bottom-0 w-[280px] bg-white shadow-2xl flex flex-col" style={{ touchAction: 'manipulation' }}>
+   577→  2576→            {/* Drawer Header */}
+   578→  2577→            <div className="bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 px-5 pt-[calc(env(safe-area-inset-top,0px)+1.5rem)] pb-5">
+   579→  2578→              <div className="flex items-center justify-between mb-4">
+   580→  2579→                <div className="w-10 h-10 bg-gradient-to-br from-orange-400 to-red-500 rounded-xl flex items-center justify-center shadow-lg shadow-orange-500/20">
+   581→  2580→                  <span className="text-white font-bold text-sm">E</span>
+   582→  2581→                </div>
+   583→  2582→                <button
+   584→  2583→                  onClick={() => setShowSideMenu(false)}
+   585→  2584→                  onTouchEnd={(e) => { e.preventDefault(); setShowSideMenu(false) }}
+   586→  2585→                  className="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center"
+   587→  2586→                  style={{ touchAction: 'manipulation', WebkitTapHighlightColor: 'transparent' }}
+   588→  2587→                >
+   589→  2588→                  <X className="w-4 h-4 text-white/60" />
+   590→  2589→                </button>
+   591→  2590→              </div>
+   592→  2591→              <p className="text-white font-bold text-base">{_t('app.name')}</p>
+   593→  2592→              <p className="text-white/40 text-xs mt-0.5">{_t('app.partner')}</p>
+   594→  2593→            </div>
+   595→  2594→
+   596→  2595→            {/* Menu Items */}
+   597→  2596→            <div className="flex-1 overflow-y-auto py-2">
+   598→  2597→              {/* Main Navigation */}
+   599→  2598→              <div className="px-3 py-2">
+
+[showing lines 100-599 of 975; use offset=600 with limit to continue reading]
