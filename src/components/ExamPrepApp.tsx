@@ -192,17 +192,34 @@ export default function ExamPrepApp() {
     loadData()
   }, [])
 
-  // --- Listen for admin data changes (when admin panel updates localStorage) ---
+  // --- Listen for admin data changes (poll Firestore for updates) ---
   useEffect(() => {
+    const refreshAdminData = async () => {
+      try {
+        if (isFirestore()) {
+          const anns = await getFsAnnouncements()
+          setAnnouncements(anns.map(a => ({ ...a, action: a.action as Page })))
+          const notifs = await getFsNotifications()
+          setNotifications(notifs)
+        } else {
+          setAnnouncements(getLocalAnnouncements().map(a => ({ ...a, action: a.action as Page })))
+          setNotifications(getLocalNotifications())
+        }
+      } catch {}
+    }
+    // Refresh from Firestore every 10 seconds so admin changes show up
+    const interval = setInterval(refreshAdminData, 10000)
+    // Also listen for localStorage changes (same-browser admin)
     const handleStorageChange = () => {
-      setAnnouncements(getLocalAnnouncements().map(a => ({ ...a, action: a.action as Page })))
-      setNotifications(getLocalNotifications())
+      if (!isFirestore()) {
+        setAnnouncements(getLocalAnnouncements().map(a => ({ ...a, action: a.action as Page })))
+        setNotifications(getLocalNotifications())
+      }
     }
     window.addEventListener('storage', handleStorageChange)
-    const interval = setInterval(handleStorageChange, 5000)
     return () => {
-      window.removeEventListener('storage', handleStorageChange)
       clearInterval(interval)
+      window.removeEventListener('storage', handleStorageChange)
     }
   }, [])
 

@@ -10,10 +10,21 @@ import {
 } from 'lucide-react'
 import {
   type Announcement, type Notification,
-  getAnnouncements, getNotifications,
-  saveAnnouncements, saveNotifications,
+  getAnnouncements as getLocalAnnouncements,
+  getNotifications as getLocalNotifications,
+  saveAnnouncements as saveLocalAnnouncements,
+  saveNotifications as saveLocalNotifications,
 } from '@/lib/admin-data'
-import { getResults, type TestResult } from '@/lib/local-data'
+import {
+  getAnnouncements as getFsAnnouncements,
+  getNotifications as getFsNotifications,
+  saveAnnouncements as saveFsAnnouncements,
+  saveNotifications as saveFsNotifications,
+  getResults as getFsResults,
+  getUseFirestore,
+} from '@/lib/firestore-service'
+import { isFirebaseReady } from '@/lib/firebase'
+import { getResults as getLocalResults, type TestResult } from '@/lib/local-data'
 import Link from 'next/link'
 
 import DashboardTab from './DashboardTab'
@@ -41,7 +52,7 @@ export default function AdminPanel() {
   const [announcements, setAnnouncements] = useState<Announcement[]>([])
   const [notifications, setNotifications] = useState<Notification[]>([])
 
-  // --- Load data on mount ---
+  // --- Load data on mount (always from Firestore if available) ---
   useEffect(() => {
     // Check session storage for admin login persistence
     try {
@@ -49,26 +60,69 @@ export default function AdminPanel() {
       if (saved === 'true') setAdminLoggedIn(true)
     } catch {}
     setMounted(true)
-    setAnnouncements(getAnnouncements())
-    setNotifications(getNotifications())
-    setAllResults(getResults())
+
+    const loadAdminData = async () => {
+      try {
+        if (getUseFirestore() && isFirebaseReady()) {
+          const [anns, notifs, results] = await Promise.all([
+            getFsAnnouncements(),
+            getFsNotifications(),
+            getFsResults(),
+          ])
+          setAnnouncements(anns)
+          setNotifications(notifs)
+          setAllResults(results)
+        } else {
+          setAnnouncements(getLocalAnnouncements())
+          setNotifications(getLocalNotifications())
+          setAllResults(getLocalResults())
+        }
+      } catch (e) {
+        console.error('Admin data load failed, using local:', e)
+        setAnnouncements(getLocalAnnouncements())
+        setNotifications(getLocalNotifications())
+        setAllResults(getLocalResults())
+      }
+    }
+    loadAdminData()
   }, [])
 
   // Refresh user data periodically
   useEffect(() => {
-    const interval = setInterval(() => {
-      setAllResults(getResults())
+    const interval = setInterval(async () => {
+      try {
+        if (getUseFirestore() && isFirebaseReady()) {
+          setAllResults(await getFsResults())
+        } else {
+          setAllResults(getLocalResults())
+        }
+      } catch {}
     }, 5000)
     return () => clearInterval(interval)
   }, [])
 
-  // Save data when it changes
+  // Save announcements to Firestore + localStorage when changed
   useEffect(() => {
-    if (announcements.length > 0) saveAnnouncements(announcements)
+    if (announcements.length > 0) {
+      saveLocalAnnouncements(announcements) // local backup
+      if (getUseFirestore() && isFirebaseReady()) {
+        saveFsAnnouncements(announcements).catch(e =>
+          console.error('[Admin] Failed to save announcements to Firestore:', e)
+        )
+      }
+    }
   }, [announcements])
 
+  // Save notifications to Firestore + localStorage when changed
   useEffect(() => {
-    if (notifications.length > 0) saveNotifications(notifications)
+    if (notifications.length > 0) {
+      saveLocalNotifications(notifications) // local backup
+      if (getUseFirestore() && isFirebaseReady()) {
+        saveFsNotifications(notifications).catch(e =>
+          console.error('[Admin] Failed to save notifications to Firestore:', e)
+        )
+      }
+    }
   }, [notifications])
 
   const ADMIN_PASSWORD = 'admin123'
@@ -86,7 +140,17 @@ export default function AdminPanel() {
     try { sessionStorage.removeItem('mockmaster_admin_logged_in') } catch {}
   }
 
-  const handleRefreshResults = () => setAllResults(getResults())
+  const handleRefreshResults = async () => {
+    try {
+      if (getUseFirestore() && isFirebaseReady()) {
+        setAllResults(await getFsResults())
+      } else {
+        setAllResults(getLocalResults())
+      }
+    } catch {
+      setAllResults(getLocalResults())
+    }
+  }
 
   // --- Login Screen ---
   if (!adminLoggedIn) {
