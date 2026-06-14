@@ -146,6 +146,8 @@ export default function ExamPrepApp() {
   const [showBackConfirm, setShowBackConfirm] = useState(false)
   const [showLanguageSheet, setShowLanguageSheet] = useState(false)
   const [showAboutSheet, setShowAboutSheet] = useState(false)
+  const [showHelpSheet, setShowHelpSheet] = useState(false)
+  const [showOfflineSheet, setShowOfflineSheet] = useState(false)
   const [selectedLanguage, setSelectedLanguage] = useState<Lang>('en')
   const [showQuestionNav, setShowQuestionNav] = useState(false)
   const [showSideMenu, setShowSideMenu] = useState(false)
@@ -313,6 +315,16 @@ export default function ExamPrepApp() {
       setShowAboutSheet(false)
       return
     }
+    // If help sheet is open, close it
+    if (showHelpSheet) {
+      setShowHelpSheet(false)
+      return
+    }
+    // If offline sheet is open, close it
+    if (showOfflineSheet) {
+      setShowOfflineSheet(false)
+      return
+    }
     // If taking a test, show confirmation
     if (currentPage === 'test-taking' && testActive) {
       setShowBackConfirm(true)
@@ -329,7 +341,7 @@ export default function ExamPrepApp() {
     } else {
       setCurrentPage('home')
     }
-  }, [currentPage, testActive, showBackConfirm, showSideMenu, showQuestionNav, showLoginModal, showLanguageSheet, showAboutSheet, goBack])
+  }, [currentPage, testActive, showBackConfirm, showSideMenu, showQuestionNav, showLoginModal, showLanguageSheet, showAboutSheet, showHelpSheet, showOfflineSheet, goBack])
 
   // Capacitor hardware back button
   useEffect(() => {
@@ -716,30 +728,48 @@ export default function ExamPrepApp() {
                   <div className={`bg-gradient-to-br ${a.gradient} rounded-2xl overflow-hidden shadow-md active:scale-[0.98] transition-transform`}>
                     {/* Image Area */}
                     <div className="h-32 relative flex items-center justify-center overflow-hidden">
-                      {/* Background Pattern */}
-                      <div className="absolute inset-0 opacity-10">
-                        <div className="absolute top-3 left-6 w-24 h-24 rounded-full border-4 border-white" />
-                        <div className="absolute bottom-2 right-8 w-20 h-20 rounded-full border-4 border-white" />
-                        <div className="absolute top-10 right-16 w-10 h-10 rounded-full bg-white" />
-                        <div className="absolute bottom-4 left-20 w-6 h-6 rounded-full bg-white" />
-                      </div>
-                      {/* Icon + Text */}
-                      <div className="relative z-10 flex items-center gap-4 px-4">
-                        <div className="w-16 h-16 bg-white/20 backdrop-blur rounded-2xl flex items-center justify-center flex-shrink-0">
-                          {a.image === 'ssc' && <BookOpen className="w-8 h-8 text-white" />}
-                          {a.image === 'banking' && <Building className="w-8 h-8 text-white" />}
-                          {a.image === 'leaderboard' && <Trophy className="w-8 h-8 text-white" />}
-                          {a.image === 'practice' && <Zap className="w-8 h-8 text-white" />}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-white font-bold text-base leading-tight">{a.title}</p>
-                          <p className="text-white/80 text-xs mt-1">{a.subtitle}</p>
-                          <div className="flex items-center gap-1 mt-2">
-                            <span className="text-white/50 text-[10px]">{_t('home.tapExplore')}</span>
-                            <ChevronRight className="w-3 h-3 text-white/50" />
+                      {/* Custom Image or Background Pattern */}
+                      {(a as any).imageUrl ? (
+                        <>
+                          <img src={(a as any).imageUrl} alt={a.title} className="absolute inset-0 w-full h-full object-cover" />
+                          <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent" />
+                          <div className="relative z-10 flex items-center gap-4 px-4 w-full">
+                            <div className="flex-1 min-w-0">
+                              <p className="text-white font-bold text-base leading-tight drop-shadow-md">{a.title}</p>
+                              <p className="text-white/90 text-xs mt-1 drop-shadow-sm">{a.subtitle}</p>
+                              <div className="flex items-center gap-1 mt-2">
+                                <span className="text-white/70 text-[10px]">{_t('home.tapExplore')}</span>
+                                <ChevronRight className="w-3 h-3 text-white/70" />
+                              </div>
+                            </div>
                           </div>
-                        </div>
-                      </div>
+                        </>
+                      ) : (
+                        <>
+                          <div className="absolute inset-0 opacity-10">
+                            <div className="absolute top-3 left-6 w-24 h-24 rounded-full border-4 border-white" />
+                            <div className="absolute bottom-2 right-8 w-20 h-20 rounded-full border-4 border-white" />
+                            <div className="absolute top-10 right-16 w-10 h-10 rounded-full bg-white" />
+                            <div className="absolute bottom-4 left-20 w-6 h-6 rounded-full bg-white" />
+                          </div>
+                          <div className="relative z-10 flex items-center gap-4 px-4">
+                            <div className="w-16 h-16 bg-white/20 backdrop-blur rounded-2xl flex items-center justify-center flex-shrink-0">
+                              {a.image === 'ssc' && <BookOpen className="w-8 h-8 text-white" />}
+                              {a.image === 'banking' && <Building className="w-8 h-8 text-white" />}
+                              {a.image === 'leaderboard' && <Trophy className="w-8 h-8 text-white" />}
+                              {a.image === 'practice' && <Zap className="w-8 h-8 text-white" />}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-white font-bold text-base leading-tight">{a.title}</p>
+                              <p className="text-white/80 text-xs mt-1">{a.subtitle}</p>
+                              <div className="flex items-center gap-1 mt-2">
+                                <span className="text-white/50 text-[10px]">{_t('home.tapExplore')}</span>
+                                <ChevronRight className="w-3 h-3 text-white/50" />
+                              </div>
+                            </div>
+                          </div>
+                        </>
+                      )}
                     </div>
                   </div>
                 </button>
@@ -2009,7 +2039,7 @@ export default function ExamPrepApp() {
               <CardContent className="p-0">
                 <button
                   className="w-full flex items-center gap-3 p-4 hover:bg-gray-50/80 transition-colors active:bg-gray-100"
-                  onClick={() => setShowAboutSheet(true)}
+                  onClick={() => setShowHelpSheet(true)}
                 >
                   <div className="w-9 h-9 rounded-xl bg-teal-50 flex items-center justify-center">
                     <HelpCircle className="w-4 h-4 text-teal-600" />
@@ -2142,6 +2172,97 @@ export default function ExamPrepApp() {
                 variant="outline"
                 className="w-full mt-4 rounded-xl h-11"
                 onClick={() => setShowAboutSheet(false)}
+              >
+                {_t('about.close')}
+              </Button>
+            </div>
+          </div>
+        )}
+
+        {/* Help & FAQ Sheet */}
+        {showHelpSheet && (
+          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-end justify-center" onClick={() => setShowHelpSheet(false)}>
+            <div className="bg-white rounded-t-[28px] w-full max-h-[80vh] overflow-y-auto p-6 animate-slide-up" onClick={e => e.stopPropagation()}>
+              <div className="w-10 h-1 rounded-full bg-gray-200 mx-auto mb-5" />
+              <div className="text-center mb-5">
+                <div className="w-16 h-16 bg-gradient-to-br from-teal-500 to-emerald-500 rounded-2xl flex items-center justify-center mx-auto mb-3 shadow-lg">
+                  <HelpCircle className="w-8 h-8 text-white" />
+                </div>
+                <h3 className="font-bold text-lg">{_t('profile.helpFaq')}</h3>
+              </div>
+              <div className="space-y-3">
+                {[
+                  { q: 'How do I start a test?', a: 'Go to the Exams page, select an exam category, choose a test and tap "Start Test". You can also use Quick Practice for a random test.' },
+                  { q: 'How is my score calculated?', a: 'Your score is calculated based on correct answers (marks added) and wrong answers (negative marking as per test scheme). Skipped questions get zero marks.' },
+                  { q: 'Can I review my answers?', a: 'Yes! After completing a test, you can see the full Answer Key with explanations for each question.' },
+                  { q: 'How do I track my progress?', a: 'Login with email to save your progress. Your test scores, accuracy, and rankings are tracked in your Profile page.' },
+                  { q: 'Is offline mode available?', a: 'You can download tests for offline use from the Offline Mode section in the side menu.' },
+                  { q: 'How do I change the language?', a: 'Go to Profile > Language or use the side menu > Language option. We support English, Hindi, and Bangla.' },
+                  { q: 'How do I bookmark questions?', a: 'During a test, use the "Mark for Review" button to flag questions. You can review them before submitting.' },
+                  { q: 'Can I retry a test?', a: 'Yes! After seeing your results, tap "Retry" to take the test again and improve your score.' },
+                ].map((item, i) => (
+                  <details key={i} className="group bg-gray-50 rounded-xl overflow-hidden">
+                    <summary className="flex items-center justify-between p-4 cursor-pointer font-medium text-sm text-gray-800 hover:bg-gray-100 transition-colors">
+                      {item.q}
+                      <ChevronDown className="w-4 h-4 text-gray-400 group-open:rotate-180 transition-transform" />
+                    </summary>
+                    <div className="px-4 pb-4 text-sm text-gray-600 leading-relaxed">{item.a}</div>
+                  </details>
+                ))}
+              </div>
+              <Button
+                variant="outline"
+                className="w-full mt-5 rounded-xl h-11"
+                onClick={() => setShowHelpSheet(false)}
+              >
+                {_t('about.close')}
+              </Button>
+            </div>
+          </div>
+        )}
+
+        {/* Offline Mode Sheet */}
+        {showOfflineSheet && (
+          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-end justify-center" onClick={() => setShowOfflineSheet(false)}>
+            <div className="bg-white rounded-t-[28px] w-full p-6 animate-slide-up" onClick={e => e.stopPropagation()}>
+              <div className="w-10 h-1 rounded-full bg-gray-200 mx-auto mb-5" />
+              <div className="text-center mb-5">
+                <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-indigo-500 rounded-2xl flex items-center justify-center mx-auto mb-3 shadow-lg">
+                  <Wifi className="w-8 h-8 text-white" />
+                </div>
+                <h3 className="font-bold text-lg">{_t('menu.offlineMode')}</h3>
+                <p className="text-gray-400 text-sm mt-1">{_t('menu.downloadTests')}</p>
+              </div>
+              <div className="space-y-3">
+                {categories.map(cat => {
+                  const color = getCatColor(cat.slug)
+                  const testCount = cat.exams.reduce((sum, e) => sum + (e as any).testCount || 0, 0)
+                  return (
+                    <div key={cat.id} className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl">
+                      <div className={`w-10 h-10 rounded-xl ${color.light} flex items-center justify-center ${color.text}`}>
+                        {getCatIcon(cat.slug)}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-semibold text-sm">{cat.name}</p>
+                        <p className="text-gray-400 text-xs">{cat.exams.length} {_t('home.exams')}</p>
+                      </div>
+                      <Button size="sm" variant="outline" className="rounded-xl text-xs" onClick={() => {
+                        // Download/sync category data to localStorage
+                        try {
+                          const key = `examprep_offline_${cat.slug}`
+                          localStorage.setItem(key, JSON.stringify(cat))
+                        } catch {}
+                      }}>
+                        <Download className="w-3 h-3 mr-1" /> Save
+                      </Button>
+                    </div>
+                  )
+                })}
+              </div>
+              <Button
+                variant="outline"
+                className="w-full mt-5 rounded-xl h-11"
+                onClick={() => setShowOfflineSheet(false)}
               >
                 {_t('about.close')}
               </Button>
@@ -2329,8 +2450,8 @@ export default function ExamPrepApp() {
                 {[
                   { icon: BookOpen, id: 'language', label: _t('profile.language'), sub: lng === 'en' ? _t('lang.english') : lng === 'hi' ? _t('lang.hindi') : _t('lang.bangla'), action: () => setShowLanguageSheet(true) },
                   { icon: Bell, id: 'notifications', label: _t('menu.notifications'), sub: unreadCount > 0 ? `${unreadCount} ${_t('menu.unread')}` : _t('menu.manageAlerts'), action: () => { setShowSideMenu(false); setCurrentPage('home'); setTimeout(() => setShowNotificationPanel(true), 300) } },
-                  { icon: Wifi, id: 'offline', label: _t('menu.offlineMode'), sub: _t('menu.downloadTests'), action: () => { alert(_t('menu.offlineMode') + ' - Coming soon!') } },
-                  { icon: HelpCircle, id: 'help', label: _t('menu.helpFaq'), sub: _t('menu.getSupport'), action: () => setShowAboutSheet(true) },
+                  { icon: Wifi, id: 'offline', label: _t('menu.offlineMode'), sub: _t('menu.downloadTests'), action: () => { setShowSideMenu(false); setShowOfflineSheet(true) } },
+                  { icon: HelpCircle, id: 'help', label: _t('menu.helpFaq'), sub: _t('menu.getSupport'), action: () => { setShowSideMenu(false); setShowHelpSheet(true) } },
                   { icon: Share2, id: 'share', label: _t('menu.shareApp'), sub: _t('menu.tellFriends'), action: () => {
                     if (navigator.share) {
                       navigator.share({ title: _t('app.name'), text: _t('share.text'), url: window.location.href })

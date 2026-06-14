@@ -1,12 +1,12 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useRef } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import {
   BookOpen, Trophy, Flame, Zap, Building, Plus,
-  Trash2, RefreshCw
+  Trash2, RefreshCw, ImagePlus, X
 } from 'lucide-react'
 import {
   type Announcement,
@@ -23,6 +23,9 @@ export default function AnnouncementsTab({ announcements, onUpdate }: Announceme
   const [newAnnSubtitle, setNewAnnSubtitle] = useState('')
   const [newAnnGradient, setNewAnnGradient] = useState('from-orange-500 to-red-500')
   const [newAnnImage, setNewAnnImage] = useState('ssc')
+  const [newAnnImageUrl, setNewAnnImageUrl] = useState('')
+  const [newAnnAction, setNewAnnAction] = useState('exams')
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   const gradients = [
     { label: 'Orange', value: 'from-orange-500 to-red-500' },
@@ -40,18 +43,48 @@ export default function AnnouncementsTab({ announcements, onUpdate }: Announceme
     { label: 'Zap', value: 'practice', icon: <Zap className="w-4 h-4" /> },
   ]
 
+  const actions = [
+    { label: 'Exams', value: 'exams' },
+    { label: 'Practice', value: 'practice' },
+    { label: 'Leaderboard', value: 'leaderboard' },
+    { label: 'Home', value: 'home' },
+    { label: 'Profile', value: 'profile' },
+    { label: 'Tests', value: 'tests' },
+  ]
+
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    // Validate file size (max 2MB)
+    if (file.size > 2 * 1024 * 1024) {
+      alert('Image size must be less than 2MB')
+      return
+    }
+
+    // Convert to base64 data URL
+    const reader = new FileReader()
+    reader.onloadend = () => {
+      setNewAnnImageUrl(reader.result as string)
+    }
+    reader.readAsDataURL(file)
+  }
+
   const handleAdd = () => {
     const newAnn: Announcement = {
       id: Date.now().toString(),
       image: newAnnImage,
+      imageUrl: newAnnImageUrl || undefined,
       title: newAnnTitle,
       subtitle: newAnnSubtitle,
-      action: 'exams',
+      action: newAnnAction,
       gradient: newAnnGradient,
     }
     onUpdate([...announcements, newAnn])
     setNewAnnTitle('')
     setNewAnnSubtitle('')
+    setNewAnnImageUrl('')
+    setNewAnnAction('exams')
   }
 
   const handleDelete = (index: number) => {
@@ -81,6 +114,89 @@ export default function AnnouncementsTab({ announcements, onUpdate }: Announceme
               placeholder="Subtitle (e.g. New Mock Tests Added!)"
               className="w-full px-3 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-orange-300"
             />
+
+            {/* Image Upload Section */}
+            <div>
+              <p className="text-xs text-gray-500 mb-1.5">Image</p>
+              {newAnnImageUrl ? (
+                <div className="relative rounded-xl overflow-hidden mb-2">
+                  <img src={newAnnImageUrl} alt="Preview" className="w-full h-32 object-cover rounded-xl" />
+                  <button
+                    onClick={() => setNewAnnImageUrl('')}
+                    className="absolute top-2 right-2 w-6 h-6 rounded-full bg-black/50 flex items-center justify-center"
+                  >
+                    <X className="w-3 h-3 text-white" />
+                  </button>
+                </div>
+              ) : (
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => fileInputRef.current?.click()}
+                    className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl border-2 border-dashed border-gray-200 hover:border-orange-300 hover:bg-orange-50/50 transition-colors text-sm text-gray-500"
+                  >
+                    <ImagePlus className="w-4 h-4" /> Upload Image
+                  </button>
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={handleImageUpload}
+                  />
+                  <input
+                    type="text"
+                    placeholder="Or paste URL..."
+                    value={newAnnImageUrl}
+                    onChange={e => setNewAnnImageUrl(e.target.value)}
+                    className="flex-1 px-3 py-2.5 rounded-xl border border-gray-200 text-xs focus:outline-none focus:ring-2 focus:ring-orange-300"
+                  />
+                </div>
+              )}
+            </div>
+
+            {/* Icon selector (fallback when no image) */}
+            {!newAnnImageUrl && (
+              <div>
+                <p className="text-xs text-gray-500 mb-1.5">Icon (if no image)</p>
+                <div className="flex gap-2">
+                  {icons.map(ic => (
+                    <button
+                      key={ic.value}
+                      onClick={() => setNewAnnImage(ic.value)}
+                      className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all ${
+                        newAnnImage === ic.value
+                          ? 'bg-orange-100 text-orange-600 ring-2 ring-orange-300'
+                          : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
+                      }`}
+                    >
+                      {ic.icon}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Action page */}
+            <div>
+              <p className="text-xs text-gray-500 mb-1.5">Action (tap goes to)</p>
+              <div className="flex gap-1.5 flex-wrap">
+                {actions.map(a => (
+                  <button
+                    key={a.value}
+                    onClick={() => setNewAnnAction(a.value)}
+                    className={`px-3 py-1.5 rounded-lg text-[11px] font-medium transition-all ${
+                      newAnnAction === a.value
+                        ? 'bg-orange-100 text-orange-700 ring-1 ring-orange-300'
+                        : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                    }`}
+                  >
+                    {a.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Gradient Color */}
             <div>
               <p className="text-xs text-gray-500 mb-1.5">Gradient Color</p>
               <div className="flex gap-2 flex-wrap">
@@ -99,24 +215,7 @@ export default function AnnouncementsTab({ announcements, onUpdate }: Announceme
                 ))}
               </div>
             </div>
-            <div>
-              <p className="text-xs text-gray-500 mb-1.5">Icon</p>
-              <div className="flex gap-2">
-                {icons.map(ic => (
-                  <button
-                    key={ic.value}
-                    onClick={() => setNewAnnImage(ic.value)}
-                    className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all ${
-                      newAnnImage === ic.value
-                        ? 'bg-orange-100 text-orange-600 ring-2 ring-orange-300'
-                        : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
-                    }`}
-                  >
-                    {ic.icon}
-                  </button>
-                ))}
-              </div>
-            </div>
+
             <Button
               className="w-full bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white rounded-xl h-11 font-semibold"
               disabled={!newAnnTitle || !newAnnSubtitle}
@@ -156,24 +255,40 @@ export default function AnnouncementsTab({ announcements, onUpdate }: Announceme
             </Card>
           ) : (
             announcements.map((a, i) => (
-              <Card key={a.id} className="border-0 shadow-sm hover:shadow-md transition-shadow">
-                <CardContent className="p-3 flex items-center gap-3">
-                  <div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${a.gradient} flex items-center justify-center flex-shrink-0`}>
-                    {a.image === 'ssc' && <BookOpen className="w-5 h-5 text-white" />}
-                    {a.image === 'banking' && <Building className="w-5 h-5 text-white" />}
-                    {a.image === 'leaderboard' && <Trophy className="w-5 h-5 text-white" />}
-                    {a.image === 'practice' && <Zap className="w-5 h-5 text-white" />}
+              <Card key={a.id} className="border-0 shadow-sm hover:shadow-md transition-shadow overflow-hidden">
+                <CardContent className="p-0">
+                  <div className="flex items-stretch">
+                    {/* Image or Icon */}
+                    <div className={`w-16 flex-shrink-0 ${a.imageUrl ? '' : `bg-gradient-to-br ${a.gradient} flex items-center justify-center`}`}>
+                      {a.imageUrl ? (
+                        <img src={a.imageUrl} alt={a.title} className="w-full h-full object-cover" />
+                      ) : (
+                        <>
+                          {a.image === 'ssc' && <BookOpen className="w-5 h-5 text-white" />}
+                          {a.image === 'banking' && <Building className="w-5 h-5 text-white" />}
+                          {a.image === 'leaderboard' && <Trophy className="w-5 h-5 text-white" />}
+                          {a.image === 'practice' && <Zap className="w-5 h-5 text-white" />}
+                        </>
+                      )}
+                    </div>
+                    {/* Content */}
+                    <div className="flex-1 min-w-0 p-3 flex items-center gap-3">
+                      <div className="flex-1 min-w-0">
+                        <p className="font-semibold text-sm truncate">{a.title}</p>
+                        <p className="text-gray-400 text-xs truncate">{a.subtitle}</p>
+                        <div className="flex items-center gap-1 mt-0.5">
+                          <Badge variant="secondary" className="text-[9px]">{a.action}</Badge>
+                          {a.imageUrl && <Badge className="text-[9px] bg-blue-100 text-blue-700">Image</Badge>}
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => handleDelete(i)}
+                        className="w-8 h-8 rounded-lg bg-red-50 hover:bg-red-100 flex items-center justify-center flex-shrink-0 transition-colors"
+                      >
+                        <Trash2 className="w-4 h-4 text-red-400" />
+                      </button>
+                    </div>
                   </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="font-semibold text-sm truncate">{a.title}</p>
-                    <p className="text-gray-400 text-xs truncate">{a.subtitle}</p>
-                  </div>
-                  <button
-                    onClick={() => handleDelete(i)}
-                    className="w-8 h-8 rounded-lg bg-red-50 hover:bg-red-100 flex items-center justify-center flex-shrink-0 transition-colors"
-                  >
-                    <Trash2 className="w-4 h-4 text-red-400" />
-                  </button>
                 </CardContent>
               </Card>
             ))

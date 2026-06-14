@@ -4,6 +4,7 @@
 export interface Announcement {
   id: string
   image: string
+  imageUrl?: string // Optional custom image URL (base64 data URL or external URL)
   title: string
   subtitle: string
   action: string
