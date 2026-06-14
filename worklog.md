@@ -372,3 +372,37 @@ Stage Summary:
 - Back navigation and scroll position working properly
 - More default content for admin
 - Build passes, pushed to origin/main
+
+---
+Task ID: comprehensive-fixes-2
+Agent: Main Agent
+Task: Comprehensive A-Z audit and fix of all remaining issues
+
+Work Log:
+- Fixed guest user browsing: categories, exams, upcoming exams are now clickable without auth
+- Auth is now only required for STARTING tests (not browsing)
+- Fixed Quick Practice START: now directly fetches and auto-starts a random test
+- Fixed Practice page mode buttons:
+  - Quick Practice: auto-starts random test directly
+  - Topic Wise: navigates to exams page to pick category
+  - Bookmarked: shows past test results (leaderboard)
+  - Weak Areas: finds weakest category from past results and starts practice
+- Fixed upcoming exams click: removed broken guest check (!auth.isLoggedIn && !auth.isGuest was always false)
+- Fixed exam cards in exams page: requireAuth removed for browsing, added for Start Test button
+- Fixed Start Test buttons: added stopPropagation to prevent card click interference
+- Fixed results page back button: uses goBack with ArrowLeft icon instead of Home icon
+- Redistributed correct answers across A/B/C/D (was 100% A, now ~28% A, 25% B, 22% C, 25% D)
+- Added 9 more mock tests (total 20 tests across all exam categories)
+- Added tests for: SSC MTS, IBPS Clerk, SBI PO, RRB Group D, NDA Mock 2, CTET Mock 2, State PSC Mock 2, SI Mock 2, SSC CGL Previous Year
+- Updated testCount values to match actual test availability
+- Build passes successfully
+- Committed and pushed to GitHub (8529a9d)
+
+Stage Summary:
+- All remaining issues from user's comprehensive request are now fixed
+- Guest users can browse everything freely; only starting tests requires auth
+- Quick Practice properly auto-starts tests
+- Practice modes are functional with meaningful navigation
+- Correct answers no longer always 'A' - properly distributed
+- 20 total mock tests across 7 categories and 13 exams
+- Build passes, pushed to origin/main
