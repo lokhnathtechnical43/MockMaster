@@ -146,6 +146,24 @@ export default function ExamPrepApp() {
   const [leaderboardData, setLeaderboardData] = useState<TestResult[]>([])
   const [leaderboardTestId, setLeaderboardTestId] = useState<string>('')
 
+  // --- Bookmarks ---
+  const [bookmarkedQuestions, setBookmarkedQuestions] = useState<Set<string>>(new Set())
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem('examprep_bookmarks')
+      if (stored) setBookmarkedQuestions(new Set(JSON.parse(stored)))
+    } catch {}
+  }, [])
+  function toggleBookmark(questionId: string) {
+    setBookmarkedQuestions(prev => {
+      const next = new Set(prev)
+      if (next.has(questionId)) next.delete(questionId)
+      else next.add(questionId)
+      try { localStorage.setItem('examprep_bookmarks', JSON.stringify([...next])) } catch {}
+      return next
+    })
+  }
+
   // --- UI State ---
   const [showLoginModal, setShowLoginModal] = useState(false)
   const [showBackConfirm, setShowBackConfirm] = useState(false)
@@ -491,7 +509,6 @@ export default function ExamPrepApp() {
             // Use refs to get latest values instead of stale closure
             const currentAnswers = answersRef.current
             const currentTest = selectedTestRef.current
-            const currentTimeLeft = prev
             if (currentTest) {
               const totalQuestions = currentTest.questions.length
               let correctCount = 0
@@ -505,7 +522,7 @@ export default function ExamPrepApp() {
               })
               const score = correctCount * currentTest.markingCorrect - wrongCount * Math.abs(currentTest.markingWrong)
               const maxScore = totalQuestions * currentTest.markingCorrect
-              const timeTaken = currentTest.duration * 60 - currentTimeLeft
+              const timeTaken = currentTest.duration * 60 - prev
               storeResult({
                 testId: currentTest.id,
                 testName: currentTest.title,
@@ -1279,6 +1296,16 @@ export default function ExamPrepApp() {
   // ===== RENDER: Exams Page =====
   function renderExams() {
     const displayCategories = selectedCategory ? [selectedCategory] : categories
+    if (categories.length === 0) {
+      return (
+        <div className="pb-20 flex items-center justify-center min-h-[60vh]">
+          <div className="text-center">
+            <Loader2 className="w-8 h-8 text-orange-500 animate-spin mx-auto mb-3" />
+            <p className="text-gray-400 text-sm">{_t('exams.loading')}</p>
+          </div>
+        </div>
+      )
+    }
     return (
       <div className="pb-20">
         <div className="bg-gradient-to-r from-orange-500 to-red-500 px-4 pt-[calc(env(safe-area-inset-top,0px)+3rem)] pb-6 rounded-b-3xl relative overflow-hidden">
@@ -1633,6 +1660,15 @@ export default function ExamPrepApp() {
             >
               <BookMarked className="w-4 h-4 mr-1" />
               {markedForReview.has(question.id) ? _t('testTaking.unmark') : _t('testTaking.mark')}
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              className={`rounded-xl flex-1 ${bookmarkedQuestions.has(question.id) ? 'bg-amber-50 border-amber-300 text-amber-700' : ''}`}
+              onClick={() => toggleBookmark(question.id)}
+            >
+              <BookmarkPlus className="w-4 h-4 mr-1" />
+              {bookmarkedQuestions.has(question.id) ? _t('testTaking.unbookmark') : _t('testTaking.bookmark')}
             </Button>
             <Button
               variant="outline"
@@ -2050,12 +2086,12 @@ export default function ExamPrepApp() {
               </Card>
               <Card className="border-0 shadow-sm cursor-pointer hover:shadow-md transition-shadow" onClick={() => {
                 if (!requireAuth()) return
-                // Bookmarked - show past test results
-                const results = getUserStats()
-                if (results.testsTaken > 0) {
-                  openLeaderboard('all')
+                // Bookmarked - show bookmarked questions or redirect to practice
+                if (bookmarkedQuestions.size > 0) {
+                  // Start a quick practice session with bookmarked questions
+                  navigateTo('practice')
                 } else {
-                  // No past tests, redirect to exams
+                  // No bookmarks yet, go to exams to start practicing
                   setSelectedCategory(null)
                   navigateTo('exams')
                 }

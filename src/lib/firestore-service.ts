@@ -1158,14 +1158,14 @@ export async function getDailyStats(days: number = 7): Promise<DailyStats[]> {
     // Group by date
     const dailyMap: Record<
       string,
-      { results: number; totalScore: number; users: Set<string> }
+      { results: number; totalScorePercent: number; users: Set<string> }
     > = {}
 
     // Initialize all days with zero
     for (let i = 0; i < days; i++) {
       const d = new Date(now.getTime() - i * 24 * 60 * 60 * 1000)
       const key = d.toISOString().split('T')[0]
-      dailyMap[key] = { results: 0, totalScore: 0, users: new Set() }
+      dailyMap[key] = { results: 0, totalScorePercent: 0, users: new Set() }
     }
 
     resultsSnap.docs.forEach((d) => {
@@ -1177,7 +1177,9 @@ export async function getDailyStats(days: number = 7): Promise<DailyStats[]> {
 
       if (dailyMap[dateStr]) {
         dailyMap[dateStr].results++
-        dailyMap[dateStr].totalScore += r.score
+        if (r.maxScore > 0) {
+          dailyMap[dateStr].totalScorePercent += (r.score / r.maxScore) * 100
+        }
         dailyMap[dateStr].users.add(r.userId)
       }
     })
@@ -1187,7 +1189,7 @@ export async function getDailyStats(days: number = 7): Promise<DailyStats[]> {
       .map(([date, stats]) => ({
         date,
         results: stats.results,
-        avgScore: stats.results > 0 ? Math.round(stats.totalScore / stats.results) : 0,
+        avgScore: stats.results > 0 ? Math.round(stats.totalScorePercent / stats.results) : 0,
         uniqueUsers: stats.users.size,
       }))
   } catch (error) {

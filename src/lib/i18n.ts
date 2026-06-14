@@ -39,6 +39,7 @@ const translations: Record<Lang, Record<string, string>> = {
 
     // === Exams Page ===
     'exams.allExams': 'All Exams',
+    'exams.loading': 'Loading exams...',
     'exams.tests': 'Tests',
 
     // === Tests Page ===
@@ -70,6 +71,8 @@ const translations: Record<Lang, Record<string, string>> = {
     'testTaking.unmark': 'Unmark',
     'testTaking.mark': 'Mark',
     'testTaking.clear': 'Clear',
+    'testTaking.bookmark': 'Save',
+    'testTaking.unbookmark': 'Saved',
     'testTaking.skip': 'Skip',
     'testTaking.submit': 'Submit Test',
     'testTaking.questionNav': 'Question Navigator',
@@ -245,6 +248,7 @@ const translations: Record<Lang, Record<string, string>> = {
 
     // === Exams Page ===
     'exams.allExams': 'सभी परीक्षाएं',
+    'exams.loading': 'परीक्षाएं लोड हो रही हैं...',
     'exams.tests': 'टेस्ट',
 
     // === Tests Page ===
@@ -276,6 +280,8 @@ const translations: Record<Lang, Record<string, string>> = {
     'testTaking.unmark': 'चिन्ह हटाएं',
     'testTaking.mark': 'चिन्हित करें',
     'testTaking.clear': 'हटाएं',
+    'testTaking.bookmark': 'सेव',
+    'testTaking.unbookmark': 'सेव्ड',
     'testTaking.skip': 'छोड़ें',
     'testTaking.submit': 'टेस्ट जमा करें',
     'testTaking.questionNav': 'प्रश्न नेविगेटर',
@@ -451,6 +457,7 @@ const translations: Record<Lang, Record<string, string>> = {
 
     // === Exams Page ===
     'exams.allExams': 'সব পরীক্ষা',
+    'exams.loading': 'পরীক্ষা লোড হচ্ছে...',
     'exams.tests': 'টেস্ট',
 
     // === Tests Page ===
@@ -482,6 +489,8 @@ const translations: Record<Lang, Record<string, string>> = {
     'testTaking.unmark': 'চিহ্ন সরান',
     'testTaking.mark': 'চিহ্নিত করুন',
     'testTaking.clear': 'মুছুন',
+    'testTaking.bookmark': 'সেভ',
+    'testTaking.unbookmark': 'সেভড',
     'testTaking.skip': 'বাদ দিন',
     'testTaking.submit': 'টেস্ট জমা দিন',
     'testTaking.questionNav': 'প্রশ্ন ন্যাভিগেটর',

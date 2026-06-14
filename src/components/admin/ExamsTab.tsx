@@ -288,6 +288,10 @@ export default function ExamsTab() {
     if (!batchText.trim() || !selectedTestId) return
     try {
       const lines = batchText.trim().split('\n').filter(l => l.trim())
+      if (lines.length > 500) {
+        alert('Maximum 500 questions per batch. Please split into smaller batches.')
+        return
+      }
       const qs = lines.map((line, i) => {
         const parts = line.split('|')
         return {
