@@ -14,6 +14,7 @@ export interface LocalExamCategory {
   description: string
   order: number
   exams: LocalExam[]
+  imageUrl?: string
 }
 
 export interface LocalExam {
@@ -27,6 +28,7 @@ export interface LocalExam {
   order: number
   testCount: number
   tests?: LocalTest[]
+  imageUrl?: string
 }
 
 export interface LocalTest {
@@ -47,6 +49,7 @@ export interface LocalTest {
   examId?: string
   examName?: string
   examSlug?: string
+  imageUrl?: string
 }
 
 export interface LocalQuestion {

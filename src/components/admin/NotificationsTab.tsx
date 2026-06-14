@@ -6,7 +6,7 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import {
   Bell, Zap, AlertTriangle, Gift, Plus,
-  Trash2, RefreshCw, ExternalLink, ImagePlus, X
+  Trash2, RefreshCw, ExternalLink, ImagePlus, X, Edit3, Check
 } from 'lucide-react'
 import {
   type Notification,
@@ -26,6 +26,15 @@ export default function NotificationsTab({ notifications, onUpdate }: Notificati
   const [newNotifImageUrl, setNewNotifImageUrl] = useState('')
   const fileInputRef = useRef<HTMLInputElement>(null)
 
+  // Edit state
+  const [editingIndex, setEditingIndex] = useState<number | null>(null)
+  const [editTitle, setEditTitle] = useState('')
+  const [editMessage, setEditMessage] = useState('')
+  const [editType, setEditType] = useState<'update' | 'alert' | 'info'>('info')
+  const [editLink, setEditLink] = useState('')
+  const [editImageUrl, setEditImageUrl] = useState('')
+  const editFileInputRef = useRef<HTMLInputElement>(null)
+
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
@@ -36,6 +45,20 @@ export default function NotificationsTab({ notifications, onUpdate }: Notificati
     const reader = new FileReader()
     reader.onloadend = () => {
       setNewNotifImageUrl(reader.result as string)
+    }
+    reader.readAsDataURL(file)
+  }
+
+  const handleEditImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    if (file.size > 2 * 1024 * 1024) {
+      alert('Image size must be less than 2MB')
+      return
+    }
+    const reader = new FileReader()
+    reader.onloadend = () => {
+      setEditImageUrl(reader.result as string)
     }
     reader.readAsDataURL(file)
   }
@@ -60,6 +83,35 @@ export default function NotificationsTab({ notifications, onUpdate }: Notificati
 
   const handleDelete = (index: number) => {
     onUpdate(notifications.filter((_, i) => i !== index))
+    if (editingIndex === index) setEditingIndex(null)
+  }
+
+  const startEdit = (index: number) => {
+    const n = notifications[index]
+    setEditingIndex(index)
+    setEditTitle(n.title)
+    setEditMessage(n.message)
+    setEditType(n.type)
+    setEditLink(n.link || '')
+    setEditImageUrl(n.imageUrl || '')
+  }
+
+  const cancelEdit = () => {
+    setEditingIndex(null)
+  }
+
+  const saveEdit = (index: number) => {
+    const updated = [...notifications]
+    updated[index] = {
+      ...updated[index],
+      title: editTitle,
+      message: editMessage,
+      type: editType,
+      link: editLink || undefined,
+      imageUrl: editImageUrl || undefined,
+    }
+    onUpdate(updated)
+    setEditingIndex(null)
   }
 
   const typeButtons = [
@@ -195,44 +247,159 @@ export default function NotificationsTab({ notifications, onUpdate }: Notificati
             </Card>
           ) : (
             notifications.map((n, i) => (
-              <Card key={n.id} className={`border-0 shadow-sm hover:shadow-md transition-shadow ${!n.read ? 'border-l-4 border-l-orange-400' : ''}`}>
-                <CardContent className="p-3 flex items-start gap-3">
-                  {n.imageUrl ? (
-                    <div className="w-10 h-10 rounded-xl overflow-hidden flex-shrink-0">
-                      <img src={n.imageUrl} alt={n.title} className="w-full h-full object-cover" />
+              <Card key={n.id} className={`border-0 shadow-sm hover:shadow-md transition-shadow ${!n.read ? 'border-l-4 border-l-orange-400' : ''} ${editingIndex === i ? 'ring-2 ring-orange-300' : ''}`}>
+                {editingIndex === i ? (
+                  /* Edit Mode */
+                  <CardContent className="p-4 space-y-3">
+                    <h4 className="font-bold text-xs text-orange-600 flex items-center gap-1">
+                      <Edit3 className="w-3 h-3" /> Editing Notification
+                    </h4>
+                    <input
+                      type="text"
+                      value={editTitle}
+                      onChange={e => setEditTitle(e.target.value)}
+                      placeholder="Title"
+                      className="w-full px-3 py-2 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-orange-300"
+                    />
+                    <textarea
+                      value={editMessage}
+                      onChange={e => setEditMessage(e.target.value)}
+                      placeholder="Message"
+                      rows={2}
+                      className="w-full px-3 py-2 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-orange-300 resize-none"
+                    />
+                    <input
+                      type="text"
+                      value={editLink}
+                      onChange={e => setEditLink(e.target.value)}
+                      placeholder="Link (optional)"
+                      className="w-full px-3 py-2 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-orange-300"
+                    />
+
+                    {/* Edit Image */}
+                    <div>
+                      <p className="text-xs text-gray-500 mb-1.5">Image</p>
+                      {editImageUrl ? (
+                        <div className="relative rounded-xl overflow-hidden mb-2">
+                          <img src={editImageUrl} alt="Preview" className="w-full h-24 object-cover rounded-xl" />
+                          <button
+                            type="button"
+                            onClick={() => setEditImageUrl('')}
+                            className="absolute top-2 right-2 w-6 h-6 rounded-full bg-black/50 flex items-center justify-center"
+                          >
+                            <X className="w-3 h-3 text-white" />
+                          </button>
+                        </div>
+                      ) : (
+                        <div className="flex gap-2">
+                          <button
+                            type="button"
+                            onClick={() => editFileInputRef.current?.click()}
+                            className="flex-1 flex items-center justify-center gap-2 py-2 rounded-xl border-2 border-dashed border-gray-200 hover:border-orange-300 text-xs text-gray-500"
+                          >
+                            <ImagePlus className="w-4 h-4" /> Upload
+                          </button>
+                          <input
+                            ref={editFileInputRef}
+                            type="file"
+                            accept="image/*"
+                            className="hidden"
+                            onChange={handleEditImageUpload}
+                          />
+                          <input
+                            type="text"
+                            placeholder="Or paste URL..."
+                            value={editImageUrl}
+                            onChange={e => setEditImageUrl(e.target.value)}
+                            className="flex-1 px-3 py-2 rounded-xl border border-gray-200 text-xs focus:outline-none focus:ring-2 focus:ring-orange-300"
+                          />
+                        </div>
+                      )}
                     </div>
-                  ) : (
-                    <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 ${
-                      n.type === 'update' ? 'bg-blue-100' :
-                      n.type === 'alert' ? 'bg-amber-100' :
-                      'bg-green-100'
-                    }`}>
-                      {n.type === 'update' ? <Zap className="w-4 h-4 text-blue-500" /> :
-                       n.type === 'alert' ? <AlertTriangle className="w-4 h-4 text-amber-500" /> :
-                       <Gift className="w-4 h-4 text-green-500" />}
+
+                    {/* Edit Type */}
+                    <div>
+                      <p className="text-xs text-gray-500 mb-1.5">Type</p>
+                      <div className="flex gap-2">
+                        {typeButtons.map(t => (
+                          <button
+                            key={t.value}
+                            onClick={() => setEditType(t.value)}
+                            className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                              editType === t.value ? t.color : 'bg-gray-100 text-gray-500'
+                            }`}
+                          >
+                            {t.label}
+                          </button>
+                        ))}
+                      </div>
                     </div>
-                  )}
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
-                      <p className="font-semibold text-sm truncate">{n.title}</p>
-                      {!n.read && <div className="w-2 h-2 rounded-full bg-orange-500 flex-shrink-0" />}
-                      {n.imageUrl && <Badge className="text-[8px] bg-blue-100 text-blue-700">Image</Badge>}
+
+                    <div className="flex gap-2">
+                      <Button
+                        size="sm"
+                        className="flex-1 bg-gradient-to-r from-orange-500 to-red-500 text-white rounded-xl"
+                        onClick={() => saveEdit(i)}
+                      >
+                        <Check className="w-4 h-4 mr-1" /> Save
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="flex-1 rounded-xl"
+                        onClick={cancelEdit}
+                      >
+                        Cancel
+                      </Button>
                     </div>
-                    <p className="text-gray-400 text-xs truncate">{n.message}</p>
-                    {n.link && (
-                      <p className="text-blue-500 text-[10px] mt-0.5 flex items-center gap-1 truncate">
-                        <ExternalLink className="w-3 h-3" /> {n.link}
-                      </p>
+                  </CardContent>
+                ) : (
+                  /* View Mode */
+                  <CardContent className="p-3 flex items-start gap-3">
+                    {n.imageUrl ? (
+                      <div className="w-10 h-10 rounded-xl overflow-hidden flex-shrink-0">
+                        <img src={n.imageUrl} alt={n.title} className="w-full h-full object-cover" />
+                      </div>
+                    ) : (
+                      <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 ${
+                        n.type === 'update' ? 'bg-blue-100' :
+                        n.type === 'alert' ? 'bg-amber-100' :
+                        'bg-green-100'
+                      }`}>
+                        {n.type === 'update' ? <Zap className="w-4 h-4 text-blue-500" /> :
+                         n.type === 'alert' ? <AlertTriangle className="w-4 h-4 text-amber-500" /> :
+                         <Gift className="w-4 h-4 text-green-500" />}
+                      </div>
                     )}
-                    <p className="text-gray-300 text-[10px] mt-0.5">{n.time}</p>
-                  </div>
-                  <button
-                    onClick={() => handleDelete(i)}
-                    className="w-7 h-7 rounded-lg bg-red-50 hover:bg-red-100 flex items-center justify-center flex-shrink-0 transition-colors"
-                  >
-                    <Trash2 className="w-3.5 h-3.5 text-red-400" />
-                  </button>
-                </CardContent>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <p className="font-semibold text-sm truncate">{n.title}</p>
+                        {!n.read && <div className="w-2 h-2 rounded-full bg-orange-500 flex-shrink-0" />}
+                        {n.imageUrl && <Badge className="text-[8px] bg-blue-100 text-blue-700">Image</Badge>}
+                      </div>
+                      <p className="text-gray-400 text-xs truncate">{n.message}</p>
+                      {n.link && (
+                        <p className="text-blue-500 text-[10px] mt-0.5 flex items-center gap-1 truncate">
+                          <ExternalLink className="w-3 h-3" /> {n.link}
+                        </p>
+                      )}
+                      <p className="text-gray-300 text-[10px] mt-0.5">{n.time}</p>
+                    </div>
+                    <button
+                      onClick={() => startEdit(i)}
+                      className="w-7 h-7 rounded-lg bg-blue-50 hover:bg-blue-100 flex items-center justify-center flex-shrink-0 transition-colors"
+                      title="Edit"
+                    >
+                      <Edit3 className="w-3.5 h-3.5 text-blue-500" />
+                    </button>
+                    <button
+                      onClick={() => handleDelete(i)}
+                      className="w-7 h-7 rounded-lg bg-red-50 hover:bg-red-100 flex items-center justify-center flex-shrink-0 transition-colors"
+                    >
+                      <Trash2 className="w-3.5 h-3.5 text-red-400" />
+                    </button>
+                  </CardContent>
+                )}
               </Card>
             ))
           )}

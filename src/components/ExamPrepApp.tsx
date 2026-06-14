@@ -36,7 +36,7 @@ import {
 import { useFirebaseAuth } from '@/lib/use-firebase-auth'
 import LoginModal from '@/components/LoginModal'
 import { App } from '@capacitor/app'
-import { getAnnouncements as getLocalAnnouncements, getNotifications as getLocalNotifications, getDailyTips as getLocalDailyTips, type DailyTip } from '@/lib/admin-data'
+import { getAnnouncements as getLocalAnnouncements, getNotifications as getLocalNotifications, getDailyTips as getLocalDailyTips, type DailyTip, getPageImage } from '@/lib/admin-data'
 import { t, type Lang } from '@/lib/i18n'
 
 // ===== Types =====
@@ -159,26 +159,46 @@ export default function ExamPrepApp() {
 
   // --- Notifications (loaded from shared admin storage) ---
   const [notifications, setNotifications] = useState<
-    { id: string; title: string; message: string; time: string; read: boolean; type: 'update' | 'alert' | 'info'; link?: string }[]
+    { id: string; title: string; message: string; time: string; read: boolean; type: 'update' | 'alert' | 'info'; link?: string; imageUrl?: string }[]
   >([])
   const unreadCount = notifications.filter(n => !n.read).length
   const [selectedNotification, setSelectedNotification] = useState<{
-    id: string; title: string; message: string; time: string; type: 'update' | 'alert' | 'info'; link?: string
+    id: string; title: string; message: string; time: string; type: 'update' | 'alert' | 'info'; link?: string; imageUrl?: string
   } | null>(null)
 
   // --- Daily Tips (loaded from shared admin storage) ---
   const [dailyTips, setDailyTips] = useState<DailyTip[]>([])
   const [selectedTip, setSelectedTip] = useState<DailyTip | null>(null)
 
+  // --- Page Images (loaded from admin storage) ---
+  const [pageImages, setPageImages] = useState<Record<string, string>>({})
+
+  // Helper to get page image by section ID
+  const getPageImg = (sectionId: string): string | undefined => pageImages[sectionId]
+
   // --- Announcements (loaded from shared admin storage) ---
   const [announcements, setAnnouncements] = useState<
-    { id: string; image: string; title: string; subtitle: string; action: Page; gradient: string }[]
+    { id: string; image: string; imageUrl?: string; title: string; subtitle: string; action: Page; gradient: string }[]
   >([])
   const [activeAnnouncement, setActiveAnnouncement] = useState(0)
 
   // (Admin state removed - admin panel is now at /admin route)
 
   // --- Load categories + admin data on mount ---
+
+  // Helper to load page images into a lookup map
+  function loadPageImages() {
+    try {
+      const { getPageImages } = require('@/lib/admin-data')
+      const images = getPageImages()
+      const map: Record<string, string> = {}
+      images.forEach((img: { id: string; imageUrl: string }) => {
+        map[img.id] = img.imageUrl
+      })
+      setPageImages(map)
+    } catch {}
+  }
+
   useEffect(() => {
     const loadData = async () => {
       try {
@@ -196,12 +216,15 @@ export default function ExamPrepApp() {
           setNotifications(getLocalNotifications())
           setDailyTips(getLocalDailyTips())
         }
+        // Load page images
+        loadPageImages()
       } catch (e) {
         console.error('Data load failed, using local fallback:', e)
         setCategories(getLocalCategories())
         setAnnouncements(getLocalAnnouncements().map(a => ({ ...a, action: a.action as Page })))
         setNotifications(getLocalNotifications())
         setDailyTips(getLocalDailyTips())
+        loadPageImages()
       }
     }
     loadData()
@@ -229,6 +252,7 @@ export default function ExamPrepApp() {
       if (!isFirestore()) {
         setAnnouncements(getLocalAnnouncements().map(a => ({ ...a, action: a.action as Page })))
         setNotifications(getLocalNotifications())
+        loadPageImages()
       }
     }
     window.addEventListener('storage', handleStorageChange)
@@ -540,7 +564,11 @@ export default function ExamPrepApp() {
     return (
       <div className="pb-20">
         {/* Compact Header */}
-        <div className="bg-gradient-to-r from-orange-500 to-red-500 px-4 pt-[calc(env(safe-area-inset-top,0px)+0.75rem)] pb-3 rounded-b-2xl">
+        <div className="bg-gradient-to-r from-orange-500 to-red-500 px-4 pt-[calc(env(safe-area-inset-top,0px)+0.75rem)] pb-3 rounded-b-2xl relative overflow-hidden">
+          {/* Page Image - Hero Banner Background */}
+          {getPageImg('home_hero') && (
+            <img src={getPageImg('home_hero')} alt="" className="absolute inset-0 w-full h-full object-cover opacity-30" />
+          )}
           <div className="flex items-center justify-between">
             {/* Left: Menu + App Name */}
             <div className="flex items-center gap-2.5">
@@ -658,9 +686,9 @@ export default function ExamPrepApp() {
                       }`}
                     >
                       <div className="flex items-start gap-3">
-                        {(notification as any).imageUrl ? (
+                        {notification.imageUrl ? (
                           <div className="w-8 h-8 rounded-xl overflow-hidden flex-shrink-0 mt-0.5">
-                            <img src={(notification as any).imageUrl} alt={notification.title} className="w-full h-full object-cover" />
+                            <img src={notification.imageUrl} alt={notification.title} className="w-full h-full object-cover" />
                           </div>
                         ) : (
                           <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 ${
@@ -735,9 +763,9 @@ export default function ExamPrepApp() {
                     {/* Image Area */}
                     <div className="h-32 relative flex items-center justify-center overflow-hidden">
                       {/* Custom Image or Background Pattern */}
-                      {(a as any).imageUrl ? (
+                      {a.imageUrl ? (
                         <>
-                          <img src={(a as any).imageUrl} alt={a.title} className="absolute inset-0 w-full h-full object-cover" />
+                          <img src={a.imageUrl} alt={a.title} className="absolute inset-0 w-full h-full object-cover" />
                           <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent" />
                           <div className="relative z-10 flex items-center gap-4 px-4 w-full">
                             <div className="flex-1 min-w-0">
@@ -806,7 +834,10 @@ export default function ExamPrepApp() {
 
         <div className="px-4 mt-4 space-y-6">
           {/* Quick Practice Card */}
-          <Card className="border-0 shadow-md">
+          <Card className="border-0 shadow-md overflow-hidden">
+            {getPageImg('home_quick_practice') && (
+              <img src={getPageImg('home_quick_practice')} alt="Quick Practice" className="w-full h-24 object-cover" />
+            )}
             <CardContent className="p-4">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-xl bg-gradient-to-r from-orange-500 to-red-500 flex items-center justify-center">
@@ -843,6 +874,11 @@ export default function ExamPrepApp() {
                 {_t('home.viewAll')} <ChevronRight className="w-4 h-4" />
               </button>
             </div>
+            {getPageImg('home_categories') && (
+              <div className="mb-3 rounded-2xl overflow-hidden">
+                <img src={getPageImg('home_categories')} alt="Categories" className="w-full h-28 object-cover" />
+              </div>
+            )}
             <div className="grid grid-cols-2 gap-3">
               {categories.map(cat => {
                 const color = getCatColor(cat.slug)
@@ -856,9 +892,9 @@ export default function ExamPrepApp() {
                     }}
                   >
                     <CardContent className="p-4">
-                      {(cat as any).imageUrl ? (
+                      {cat.imageUrl ? (
                         <div className="w-10 h-10 rounded-xl overflow-hidden mb-2">
-                          <img src={(cat as any).imageUrl} alt={cat.name} className="w-full h-full object-cover" />
+                          <img src={cat.imageUrl} alt={cat.name} className="w-full h-full object-cover" />
                         </div>
                       ) : (
                         <div className={`w-10 h-10 rounded-xl ${color.light} flex items-center justify-center ${color.text} mb-2`}>
@@ -877,6 +913,11 @@ export default function ExamPrepApp() {
           {/* Popular Exams */}
           <div>
             <h2 className="font-bold text-lg mb-3">{_t('home.popularExams')}</h2>
+            {getPageImg('home_popular_exams') && (
+              <div className="mb-3 rounded-2xl overflow-hidden">
+                <img src={getPageImg('home_popular_exams')} alt="Popular Exams" className="w-full h-28 object-cover" />
+              </div>
+            )}
             <div className="space-y-2">
               {categories.slice(0, 3).flatMap(cat =>
                 cat.exams.slice(0, 2).map(exam => (
@@ -975,6 +1016,11 @@ export default function ExamPrepApp() {
               <Calendar className="w-5 h-5 text-blue-500" />
               <h2 className="font-bold text-lg">{_t('home.upcomingExams')}</h2>
             </div>
+            {getPageImg('home_upcoming') && (
+              <div className="mb-3 rounded-2xl overflow-hidden">
+                <img src={getPageImg('home_upcoming')} alt="Upcoming Exams" className="w-full h-28 object-cover" />
+              </div>
+            )}
             <div className="space-y-2">
               {[
                 { name: _t('upcoming.sscCgl'), date: _t('upcoming.sscCglDate'), status: _t('upcoming.sscCglStatus'), statusType: 'open', catSlug: 'ssc' },
@@ -1018,6 +1064,11 @@ export default function ExamPrepApp() {
               <TrendingUp className="w-5 h-5 text-green-500" />
               <h2 className="font-bold text-lg">{_t('home.yourProgress')}</h2>
             </div>
+            {getPageImg('home_progress') && (
+              <div className="mb-3 rounded-2xl overflow-hidden">
+                <img src={getPageImg('home_progress')} alt="Progress" className="w-full h-28 object-cover" />
+              </div>
+            )}
             {auth.isLoggedIn ? (
               <div className="grid grid-cols-3 gap-2">
                 <Card className="border-0 shadow-sm">
@@ -1064,7 +1115,10 @@ export default function ExamPrepApp() {
   function renderExams() {
     return (
       <div className="pb-20">
-        <div className="bg-gradient-to-r from-orange-500 to-red-500 px-4 pt-[calc(env(safe-area-inset-top,0px)+3rem)] pb-6 rounded-b-3xl">
+        <div className="bg-gradient-to-r from-orange-500 to-red-500 px-4 pt-[calc(env(safe-area-inset-top,0px)+3rem)] pb-6 rounded-b-3xl relative overflow-hidden">
+          {getPageImg('exams_header') && (
+            <img src={getPageImg('exams_header')} alt="" className="absolute inset-0 w-full h-full object-cover opacity-20" />
+          )}
           <div className="flex items-center gap-3 mb-4">
             <button onClick={goBack} className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center">
               <ArrowLeft className="w-5 h-5 text-white" />
@@ -1079,9 +1133,9 @@ export default function ExamPrepApp() {
             return (
               <div key={cat.id}>
                 <div className="flex items-center gap-2 mb-3">
-                  {(cat as any).imageUrl ? (
+                  {cat.imageUrl ? (
                     <div className="w-8 h-8 rounded-lg overflow-hidden">
-                      <img src={(cat as any).imageUrl} alt={cat.name} className="w-full h-full object-cover" />
+                      <img src={cat.imageUrl} alt={cat.name} className="w-full h-full object-cover" />
                     </div>
                   ) : (
                     <div className={`w-8 h-8 rounded-lg ${color.light} flex items-center justify-center ${color.text}`}>
@@ -1099,9 +1153,9 @@ export default function ExamPrepApp() {
                       onClick={() => openExam(exam, cat)}
                     >
                       <CardContent className="p-3 flex items-center gap-3">
-                        {(exam as any).imageUrl ? (
+                        {exam.imageUrl ? (
                           <div className="w-10 h-10 rounded-xl overflow-hidden flex-shrink-0">
-                            <img src={(exam as any).imageUrl} alt={exam.name} className="w-full h-full object-cover" />
+                            <img src={exam.imageUrl} alt={exam.name} className="w-full h-full object-cover" />
                           </div>
                         ) : (
                           <div className={`w-10 h-10 rounded-xl ${color.light} flex items-center justify-center ${color.text} flex-shrink-0`}>
@@ -1167,9 +1221,9 @@ export default function ExamPrepApp() {
                 <CardContent className="p-4">
                   <div className="flex items-start justify-between mb-2">
                     <div className="flex items-start gap-3 flex-1 min-w-0 mr-2">
-                      {(test as any).imageUrl ? (
+                      {test.imageUrl ? (
                         <div className="w-12 h-12 rounded-xl overflow-hidden flex-shrink-0">
-                          <img src={(test as any).imageUrl} alt={test.title} className="w-full h-full object-cover" />
+                          <img src={test.imageUrl} alt={test.title} className="w-full h-full object-cover" />
                         </div>
                       ) : null}
                       <div className="flex-1 min-w-0">
@@ -1535,7 +1589,10 @@ export default function ExamPrepApp() {
 
     return (
       <div className="pb-20">
-        <div className="bg-gradient-to-r from-orange-500 to-red-500 px-4 pt-[calc(env(safe-area-inset-top,0px)+3rem)] pb-8 rounded-b-3xl text-center">
+        <div className="bg-gradient-to-r from-orange-500 to-red-500 px-4 pt-[calc(env(safe-area-inset-top,0px)+3rem)] pb-8 rounded-b-3xl text-center relative overflow-hidden">
+          {getPageImg('results_header') && (
+            <img src={getPageImg('results_header')} alt="" className="absolute inset-0 w-full h-full object-cover opacity-15" />
+          )}
           <div className="w-20 h-20 rounded-full bg-white/20 flex items-center justify-center mx-auto mb-4">
             {percentage >= 60 ? (
               <Trophy className="w-10 h-10 text-yellow-300" />
@@ -1687,7 +1744,10 @@ export default function ExamPrepApp() {
     const isAllResults = leaderboardTestId === 'all'
     return (
       <div className="pb-20">
-        <div className="bg-gradient-to-r from-orange-500 to-red-500 px-4 pt-[calc(env(safe-area-inset-top,0px)+3rem)] pb-6 rounded-b-3xl">
+        <div className="bg-gradient-to-r from-orange-500 to-red-500 px-4 pt-[calc(env(safe-area-inset-top,0px)+3rem)] pb-6 rounded-b-3xl relative overflow-hidden">
+          {getPageImg('leaderboard_header') && (
+            <img src={getPageImg('leaderboard_header')} alt="" className="absolute inset-0 w-full h-full object-cover opacity-20" />
+          )}
           <div className="flex items-center gap-3">
             <button onClick={goBack} className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center">
               <ArrowLeft className="w-5 h-5 text-white" />
@@ -1740,7 +1800,10 @@ export default function ExamPrepApp() {
   function renderPractice() {
     return (
       <div className="pb-20">
-        <div className="bg-gradient-to-r from-orange-500 to-red-500 px-4 pt-[calc(env(safe-area-inset-top,0px)+3rem)] pb-6 rounded-b-3xl">
+        <div className="bg-gradient-to-r from-orange-500 to-red-500 px-4 pt-[calc(env(safe-area-inset-top,0px)+3rem)] pb-6 rounded-b-3xl relative overflow-hidden">
+          {getPageImg('practice_header') && (
+            <img src={getPageImg('practice_header')} alt="" className="absolute inset-0 w-full h-full object-cover opacity-20" />
+          )}
           <div className="flex items-center gap-3 mb-2">
             <button onClick={goBack} className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center">
               <ArrowLeft className="w-5 h-5 text-white" />
@@ -1894,6 +1957,10 @@ export default function ExamPrepApp() {
       <div className="pb-20">
         {/* Header with gradient */}
         <div className="bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 px-5 pt-[calc(env(safe-area-inset-top,0px)+3rem)] pb-10 rounded-b-[28px] relative overflow-hidden">
+          {/* Page Image - Profile Header Background */}
+          {getPageImg('profile_header') && (
+            <img src={getPageImg('profile_header')} alt="" className="absolute inset-0 w-full h-full object-cover opacity-20" />
+          )}
           {/* Decorative circles */}
           <div className="absolute top-0 right-0 w-40 h-40 bg-orange-500/10 rounded-full -translate-y-1/2 translate-x-1/4" />
           <div className="absolute bottom-0 left-0 w-32 h-32 bg-orange-500/10 rounded-full translate-y-1/2 -translate-x-1/4" />

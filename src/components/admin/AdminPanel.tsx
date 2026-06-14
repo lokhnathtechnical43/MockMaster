@@ -9,13 +9,15 @@ import {
   BookOpen, Bell, Flame, PieChart
 } from 'lucide-react'
 import {
-  type Announcement, type Notification, type DailyTip,
+  type Announcement, type Notification, type DailyTip, type PageImage,
   getAnnouncements as getLocalAnnouncements,
   getNotifications as getLocalNotifications,
   saveAnnouncements as saveLocalAnnouncements,
   saveNotifications as saveLocalNotifications,
   getDailyTips as getLocalDailyTips,
   saveDailyTips as saveLocalDailyTips,
+  getPageImages as getLocalPageImages,
+  savePageImages as saveLocalPageImages,
 } from '@/lib/admin-data'
 import {
   getAnnouncements as getFsAnnouncements,
@@ -38,9 +40,10 @@ import AnalyticsTab from './AnalyticsTab'
 import AnnouncementsTab from './AnnouncementsTab'
 import NotificationsTab from './NotificationsTab'
 import DailyTipsTab from './DailyTipsTab'
+import PageImagesTab from './PageImagesTab'
 import SettingsTab from './SettingsTab'
 
-type AdminTab = 'dashboard' | 'exams' | 'users' | 'analytics' | 'announcements' | 'notifications' | 'dailyTips' | 'settings'
+type AdminTab = 'dashboard' | 'exams' | 'users' | 'analytics' | 'announcements' | 'notifications' | 'dailyTips' | 'pageImages' | 'settings'
 
 export default function AdminPanel() {
   // --- Auth ---
@@ -57,6 +60,7 @@ export default function AdminPanel() {
   const [announcements, setAnnouncements] = useState<Announcement[]>([])
   const [notifications, setNotifications] = useState<Notification[]>([])
   const [dailyTips, setDailyTips] = useState<DailyTip[]>([])
+  const [pageImages, setPageImages] = useState<PageImage[]>([])
 
   // --- Load data on mount (always from Firestore if available) ---
   useEffect(() => {
@@ -84,6 +88,7 @@ export default function AdminPanel() {
           setAnnouncements(getLocalAnnouncements())
           setNotifications(getLocalNotifications())
           setDailyTips(getLocalDailyTips())
+          setPageImages(getLocalPageImages())
           setAllResults(getLocalResults())
         }
       } catch (e) {
@@ -91,6 +96,7 @@ export default function AdminPanel() {
         setAnnouncements(getLocalAnnouncements())
         setNotifications(getLocalNotifications())
         setDailyTips(getLocalDailyTips())
+        setPageImages(getLocalPageImages())
         setAllResults(getLocalResults())
       }
     }
@@ -147,10 +153,23 @@ export default function AdminPanel() {
     }
   }, [dailyTips])
 
+  // Save page images to localStorage when changed
+  useEffect(() => {
+    saveLocalPageImages(pageImages)
+  }, [pageImages])
+
   const ADMIN_PASSWORD = 'admin123'
 
+  const getAdminPassword = () => {
+    try {
+      return localStorage.getItem('examprep_admin_password') || ADMIN_PASSWORD
+    } catch {
+      return ADMIN_PASSWORD
+    }
+  }
+
   const handleAdminLogin = () => {
-    if (adminPassword === ADMIN_PASSWORD) {
+    if (adminPassword === getAdminPassword()) {
       setAdminLoggedIn(true)
       setAdminPassword('')
       try { sessionStorage.setItem('mockmaster_admin_logged_in', 'true') } catch {}
@@ -231,7 +250,7 @@ export default function AdminPanel() {
                   <Shield className="w-4 h-4 mr-2" /> Login
                 </Button>
 
-                {adminPassword && adminPassword !== ADMIN_PASSWORD && adminPassword.length > 3 && (
+                {adminPassword && adminPassword !== getAdminPassword() && adminPassword.length > 3 && (
                   <p className="text-red-500 text-xs text-center">Wrong password. Try again.</p>
                 )}
               </div>
@@ -261,6 +280,7 @@ export default function AdminPanel() {
     { id: 'announcements', icon: Flame, label: 'Announce' },
     { id: 'notifications', icon: Bell, label: 'Notify' },
     { id: 'dailyTips', icon: FileText, label: 'Tips' },
+    { id: 'pageImages', icon: Home, label: 'Images' },
     { id: 'settings', icon: Settings, label: 'Settings' },
   ]
 
@@ -353,6 +373,13 @@ export default function AdminPanel() {
           <DailyTipsTab
             tips={dailyTips}
             onUpdate={setDailyTips}
+          />
+        )}
+
+        {adminTab === 'pageImages' && (
+          <PageImagesTab
+            images={pageImages}
+            onUpdate={setPageImages}
           />
         )}
 

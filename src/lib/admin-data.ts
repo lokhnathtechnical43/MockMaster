@@ -31,11 +31,21 @@ export interface DailyTip {
   createdAt: string
 }
 
+export interface PageImage {
+  id: string // e.g. 'home_hero', 'home_quick_practice', 'profile_banner', 'practice_header'
+  label: string // Human-readable label for admin
+  page: string // Which page: home, exams, tests, practice, profile, leaderboard, results
+  section: string // Which section on the page
+  imageUrl: string // The image URL (base64 data URL or external URL)
+  updatedAt: string
+}
+
 export const STORAGE_KEYS = {
   announcements: 'examprep_announcements',
   notifications: 'examprep_notifications',
   dailyTips: 'examprep_daily_tips',
   adminAuth: 'examprep_admin_auth',
+  pageImages: 'examprep_page_images',
 } as const
 
 export const DEFAULT_ANNOUNCEMENTS: Announcement[] = [
@@ -112,4 +122,27 @@ export function getDailyTip(): DailyTip | null {
   // Use date-based selection so same tip shown all day
   const dayIndex = Math.floor(Date.now() / 86400000) % tips.length
   return tips[dayIndex]
+}
+
+// Page Images - allow admin to add images to any page section
+export const DEFAULT_PAGE_IMAGES: PageImage[] = []
+
+export function getPageImages(): PageImage[] {
+  if (typeof window === 'undefined') return DEFAULT_PAGE_IMAGES
+  try {
+    const stored = localStorage.getItem(STORAGE_KEYS.pageImages)
+    return stored ? JSON.parse(stored) : DEFAULT_PAGE_IMAGES
+  } catch {
+    return DEFAULT_PAGE_IMAGES
+  }
+}
+
+export function savePageImages(images: PageImage[]): void {
+  if (typeof window === 'undefined') return
+  localStorage.setItem(STORAGE_KEYS.pageImages, JSON.stringify(images))
+}
+
+export function getPageImage(id: string): string | undefined {
+  const images = getPageImages()
+  return images.find(img => img.id === id)?.imageUrl
 }

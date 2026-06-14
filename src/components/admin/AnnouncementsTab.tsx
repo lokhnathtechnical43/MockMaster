@@ -6,7 +6,7 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import {
   BookOpen, Trophy, Flame, Zap, Building, Plus,
-  Trash2, RefreshCw, ImagePlus, X
+  Trash2, RefreshCw, ImagePlus, X, Edit3, Check
 } from 'lucide-react'
 import {
   type Announcement,
@@ -26,6 +26,16 @@ export default function AnnouncementsTab({ announcements, onUpdate }: Announceme
   const [newAnnImageUrl, setNewAnnImageUrl] = useState('')
   const [newAnnAction, setNewAnnAction] = useState('exams')
   const fileInputRef = useRef<HTMLInputElement>(null)
+
+  // Edit state
+  const [editingIndex, setEditingIndex] = useState<number | null>(null)
+  const [editTitle, setEditTitle] = useState('')
+  const [editSubtitle, setEditSubtitle] = useState('')
+  const [editGradient, setEditGradient] = useState('')
+  const [editImage, setEditImage] = useState('')
+  const [editImageUrl, setEditImageUrl] = useState('')
+  const [editAction, setEditAction] = useState('')
+  const editFileInputRef = useRef<HTMLInputElement>(null)
 
   const gradients = [
     { label: 'Orange', value: 'from-orange-500 to-red-500' },
@@ -56,16 +66,30 @@ export default function AnnouncementsTab({ announcements, onUpdate }: Announceme
     const file = e.target.files?.[0]
     if (!file) return
 
-    // Validate file size (max 2MB)
     if (file.size > 2 * 1024 * 1024) {
       alert('Image size must be less than 2MB')
       return
     }
 
-    // Convert to base64 data URL
     const reader = new FileReader()
     reader.onloadend = () => {
       setNewAnnImageUrl(reader.result as string)
+    }
+    reader.readAsDataURL(file)
+  }
+
+  const handleEditImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    if (file.size > 2 * 1024 * 1024) {
+      alert('Image size must be less than 2MB')
+      return
+    }
+
+    const reader = new FileReader()
+    reader.onloadend = () => {
+      setEditImageUrl(reader.result as string)
     }
     reader.readAsDataURL(file)
   }
@@ -89,6 +113,37 @@ export default function AnnouncementsTab({ announcements, onUpdate }: Announceme
 
   const handleDelete = (index: number) => {
     onUpdate(announcements.filter((_, i) => i !== index))
+    if (editingIndex === index) setEditingIndex(null)
+  }
+
+  const startEdit = (index: number) => {
+    const a = announcements[index]
+    setEditingIndex(index)
+    setEditTitle(a.title)
+    setEditSubtitle(a.subtitle)
+    setEditGradient(a.gradient)
+    setEditImage(a.image)
+    setEditImageUrl(a.imageUrl || '')
+    setEditAction(a.action)
+  }
+
+  const cancelEdit = () => {
+    setEditingIndex(null)
+  }
+
+  const saveEdit = (index: number) => {
+    const updated = [...announcements]
+    updated[index] = {
+      ...updated[index],
+      title: editTitle,
+      subtitle: editSubtitle,
+      gradient: editGradient,
+      image: editImage,
+      imageUrl: editImageUrl || undefined,
+      action: editAction,
+    }
+    onUpdate(updated)
+    setEditingIndex(null)
   }
 
   return (
@@ -255,41 +310,191 @@ export default function AnnouncementsTab({ announcements, onUpdate }: Announceme
             </Card>
           ) : (
             announcements.map((a, i) => (
-              <Card key={a.id} className="border-0 shadow-sm hover:shadow-md transition-shadow overflow-hidden">
-                <CardContent className="p-0">
-                  <div className="flex items-stretch">
-                    {/* Image or Icon */}
-                    <div className={`w-16 flex-shrink-0 ${a.imageUrl ? '' : `bg-gradient-to-br ${a.gradient} flex items-center justify-center`}`}>
-                      {a.imageUrl ? (
-                        <img src={a.imageUrl} alt={a.title} className="w-full h-full object-cover" />
+              <Card key={a.id} className={`border-0 shadow-sm hover:shadow-md transition-shadow overflow-hidden ${editingIndex === i ? 'ring-2 ring-orange-300' : ''}`}>
+                {editingIndex === i ? (
+                  /* Edit Mode */
+                  <CardContent className="p-4 space-y-3">
+                    <h4 className="font-bold text-xs text-orange-600 flex items-center gap-1">
+                      <Edit3 className="w-3 h-3" /> Editing Announcement
+                    </h4>
+                    <input
+                      type="text"
+                      value={editTitle}
+                      onChange={e => setEditTitle(e.target.value)}
+                      placeholder="Title"
+                      className="w-full px-3 py-2 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-orange-300"
+                    />
+                    <input
+                      type="text"
+                      value={editSubtitle}
+                      onChange={e => setEditSubtitle(e.target.value)}
+                      placeholder="Subtitle"
+                      className="w-full px-3 py-2 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-orange-300"
+                    />
+
+                    {/* Edit Image */}
+                    <div>
+                      <p className="text-xs text-gray-500 mb-1.5">Image</p>
+                      {editImageUrl ? (
+                        <div className="relative rounded-xl overflow-hidden mb-2">
+                          <img src={editImageUrl} alt="Preview" className="w-full h-28 object-cover rounded-xl" />
+                          <button
+                            onClick={() => setEditImageUrl('')}
+                            className="absolute top-2 right-2 w-6 h-6 rounded-full bg-black/50 flex items-center justify-center"
+                          >
+                            <X className="w-3 h-3 text-white" />
+                          </button>
+                        </div>
                       ) : (
-                        <>
-                          {a.image === 'ssc' && <BookOpen className="w-5 h-5 text-white" />}
-                          {a.image === 'banking' && <Building className="w-5 h-5 text-white" />}
-                          {a.image === 'leaderboard' && <Trophy className="w-5 h-5 text-white" />}
-                          {a.image === 'practice' && <Zap className="w-5 h-5 text-white" />}
-                        </>
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() => editFileInputRef.current?.click()}
+                            className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl border-2 border-dashed border-gray-200 hover:border-orange-300 hover:bg-orange-50/50 transition-colors text-xs text-gray-500"
+                          >
+                            <ImagePlus className="w-4 h-4" /> Upload
+                          </button>
+                          <input
+                            ref={editFileInputRef}
+                            type="file"
+                            accept="image/*"
+                            className="hidden"
+                            onChange={handleEditImageUpload}
+                          />
+                          <input
+                            type="text"
+                            placeholder="Or paste URL..."
+                            value={editImageUrl}
+                            onChange={e => setEditImageUrl(e.target.value)}
+                            className="flex-1 px-3 py-2 rounded-xl border border-gray-200 text-xs focus:outline-none focus:ring-2 focus:ring-orange-300"
+                          />
+                        </div>
                       )}
                     </div>
-                    {/* Content */}
-                    <div className="flex-1 min-w-0 p-3 flex items-center gap-3">
-                      <div className="flex-1 min-w-0">
-                        <p className="font-semibold text-sm truncate">{a.title}</p>
-                        <p className="text-gray-400 text-xs truncate">{a.subtitle}</p>
-                        <div className="flex items-center gap-1 mt-0.5">
-                          <Badge variant="secondary" className="text-[9px]">{a.action}</Badge>
-                          {a.imageUrl && <Badge className="text-[9px] bg-blue-100 text-blue-700">Image</Badge>}
+
+                    {/* Edit Icon (fallback) */}
+                    {!editImageUrl && (
+                      <div>
+                        <p className="text-xs text-gray-500 mb-1.5">Icon</p>
+                        <div className="flex gap-2">
+                          {icons.map(ic => (
+                            <button
+                              key={ic.value}
+                              onClick={() => setEditImage(ic.value)}
+                              className={`w-8 h-8 rounded-lg flex items-center justify-center transition-all ${
+                                editImage === ic.value
+                                  ? 'bg-orange-100 text-orange-600 ring-2 ring-orange-300'
+                                  : 'bg-gray-100 text-gray-500'
+                              }`}
+                            >
+                              {ic.icon}
+                            </button>
+                          ))}
                         </div>
                       </div>
-                      <button
-                        onClick={() => handleDelete(i)}
-                        className="w-8 h-8 rounded-lg bg-red-50 hover:bg-red-100 flex items-center justify-center flex-shrink-0 transition-colors"
-                      >
-                        <Trash2 className="w-4 h-4 text-red-400" />
-                      </button>
+                    )}
+
+                    {/* Edit Action */}
+                    <div>
+                      <p className="text-xs text-gray-500 mb-1.5">Action</p>
+                      <div className="flex gap-1.5 flex-wrap">
+                        {actions.map(act => (
+                          <button
+                            key={act.value}
+                            onClick={() => setEditAction(act.value)}
+                            className={`px-2.5 py-1 rounded-lg text-[10px] font-medium transition-all ${
+                              editAction === act.value
+                                ? 'bg-orange-100 text-orange-700 ring-1 ring-orange-300'
+                                : 'bg-gray-100 text-gray-600'
+                            }`}
+                          >
+                            {act.label}
+                          </button>
+                        ))}
+                      </div>
                     </div>
-                  </div>
-                </CardContent>
+
+                    {/* Edit Gradient */}
+                    <div>
+                      <p className="text-xs text-gray-500 mb-1.5">Gradient</p>
+                      <div className="flex gap-1.5 flex-wrap">
+                        {gradients.map(g => (
+                          <button
+                            key={g.value}
+                            onClick={() => setEditGradient(g.value)}
+                            className={`px-2.5 py-1 rounded-lg text-[10px] font-medium transition-all ${
+                              editGradient === g.value
+                                ? `bg-gradient-to-r ${g.value} text-white shadow-sm`
+                                : 'bg-gray-100 text-gray-600'
+                            }`}
+                          >
+                            {g.label}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className="flex gap-2">
+                      <Button
+                        size="sm"
+                        className="flex-1 bg-gradient-to-r from-orange-500 to-red-500 text-white rounded-xl"
+                        onClick={() => saveEdit(i)}
+                      >
+                        <Check className="w-4 h-4 mr-1" /> Save
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="flex-1 rounded-xl"
+                        onClick={cancelEdit}
+                      >
+                        Cancel
+                      </Button>
+                    </div>
+                  </CardContent>
+                ) : (
+                  /* View Mode */
+                  <CardContent className="p-0">
+                    <div className="flex items-stretch">
+                      {/* Image or Icon */}
+                      <div className={`w-16 flex-shrink-0 ${a.imageUrl ? '' : `bg-gradient-to-br ${a.gradient} flex items-center justify-center`}`}>
+                        {a.imageUrl ? (
+                          <img src={a.imageUrl} alt={a.title} className="w-full h-full object-cover" />
+                        ) : (
+                          <>
+                            {a.image === 'ssc' && <BookOpen className="w-5 h-5 text-white" />}
+                            {a.image === 'banking' && <Building className="w-5 h-5 text-white" />}
+                            {a.image === 'leaderboard' && <Trophy className="w-5 h-5 text-white" />}
+                            {a.image === 'practice' && <Zap className="w-5 h-5 text-white" />}
+                          </>
+                        )}
+                      </div>
+                      {/* Content */}
+                      <div className="flex-1 min-w-0 p-3 flex items-center gap-3">
+                        <div className="flex-1 min-w-0">
+                          <p className="font-semibold text-sm truncate">{a.title}</p>
+                          <p className="text-gray-400 text-xs truncate">{a.subtitle}</p>
+                          <div className="flex items-center gap-1 mt-0.5">
+                            <Badge variant="secondary" className="text-[9px]">{a.action}</Badge>
+                            {a.imageUrl && <Badge className="text-[9px] bg-blue-100 text-blue-700">Image</Badge>}
+                          </div>
+                        </div>
+                        <button
+                          onClick={() => startEdit(i)}
+                          className="w-8 h-8 rounded-lg bg-blue-50 hover:bg-blue-100 flex items-center justify-center flex-shrink-0 transition-colors"
+                          title="Edit"
+                        >
+                          <Edit3 className="w-4 h-4 text-blue-500" />
+                        </button>
+                        <button
+                          onClick={() => handleDelete(i)}
+                          className="w-8 h-8 rounded-lg bg-red-50 hover:bg-red-100 flex items-center justify-center flex-shrink-0 transition-colors"
+                        >
+                          <Trash2 className="w-4 h-4 text-red-400" />
+                        </button>
+                      </div>
+                    </div>
+                  </CardContent>
+                )}
               </Card>
             ))
           )}

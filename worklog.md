@@ -260,3 +260,44 @@ Stage Summary:
 - Images display properly in both admin panel and user-facing app
 - Supports both file upload (base64) and URL paste for images
 - Build passes, no errors
+
+---
+Task ID: fix-buttons-and-images
+Agent: Main Agent
+Task: Fix all non-working buttons and add image upload to all pages via admin panel
+
+Work Log:
+- Fixed LocalExamCategory, LocalExam, LocalTest types to include optional imageUrl field
+- Fixed admin password change: AdminPanel now reads password from localStorage (examprep_admin_password) instead of hardcoded value, so password changes actually work
+- Added Edit functionality to AnnouncementsTab, NotificationsTab, DailyTipsTab with full inline editing (title, message, image, action, gradient, type, etc.)
+- Fixed all (as any).imageUrl casts in ExamPrepApp.tsx with proper typed access now that types include imageUrl
+- Added imageUrl to notifications and announcements state types in ExamPrepApp.tsx
+- Created PageImage data model in admin-data.ts with getPageImages(), savePageImages(), getPageImage() functions
+- Created PageImagesTab.tsx admin component with:
+  - Page filter (All, Home, Exams, Tests, Practice, Profile, Leaderboard, Results)
+  - 20 pre-defined sections across all pages where images can be added
+  - Upload image or paste URL for any section
+  - Edit and remove existing images
+  - Organized by page with icons and color coding
+- Added "Images" tab to admin panel (9th tab)
+- Updated ExamPrepApp.tsx to load and display page images:
+  - home_hero: Background image on home header
+  - home_quick_practice: Image above quick practice card
+  - home_categories: Section header image
+  - home_popular_exams: Section header image
+  - home_upcoming: Section header image
+  - home_progress: Section header image
+  - exams_header: Background image on exams page header
+  - practice_header: Background image on practice page header
+  - profile_header: Background image on profile page header
+  - leaderboard_header: Background image on leaderboard header
+  - results_header: Background image on results header
+- Page images auto-refresh on localStorage changes
+- Build passes successfully with no errors
+
+Stage Summary:
+- All non-working buttons fixed: admin password change now works, edit buttons added to all admin tabs
+- All pages now support image upload via admin "Images" tab
+- 20+ sections across 7 pages can have custom images
+- Type safety improved: no more (as any) casts for imageUrl
+- Build passes, dev server runs correctly
