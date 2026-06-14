@@ -31,6 +31,7 @@ export default function AdminPanel() {
   const [adminLoggedIn, setAdminLoggedIn] = useState(false)
   const [adminPassword, setAdminPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
+  const [mounted, setMounted] = useState(false)
 
   // --- Tab ---
   const [adminTab, setAdminTab] = useState<AdminTab>('dashboard')
@@ -42,6 +43,12 @@ export default function AdminPanel() {
 
   // --- Load data on mount ---
   useEffect(() => {
+    // Check session storage for admin login persistence
+    try {
+      const saved = sessionStorage.getItem('mockmaster_admin_logged_in')
+      if (saved === 'true') setAdminLoggedIn(true)
+    } catch {}
+    setMounted(true)
     setAnnouncements(getAnnouncements())
     setNotifications(getNotifications())
     setAllResults(getResults())
@@ -65,6 +72,19 @@ export default function AdminPanel() {
   }, [notifications])
 
   const ADMIN_PASSWORD = 'admin123'
+
+  const handleAdminLogin = () => {
+    if (adminPassword === ADMIN_PASSWORD) {
+      setAdminLoggedIn(true)
+      setAdminPassword('')
+      try { sessionStorage.setItem('mockmaster_admin_logged_in', 'true') } catch {}
+    }
+  }
+
+  const handleAdminLogout = () => {
+    setAdminLoggedIn(false)
+    try { sessionStorage.removeItem('mockmaster_admin_logged_in') } catch {}
+  }
 
   const handleRefreshResults = () => setAllResults(getResults())
 
@@ -106,10 +126,7 @@ export default function AdminPanel() {
                     placeholder="Enter admin password"
                     className="w-full px-4 py-3 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400 pr-12"
                     onKeyDown={e => {
-                      if (e.key === 'Enter' && adminPassword === ADMIN_PASSWORD) {
-                        setAdminLoggedIn(true)
-                        setAdminPassword('')
-                      }
+                      if (e.key === 'Enter') handleAdminLogin()
                     }}
                   />
                   <button
@@ -123,12 +140,7 @@ export default function AdminPanel() {
 
                 <Button
                   className="w-full bg-gradient-to-r from-slate-700 to-slate-800 hover:from-slate-800 hover:to-slate-900 text-white rounded-xl h-11 font-semibold"
-                  onClick={() => {
-                    if (adminPassword === ADMIN_PASSWORD) {
-                      setAdminLoggedIn(true)
-                      setAdminPassword('')
-                    }
-                  }}
+                  onClick={handleAdminLogin}
                 >
                   <Shield className="w-4 h-4 mr-2" /> Login
                 </Button>
@@ -184,7 +196,7 @@ export default function AdminPanel() {
               <p className="text-slate-400 text-[11px]">ExamPrep Bharat Management</p>
             </div>
             <button
-              onClick={() => setAdminLoggedIn(false)}
+              onClick={handleAdminLogout}
               className="w-9 h-9 rounded-xl bg-white/10 flex items-center justify-center hover:bg-white/20 transition-colors"
               title="Logout"
             >
