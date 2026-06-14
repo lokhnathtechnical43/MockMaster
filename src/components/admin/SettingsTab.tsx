@@ -98,8 +98,9 @@ export default function SettingsTab() {
     }
   }
 
+  const DEFAULT_ADMIN_PASSWORD = 'examprep2025'
   const handleChangePassword = () => {
-    const savedPassword = localStorage.getItem('examprep_admin_password') || ''
+    const savedPassword = localStorage.getItem('examprep_admin_password') || DEFAULT_ADMIN_PASSWORD
     if (currentPassword !== savedPassword) {
       alert('Current password is incorrect')
       return
@@ -401,7 +402,7 @@ export default function SettingsTab() {
           <div className="space-y-2">
             {[
               { label: 'App Name', value: 'ExamPrep Bharat' },
-              { label: 'Version', value: '2.0.0' },
+              { label: 'Version', value: '2.0' },
               { label: 'Framework', value: 'Next.js 16' },
               { label: 'Firebase', value: firebaseConfigured ? 'Configured' : 'Not Configured' },
               { label: 'Data Source', value: firestoreEnabled ? 'Firestore' : 'localStorage' },

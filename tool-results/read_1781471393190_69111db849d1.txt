@@ -1,0 +1,760 @@
+     1→'use client'
+     2→
+     3→import { useState, useEffect, useCallback, useRef } from 'react'
+     4→import { Button } from '@/components/ui/button'
+     5→import { Card, CardContent } from '@/components/ui/card'
+     6→import { Badge } from '@/components/ui/badge'
+     7→import { Input } from '@/components/ui/input'
+     8→import { Textarea } from '@/components/ui/textarea'
+     9→import {
+    10→  BookOpen, ChevronRight, Plus, Trash2, Edit3, Save,
+    11→  ArrowLeft, RefreshCw, ListChecks, HelpCircle, Database,
+    12→  ImagePlus, X
+    13→} from 'lucide-react'
+    14→import {
+    15→  getCategories, addCategory, updateCategory, deleteCategory,
+    16→  getExams, addExam, updateExam, deleteExam,
+    17→  getTests, addTest, updateTest, deleteTest,
+    18→  getQuestions, addQuestion, updateQuestion, deleteQuestion,
+    19→  addBatchQuestions, seedFirestoreIfEmpty,
+    20→  type FirestoreExamCategory, type FirestoreExam, type FirestoreTest, type FirestoreQuestion
+    21→} from '@/lib/firestore-service'
+    22→import {
+    23→  getCategories as getLocalCategories,
+    24→  type LocalExamCategory, type LocalExam, type LocalTest, type LocalQuestion
+    25→} from '@/lib/local-data'
+    26→
+    27→type ViewLevel = 'categories' | 'exams' | 'tests' | 'questions'
+    28→
+    29→// Reusable image upload helper
+    30→function handleImageFileUpload(
+    31→  file: File,
+    32→  onSuccess: (dataUrl: string) => void
+    33→) {
+    34→  if (file.size > 2 * 1024 * 1024) {
+    35→    alert('Image size must be less than 2MB')
+    36→    return
+    37→  }
+    38→  const reader = new FileReader()
+    39→  reader.onloadend = () => {
+    40→    onSuccess(reader.result as string)
+    41→  }
+    42→  reader.readAsDataURL(file)
+    43→}
+    44→
+    45→// Reusable Image Upload Section Component
+    46→function ImageUploadSection({
+    47→  imageUrl,
+    48→  onImageChange,
+    49→  label = 'Image',
+    50→}: {
+    51→  imageUrl: string
+    52→  onImageChange: (url: string) => void
+    53→  label?: string
+    54→}) {
+    55→  const fileInputRef = useRef<HTMLInputElement>(null)
+    56→
+    57→  return (
+    58→    <div>
+    59→      <p className="text-xs text-gray-500 mb-1.5">{label}</p>
+    60→      {imageUrl ? (
+    61→        <div className="relative rounded-xl overflow-hidden mb-2">
+    62→          <img src={imageUrl} alt="Preview" className="w-full h-28 object-cover rounded-xl" />
+    63→          <button
+    64→            type="button"
+    65→            onClick={() => onImageChange('')}
+    66→            className="absolute top-2 right-2 w-6 h-6 rounded-full bg-black/50 flex items-center justify-center"
+    67→          >
+    68→            <X className="w-3 h-3 text-white" />
+    69→          </button>
+    70→        </div>
+    71→      ) : (
+    72→        <div className="flex gap-2">
+    73→          <button
+    74→            type="button"
+    75→            onClick={() => fileInputRef.current?.click()}
+    76→            className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl border-2 border-dashed border-gray-200 hover:border-orange-300 hover:bg-orange-50/50 transition-colors text-xs text-gray-500"
+    77→          >
+    78→            <ImagePlus className="w-4 h-4" /> Upload
+    79→          </button>
+    80→          <input
+    81→            ref={fileInputRef}
+    82→            type="file"
+    83→            accept="image/*"
+    84→            className="hidden"
+    85→            onChange={(e) => {
+    86→              const file = e.target.files?.[0]
+    87→              if (file) handleImageFileUpload(file, onImageChange)
+    88→            }}
+    89→          />
+    90→          <input
+    91→            type="text"
+    92→            placeholder="Or paste URL..."
+    93→            value={imageUrl}
+    94→            onChange={(e) => onImageChange(e.target.value)}
+    95→            className="flex-1 px-3 py-2 rounded-xl border border-gray-200 text-xs focus:outline-none focus:ring-2 focus:ring-orange-300"
+    96→          />
+    97→        </div>
+    98→      )}
+    99→    </div>
+   100→  )
+   101→}
+   102→
+   103→export default function ExamsTab() {
+   104→  const [viewLevel, setViewLevel] = useState<ViewLevel>('categories')
+   105→  const [loading, setLoading] = useState(true)
+   106→  const [seeding, setSeeding] = useState(false)
+   107→
+   108→  // Categories
+   109→  const [categories, setCategories] = useState<LocalExamCategory[]>([])
+   110→  const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null)
+   111→  const [selectedCategoryName, setSelectedCategoryName] = useState('')
+   112→
+   113→  // Exams
+   114→  const [exams, setExams] = useState<LocalExam[]>([])
+   115→  const [selectedExamId, setSelectedExamId] = useState<string | null>(null)
+   116→  const [selectedExamName, setSelectedExamName] = useState('')
+   117→
+   118→  // Tests
+   119→  const [tests, setTests] = useState<LocalTest[]>([])
+   120→  const [selectedTestId, setSelectedTestId] = useState<string | null>(null)
+   121→  const [selectedTestName, setSelectedTestName] = useState('')
+   122→
+   123→  // Questions
+   124→  const [questions, setQuestions] = useState<LocalQuestion[]>([])
+   125→
+   126→  // Edit states
+   127→  const [editingId, setEditingId] = useState<string | null>(null)
+   128→  const [editName, setEditName] = useState('')
+   129→  const [editDesc, setEditDesc] = useState('')
+   130→  const [editImageUrl, setEditImageUrl] = useState('')
+   131→
+   132→  // Add states
+   133→  const [showAdd, setShowAdd] = useState(false)
+   134→  const [addName, setAddName] = useState('')
+   135→  const [addDesc, setAddDesc] = useState('')
+   136→  const [addSlug, setAddSlug] = useState('')
+   137→  const [addImageUrl, setAddImageUrl] = useState('')
+   138→
+   139→  // Add question
+   140→  const [showAddQuestion, setShowAddQuestion] = useState(false)
+   141→  const [qText, setQText] = useState('')
+   142→  const [qA, setQA] = useState('')
+   143→  const [qB, setQB] = useState('')
+   144→  const [qC, setQC] = useState('')
+   145→  const [qD, setQD] = useState('')
+   146→  const [qAns, setQAns] = useState('A')
+   147→  const [qExplanation, setQExplanation] = useState('')
+   148→  const [qSubject, setQSubject] = useState('')
+   149→  const [qImageUrl, setQImageUrl] = useState('')
+   150→
+   151→  // Batch questions
+   152→  const [showBatch, setShowBatch] = useState(false)
+   153→  const [batchText, setBatchText] = useState('')
+   154→
+   155→  const loadCategories = useCallback(async () => {
+   156→    setLoading(true)
+   157→    try {
+   158→      const cats = await getCategories()
+   159→      setCategories(cats)
+   160→    } catch {
+   161→      // Fallback to local
+   162→      const local = getLocalCategories()
+   163→      setCategories(local)
+   164→    } finally {
+   165→      setLoading(false)
+   166→    }
+   167→  }, [])
+   168→
+   169→  const loadExams = useCallback(async (categoryId: string) => {
+   170→    setLoading(true)
+   171→    try {
+   172→      const data = await getExams(categoryId)
+   173→      setExams(data)
+   174→    } catch { setExams([]) } finally { setLoading(false) }
+   175→  }, [])
+   176→
+   177→  const loadTests = useCallback(async (examId: string) => {
+   178→    setLoading(true)
+   179→    try {
+   180→      const data = await getTests(examId)
+   181→      setTests(data)
+   182→    } catch { setTests([]) } finally { setLoading(false) }
+   183→  }, [])
+   184→
+   185→  const loadQuestions = useCallback(async (testId: string) => {
+   186→    setLoading(true)
+   187→    try {
+   188→      const data = await getQuestions(testId)
+   189→      setQuestions(data)
+   190→    } catch { setQuestions([]) } finally { setLoading(false) }
+   191→  }, [])
+   192→
+   193→  useEffect(() => { loadCategories() }, [loadCategories])
+   194→
+   195→  const handleSelectCategory = (cat: LocalExamCategory) => {
+   196→    setSelectedCategoryId(cat.id)
+   197→    setSelectedCategoryName(cat.name)
+   198→    loadExams(cat.id)
+   199→    setViewLevel('exams')
+   200→  }
+   201→
+   202→  const handleSelectExam = (exam: LocalExam) => {
+   203→    setSelectedExamId(exam.id)
+   204→    setSelectedExamName(exam.name)
+   205→    loadTests(exam.id)
+   206→    setViewLevel('tests')
+   207→  }
+   208→
+   209→  const handleSelectTest = (test: LocalTest) => {
+   210→    setSelectedTestId(test.id)
+   211→    setSelectedTestName(test.title)
+   212→    loadQuestions(test.id)
+   213→    setViewLevel('questions')
+   214→  }
+   215→
+   216→  const handleBack = () => {
+   217→    if (viewLevel === 'questions') { setViewLevel('tests'); setQuestions([]) }
+   218→    else if (viewLevel === 'tests') { setViewLevel('exams'); setTests([]) }
+   219→    else if (viewLevel === 'exams') { setViewLevel('categories'); setExams([]) }
+   220→    setShowAdd(false)
+   221→    setEditingId(null)
+   222→  }
+   223→
+   224→  // --- CRUD Handlers ---
+   225→  const handleAddCategory = async () => {
+   226→    if (!addName.trim()) return
+   227→    try {
+   228→      await addCategory({
+   229→        name: addName, slug: addSlug || addName.toLowerCase().replace(/\s+/g, '-'),
+   230→        icon: '📋', description: addDesc, order: categories.length + 1,
+   231→        ...(addImageUrl ? { imageUrl: addImageUrl } : {})
+   232→      })
+   233→      setAddName(''); setAddDesc(''); setAddSlug(''); setAddImageUrl(''); setShowAdd(false)
+   234→      loadCategories()
+   235→    } catch { alert('Failed to add category') }
+   236→  }
+   237→
+   238→  const handleAddExam = async () => {
+   239→    if (!addName.trim() || !selectedCategoryId) return
+   240→    try {
+   241→      await addExam({
+   242→        name: addName, slug: addSlug || addName.toLowerCase().replace(/\s+/g, '-'),
+   243→        description: addDesc, totalQuestions: 0, duration: 60,
+   244→        markingScheme: '1/-0.25', order: exams.length + 1,
+   245→        testCount: 0, categoryId: selectedCategoryId,
+   246→        ...(addImageUrl ? { imageUrl: addImageUrl } : {})
+   247→      })
+   248→      setAddName(''); setAddDesc(''); setAddSlug(''); setAddImageUrl(''); setShowAdd(false)
+   249→      loadExams(selectedCategoryId)
+   250→    } catch { alert('Failed to add exam') }
+   251→  }
+   252→
+   253→  const handleAddTest = async () => {
+   254→    if (!addName.trim() || !selectedExamId) return
+   255→    try {
+   256→      await addTest({
+   257→        title: addName, slug: addSlug || addName.toLowerCase().replace(/\s+/g, '-'),
+   258→        description: addDesc, totalQuestions: 0, duration: 30,
+   259→        markingCorrect: 1, markingWrong: -0.25, markingSkipped: 0,
+   260→        difficulty: 'medium', isFree: true, isLive: true,
+   261→        examId: selectedExamId, examName: selectedExamName,
+   262→        examSlug: selectedExamName.toLowerCase().replace(/\s+/g, '-'),
+   263→        ...(addImageUrl ? { imageUrl: addImageUrl } : {})
+   264→      })
+   265→      setAddName(''); setAddDesc(''); setAddSlug(''); setAddImageUrl(''); setShowAdd(false)
+   266→      loadTests(selectedExamId)
+   267→    } catch { alert('Failed to add test') }
+   268→  }
+   269→
+   270→  const handleAddQuestion = async () => {
+   271→    if (!qText.trim() || !selectedTestId) return
+   272→    try {
+   273→      await addQuestion({
+   274→        questionText: qText, questionImage: qImageUrl || null,
+   275→        optionA: qA, optionB: qB, optionC: qC, optionD: qD,
+   276→        correctAnswer: qAns, explanation: qExplanation || null,
+   277→        subject: qSubject || null, order: questions.length + 1,
+   278→        testId: selectedTestId
+   279→      })
+   280→      setQText(''); setQA(''); setQB(''); setQC(''); setQD('')
+   281→      setQAns('A'); setQExplanation(''); setQSubject(''); setQImageUrl('')
+   282→      setShowAddQuestion(false)
+   283→      loadQuestions(selectedTestId)
+   284→    } catch { alert('Failed to add question') }
+   285→  }
+   286→
+   287→  const handleBatchQuestions = async () => {
+   288→    if (!batchText.trim() || !selectedTestId) return
+   289→    try {
+   290→      const lines = batchText.trim().split('\n').filter(l => l.trim())
+   291→      if (lines.length > 500) {
+   292→        alert('Maximum 500 questions per batch. Please split into smaller batches.')
+   293→        return
+   294→      }
+   295→      const qs = lines.map((line, i) => {
+   296→        const parts = line.split('|')
+   297→        return {
+   298→          questionText: parts[0]?.trim() || '',
+   299→          optionA: parts[1]?.trim() || '',
+   300→          optionB: parts[2]?.trim() || '',
+   301→          optionC: parts[3]?.trim() || '',
+   302→          optionD: parts[4]?.trim() || '',
+   303→          correctAnswer: parts[5]?.trim() || 'A',
+   304→          explanation: parts[6]?.trim() || null,
+   305→          subject: parts[7]?.trim() || null,
+   306→          order: i + 1,
+   307→          testId: selectedTestId
+   308→        }
+   309→      }).filter(q => q.questionText)
+   310→      await addBatchQuestions(selectedTestId, qs)
+   311→      setBatchText(''); setShowBatch(false)
+   312→      loadQuestions(selectedTestId)
+   313→    } catch { alert('Failed to add batch questions') }
+   314→  }
+   315→
+   316→  const handleDelete = async (type: string, id: string) => {
+   317→    if (!confirm(`Delete this ${type}?`)) return
+   318→    try {
+   319→      if (type === 'category') { await deleteCategory(id); loadCategories() }
+   320→      else if (type === 'exam' && selectedCategoryId) { await deleteExam(id); loadExams(selectedCategoryId) }
+   321→      else if (type === 'test' && selectedExamId) { await deleteTest(id); loadTests(selectedExamId) }
+   322→      else if (type === 'question' && selectedTestId) { await deleteQuestion(id); loadQuestions(selectedTestId) }
+   323→    } catch { alert(`Failed to delete ${type}`) }
+   324→  }
+   325→
+   326→  const handleSeed = async () => {
+   327→    if (!confirm('Seed Firestore from local data? This may take a moment.')) return
+   328→    setSeeding(true)
+   329→    try {
+   330→      await seedFirestoreIfEmpty()
+   331→      alert('Firestore seeded successfully!')
+   332→      loadCategories()
+   333→    } catch { alert('Failed to seed Firestore') }
+   334→    finally { setSeeding(false) }
+   335→  }
+   336→
+   337→  const handleStartEdit = (id: string, name: string, desc: string, imageUrl?: string) => {
+   338→    setEditingId(id)
+   339→    setEditName(name)
+   340→    setEditDesc(desc || '')
+   341→    setEditImageUrl(imageUrl || '')
+   342→  }
+   343→
+   344→  const handleSaveEdit = async (type: string, id: string) => {
+   345→    try {
+   346→      if (type === 'category') {
+   347→        await updateCategory(id, { name: editName, description: editDesc, imageUrl: editImageUrl || undefined })
+   348→        loadCategories()
+   349→      } else if (type === 'exam') {
+   350→        await updateExam(id, { name: editName, description: editDesc, imageUrl: editImageUrl || undefined })
+   351→        if (selectedCategoryId) loadExams(selectedCategoryId)
+   352→      } else if (type === 'test') {
+   353→        await updateTest(id, { title: editName, description: editDesc, imageUrl: editImageUrl || undefined })
+   354→        if (selectedExamId) loadTests(selectedExamId)
+   355→      }
+   356→      setEditingId(null)
+   357→    } catch { alert('Failed to update') }
+   358→  }
+   359→
+   360→  return (
+   361→    <div className="space-y-4">
+   362→      {/* Breadcrumb + Actions */}
+   363→      <div className="flex items-center justify-between">
+   364→        <div className="flex items-center gap-2 text-sm">
+   365→          {viewLevel !== 'categories' && (
+   366→            <button onClick={handleBack} className="text-violet-600 hover:text-violet-800 font-medium flex items-center gap-1">
+   367→              <ArrowLeft className="w-4 h-4" /> Back
+   368→            </button>
+   369→          )}
+   370→          <span className="text-gray-400">
+   371→            {viewLevel === 'categories' ? 'Categories' :
+   372→             viewLevel === 'exams' ? `› ${selectedCategoryName} › Exams` :
+   373→             viewLevel === 'tests' ? `› ${selectedCategoryName} › ${selectedExamName} › Tests` :
+   374→             `› ${selectedCategoryName} › ${selectedExamName} › ${selectedTestName} › Questions`}
+   375→          </span>
+   376→        </div>
+   377→        <div className="flex items-center gap-2">
+   378→          <Button
+   379→            variant="outline"
+   380→            size="sm"
+   381→            className="rounded-xl text-xs"
+   382→            onClick={handleSeed}
+   383→            disabled={seeding}
+   384→          >
+   385→            <Database className="w-3 h-3 mr-1" />
+   386→            {seeding ? 'Seeding...' : 'Seed Firestore'}
+   387→          </Button>
+   388→        </div>
+   389→      </div>
+   390→
+   391→      {/* Loading */}
+   392→      {loading && (
+   393→        <div className="flex items-center justify-center py-12">
+   394→          <RefreshCw className="w-6 h-6 text-gray-400 animate-spin" />
+   395→        </div>
+   396→      )}
+   397→
+   398→      {/* ===== CATEGORIES VIEW ===== */}
+   399→      {!loading && viewLevel === 'categories' && (
+   400→        <div className="space-y-4">
+   401→          <div className="flex items-center justify-between">
+   402→            <h3 className="font-bold text-sm">Categories ({categories.length})</h3>
+   403→            <Button size="sm" className="rounded-xl text-xs" onClick={() => { setShowAdd(!showAdd); setAddName(''); setAddDesc(''); setAddSlug(''); setAddImageUrl('') }}>
+   404→              <Plus className="w-3 h-3 mr-1" /> Add Category
+   405→            </Button>
+   406→          </div>
+   407→
+   408→          {showAdd && (
+   409→            <Card className="border-0 shadow-md bg-orange-50/50">
+   410→              <CardContent className="p-4 space-y-2">
+   411→                <Input placeholder="Category name" value={addName} onChange={e => setAddName(e.target.value)} className="rounded-xl" />
+   412→                <Input placeholder="Slug (auto-generated if empty)" value={addSlug} onChange={e => setAddSlug(e.target.value)} className="rounded-xl" />
+   413→                <Input placeholder="Description" value={addDesc} onChange={e => setAddDesc(e.target.value)} className="rounded-xl" />
+   414→                <ImageUploadSection imageUrl={addImageUrl} onImageChange={setAddImageUrl} label="Category Image (optional)" />
+   415→                <div className="flex gap-2">
+   416→                  <Button size="sm" className="rounded-xl" onClick={handleAddCategory} disabled={!addName.trim()}>Add</Button>
+   417→                  <Button size="sm" variant="outline" className="rounded-xl" onClick={() => setShowAdd(false)}>Cancel</Button>
+   418→                </div>
+   419→              </CardContent>
+   420→            </Card>
+   421→          )}
+   422→
+   423→          {categories.length === 0 ? (
+   424→            <Card className="border-0 shadow-sm">
+   425→              <CardContent className="p-8 text-center">
+   426→                <BookOpen className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+   427→                <p className="text-gray-400 text-sm">No categories found</p>
+   428→              </CardContent>
+   429→            </Card>
+   430→          ) : (
+   431→            categories.map(cat => (
+   432→              <Card key={cat.id} className="border-0 shadow-sm hover:shadow-md transition-shadow">
+   433→                <CardContent className="p-3 flex items-center gap-3">
+   434→                  {editingId === cat.id ? (
+   435→                    <div className="flex-1 space-y-2">
+   436→                      <Input value={editName} onChange={e => setEditName(e.target.value)} className="rounded-xl text-sm" />
+   437→                      <Input value={editDesc} onChange={e => setEditDesc(e.target.value)} placeholder="Description" className="rounded-xl text-sm" />
+   438→                      <ImageUploadSection imageUrl={editImageUrl} onImageChange={setEditImageUrl} label="Image" />
+   439→                      <div className="flex gap-2">
+   440→                        <Button size="sm" className="rounded-xl" onClick={() => handleSaveEdit('category', cat.id)}>
+   441→                          <Save className="w-3 h-3 mr-1" /> Save
+   442→                        </Button>
+   443→                        <Button size="sm" variant="outline" className="rounded-xl" onClick={() => setEditingId(null)}>Cancel</Button>
+   444→                      </div>
+   445→                    </div>
+   446→                  ) : (
+   447→                    <>
+   448→                      <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-orange-100 to-orange-200 flex items-center justify-center flex-shrink-0 overflow-hidden">
+   449→                        {cat.imageUrl ? (
+   450→                          <img src={cat.imageUrl} alt={cat.name} className="w-full h-full object-cover" />
+   451→                        ) : (
+   452→                          <span className="text-lg">{cat.icon || '📋'}</span>
+   453→                        )}
+   454→                      </div>
+   455→                      <button className="flex-1 min-w-0 text-left" onClick={() => handleSelectCategory(cat)}>
+   456→                        <p className="font-semibold text-sm truncate">{cat.name}</p>
+   457→                        <p className="text-gray-400 text-xs truncate">{cat.description || cat.slug}</p>
+   458→                        {cat.imageUrl && <Badge className="text-[8px] mt-0.5 bg-blue-100 text-blue-700">Image</Badge>}
+   459→                      </button>
+   460→                      <div className="flex items-center gap-1">
+   461→                        <button onClick={() => handleStartEdit(cat.id, cat.name, cat.description, cat.imageUrl)} className="w-8 h-8 rounded-lg bg-blue-50 hover:bg-blue-100 flex items-center justify-center">
+   462→                          <Edit3 className="w-3.5 h-3.5 text-blue-500" />
+   463→                        </button>
+   464→                        <button onClick={() => handleDelete('category', cat.id)} className="w-8 h-8 rounded-lg bg-red-50 hover:bg-red-100 flex items-center justify-center">
+   465→                          <Trash2 className="w-3.5 h-3.5 text-red-400" />
+   466→                        </button>
+   467→                        <button onClick={() => handleSelectCategory(cat)} className="w-8 h-8 rounded-lg bg-gray-50 hover:bg-gray-100 flex items-center justify-center">
+   468→                          <ChevronRight className="w-4 h-4 text-gray-400" />
+   469→                        </button>
+   470→                      </div>
+   471→                    </>
+   472→                  )}
+   473→                </CardContent>
+   474→              </Card>
+   475→            ))
+   476→          )}
+   477→        </div>
+   478→      )}
+   479→
+   480→      {/* ===== EXAMS VIEW ===== */}
+   481→      {!loading && viewLevel === 'exams' && (
+   482→        <div className="space-y-4">
+   483→          <div className="flex items-center justify-between">
+   484→            <h3 className="font-bold text-sm">Exams in {selectedCategoryName} ({exams.length})</h3>
+   485→            <Button size="sm" className="rounded-xl text-xs" onClick={() => { setShowAdd(!showAdd); setAddName(''); setAddDesc(''); setAddSlug(''); setAddImageUrl('') }}>
+   486→              <Plus className="w-3 h-3 mr-1" /> Add Exam
+   487→            </Button>
+   488→          </div>
+   489→
+   490→          {showAdd && (
+   491→            <Card className="border-0 shadow-md bg-orange-50/50">
+   492→              <CardContent className="p-4 space-y-2">
+   493→                <Input placeholder="Exam name" value={addName} onChange={e => setAddName(e.target.value)} className="rounded-xl" />
+   494→                <Input placeholder="Slug" value={addSlug} onChange={e => setAddSlug(e.target.value)} className="rounded-xl" />
+   495→                <Input placeholder="Description" value={addDesc} onChange={e => setAddDesc(e.target.value)} className="rounded-xl" />
+   496→                <ImageUploadSection imageUrl={addImageUrl} onImageChange={setAddImageUrl} label="Exam Image (optional)" />
+   497→                <div className="flex gap-2">
+   498→                  <Button size="sm" className="rounded-xl" onClick={handleAddExam} disabled={!addName.trim()}>Add</Button>
+   499→                  <Button size="sm" variant="outline" className="rounded-xl" onClick={() => setShowAdd(false)}>Cancel</Button>
+   500→                </div>
+   501→              </CardContent>
+   502→            </Card>
+   503→          )}
+   504→
+   505→          {exams.length === 0 ? (
+   506→            <Card className="border-0 shadow-sm">
+   507→              <CardContent className="p-8 text-center">
+   508→                <BookOpen className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+   509→                <p className="text-gray-400 text-sm">No exams in this category</p>
+   510→              </CardContent>
+   511→            </Card>
+   512→          ) : (
+   513→            exams.map(exam => (
+   514→              <Card key={exam.id} className="border-0 shadow-sm hover:shadow-md transition-shadow">
+   515→                <CardContent className="p-3 flex items-center gap-3">
+   516→                  {editingId === exam.id ? (
+   517→                    <div className="flex-1 space-y-2">
+   518→                      <Input value={editName} onChange={e => setEditName(e.target.value)} className="rounded-xl text-sm" />
+   519→                      <Input value={editDesc} onChange={e => setEditDesc(e.target.value)} placeholder="Description" className="rounded-xl text-sm" />
+   520→                      <ImageUploadSection imageUrl={editImageUrl} onImageChange={setEditImageUrl} label="Image" />
+   521→                      <div className="flex gap-2">
+   522→                        <Button size="sm" className="rounded-xl" onClick={() => handleSaveEdit('exam', exam.id)}><Save className="w-3 h-3 mr-1" /> Save</Button>
+   523→                        <Button size="sm" variant="outline" className="rounded-xl" onClick={() => setEditingId(null)}>Cancel</Button>
+   524→                      </div>
+   525→                    </div>
+   526→                  ) : (
+   527→                    <>
+   528→                      <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-100 to-blue-200 flex items-center justify-center flex-shrink-0 overflow-hidden">
+   529→                        {exam.imageUrl ? (
+   530→                          <img src={exam.imageUrl} alt={exam.name} className="w-full h-full object-cover" />
+   531→                        ) : (
+   532→                          <BookOpen className="w-5 h-5 text-blue-500" />
+   533→                        )}
+   534→                      </div>
+   535→                      <button className="flex-1 min-w-0 text-left" onClick={() => handleSelectExam(exam)}>
+   536→                        <p className="font-semibold text-sm truncate">{exam.name}</p>
+   537→                        <p className="text-gray-400 text-xs">{exam.testCount || 0} tests • {exam.totalQuestions || 0} questions</p>
+   538→                        {exam.imageUrl && <Badge className="text-[8px] mt-0.5 bg-blue-100 text-blue-700">Image</Badge>}
+   539→                      </button>
+   540→                      <div className="flex items-center gap-1">
+   541→                        <button onClick={() => handleStartEdit(exam.id, exam.name, exam.description, exam.imageUrl)} className="w-8 h-8 rounded-lg bg-blue-50 hover:bg-blue-100 flex items-center justify-center">
+   542→                          <Edit3 className="w-3.5 h-3.5 text-blue-500" />
+   543→                        </button>
+   544→                        <button onClick={() => handleDelete('exam', exam.id)} className="w-8 h-8 rounded-lg bg-red-50 hover:bg-red-100 flex items-center justify-center">
+   545→                          <Trash2 className="w-3.5 h-3.5 text-red-400" />
+   546→                        </button>
+   547→                        <button onClick={() => handleSelectExam(exam)} className="w-8 h-8 rounded-lg bg-gray-50 hover:bg-gray-100 flex items-center justify-center">
+   548→                          <ChevronRight className="w-4 h-4 text-gray-400" />
+   549→                        </button>
+   550→                      </div>
+   551→                    </>
+   552→                  )}
+   553→                </CardContent>
+   554→              </Card>
+   555→            ))
+   556→          )}
+   557→        </div>
+   558→      )}
+   559→
+   560→      {/* ===== TESTS VIEW ===== */}
+   561→      {!loading && viewLevel === 'tests' && (
+   562→        <div className="space-y-4">
+   563→          <div className="flex items-center justify-between">
+   564→            <h3 className="font-bold text-sm">Tests in {selectedExamName} ({tests.length})</h3>
+   565→            <Button size="sm" className="rounded-xl text-xs" onClick={() => { setShowAdd(!showAdd); setAddName(''); setAddDesc(''); setAddSlug(''); setAddImageUrl('') }}>
+   566→              <Plus className="w-3 h-3 mr-1" /> Add Test
+   567→            </Button>
+   568→          </div>
+   569→
+   570→          {showAdd && (
+   571→            <Card className="border-0 shadow-md bg-orange-50/50">
+   572→              <CardContent className="p-4 space-y-2">
+   573→                <Input placeholder="Test title" value={addName} onChange={e => setAddName(e.target.value)} className="rounded-xl" />
+   574→                <Input placeholder="Slug" value={addSlug} onChange={e => setAddSlug(e.target.value)} className="rounded-xl" />
+   575→                <Input placeholder="Description" value={addDesc} onChange={e => setAddDesc(e.target.value)} className="rounded-xl" />
+   576→                <ImageUploadSection imageUrl={addImageUrl} onImageChange={setAddImageUrl} label="Test Image (optional)" />
+   577→                <div className="flex gap-2">
+   578→                  <Button size="sm" className="rounded-xl" onClick={handleAddTest} disabled={!addName.trim()}>Add</Button>
+   579→                  <Button size="sm" variant="outline" className="rounded-xl" onClick={() => setShowAdd(false)}>Cancel</Button>
+   580→                </div>
+   581→              </CardContent>
+   582→            </Card>
+   583→          )}
+   584→
+   585→          {tests.length === 0 ? (
+   586→            <Card className="border-0 shadow-sm">
+   587→              <CardContent className="p-8 text-center">
+   588→                <ListChecks className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+   589→                <p className="text-gray-400 text-sm">No tests in this exam</p>
+   590→              </CardContent>
+   591→            </Card>
+   592→          ) : (
+   593→            tests.map(test => (
+   594→              <Card key={test.id} className="border-0 shadow-sm hover:shadow-md transition-shadow">
+   595→                <CardContent className="p-3 flex items-center gap-3">
+   596→                  {editingId === test.id ? (
+   597→                    <div className="flex-1 space-y-2">
+   598→                      <Input value={editName} onChange={e => setEditName(e.target.value)} className="rounded-xl text-sm" />
+   599→                      <Input value={editDesc} onChange={e => setEditDesc(e.target.value)} placeholder="Description" className="rounded-xl text-sm" />
+   600→                      <ImageUploadSection imageUrl={editImageUrl} onImageChange={setEditImageUrl} label="Image" />
+   601→                      <div className="flex gap-2">
+   602→                        <Button size="sm" className="rounded-xl" onClick={() => handleSaveEdit('test', test.id)}><Save className="w-3 h-3 mr-1" /> Save</Button>
+   603→                        <Button size="sm" variant="outline" className="rounded-xl" onClick={() => setEditingId(null)}>Cancel</Button>
+   604→                      </div>
+   605→                    </div>
+   606→                  ) : (
+   607→                    <>
+   608→                      <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-100 to-emerald-200 flex items-center justify-center flex-shrink-0 overflow-hidden">
+   609→                        {test.imageUrl ? (
+   610→                          <img src={test.imageUrl} alt={test.title} className="w-full h-full object-cover" />
+   611→                        ) : (
+   612→                          <ListChecks className="w-5 h-5 text-emerald-500" />
+   613→                        )}
+   614→                      </div>
+   615→                      <button className="flex-1 min-w-0 text-left" onClick={() => handleSelectTest(test)}>
+   616→                        <p className="font-semibold text-sm truncate">{test.title}</p>
+   617→                        <p className="text-gray-400 text-xs">{test.totalQuestions}Q • {test.duration}min • {test.difficulty}</p>
+   618→                        {test.imageUrl && <Badge className="text-[8px] mt-0.5 bg-blue-100 text-blue-700">Image</Badge>}
+   619→                      </button>
+   620→                      <div className="flex items-center gap-1">
+   621→                        <Badge variant="secondary" className={`text-[9px] ${test.isLive ? 'bg-emerald-100 text-emerald-700' : 'bg-gray-100 text-gray-500'}`}>
+   622→                          {test.isLive ? 'Live' : 'Draft'}
+   623→                        </Badge>
+   624→                        <button onClick={() => handleStartEdit(test.id, test.title, test.description, test.imageUrl)} className="w-8 h-8 rounded-lg bg-blue-50 hover:bg-blue-100 flex items-center justify-center">
+   625→                          <Edit3 className="w-3.5 h-3.5 text-blue-500" />
+   626→                        </button>
+   627→                        <button onClick={() => handleDelete('test', test.id)} className="w-8 h-8 rounded-lg bg-red-50 hover:bg-red-100 flex items-center justify-center">
+   628→                          <Trash2 className="w-3.5 h-3.5 text-red-400" />
+   629→                        </button>
+   630→                        <button onClick={() => handleSelectTest(test)} className="w-8 h-8 rounded-lg bg-gray-50 hover:bg-gray-100 flex items-center justify-center">
+   631→                          <ChevronRight className="w-4 h-4 text-gray-400" />
+   632→                        </button>
+   633→                      </div>
+   634→                    </>
+   635→                  )}
+   636→                </CardContent>
+   637→              </Card>
+   638→            ))
+   639→          )}
+   640→        </div>
+   641→      )}
+   642→
+   643→      {/* ===== QUESTIONS VIEW ===== */}
+   644→      {!loading && viewLevel === 'questions' && (
+   645→        <div className="space-y-4">
+   646→          <div className="flex items-center justify-between">
+   647→            <h3 className="font-bold text-sm">Questions in {selectedTestName} ({questions.length})</h3>
+   648→            <div className="flex gap-2">
+   649→              <Button size="sm" variant="outline" className="rounded-xl text-xs" onClick={() => { setShowBatch(!showBatch); setBatchText('') }}>
+   650→                <Database className="w-3 h-3 mr-1" /> Batch Import
+   651→              </Button>
+   652→              <Button size="sm" className="rounded-xl text-xs" onClick={() => { setShowAddQuestion(!showAddQuestion); setQText(''); setQA(''); setQB(''); setQC(''); setQD(''); setQImageUrl('') }}>
+   653→                <Plus className="w-3 h-3 mr-1" /> Add Question
+   654→              </Button>
+   655→            </div>
+   656→          </div>
+   657→
+   658→          {/* Add Single Question */}
+   659→          {showAddQuestion && (
+   660→            <Card className="border-0 shadow-md bg-blue-50/50">
+   661→              <CardContent className="p-4 space-y-2">
+   662→                <Textarea placeholder="Question text" value={qText} onChange={e => setQText(e.target.value)} className="rounded-xl" rows={2} />
+   663→                <ImageUploadSection imageUrl={qImageUrl} onImageChange={setQImageUrl} label="Question Image (optional)" />
+   664→                <div className="grid grid-cols-2 gap-2">
+   665→                  <Input placeholder="Option A" value={qA} onChange={e => setQA(e.target.value)} className="rounded-xl" />
+   666→                  <Input placeholder="Option B" value={qB} onChange={e => setQB(e.target.value)} className="rounded-xl" />
+   667→                  <Input placeholder="Option C" value={qC} onChange={e => setQC(e.target.value)} className="rounded-xl" />
+   668→                  <Input placeholder="Option D" value={qD} onChange={e => setQD(e.target.value)} className="rounded-xl" />
+   669→                </div>
+   670→                <div className="grid grid-cols-2 gap-2">
+   671→                  <div>
+   672→                    <p className="text-xs text-gray-500 mb-1">Correct Answer</p>
+   673→                    <div className="flex gap-2">
+   674→                      {['A', 'B', 'C', 'D'].map(o => (
+   675→                        <button key={o} onClick={() => setQAns(o)} className={`w-9 h-9 rounded-lg text-sm font-bold ${qAns === o ? 'bg-emerald-500 text-white' : 'bg-gray-100 text-gray-500'}`}>
+   676→                          {o}
+   677→                        </button>
+   678→                      ))}
+   679→                    </div>
+   680→                  </div>
+   681→                  <Input placeholder="Subject (optional)" value={qSubject} onChange={e => setQSubject(e.target.value)} className="rounded-xl" />
+   682→                </div>
+   683→                <Textarea placeholder="Explanation (optional)" value={qExplanation} onChange={e => setQExplanation(e.target.value)} className="rounded-xl" rows={2} />
+   684→                <div className="flex gap-2">
+   685→                  <Button size="sm" className="rounded-xl" onClick={handleAddQuestion} disabled={!qText.trim()}>Add Question</Button>
+   686→                  <Button size="sm" variant="outline" className="rounded-xl" onClick={() => setShowAddQuestion(false)}>Cancel</Button>
+   687→                </div>
+   688→              </CardContent>
+   689→            </Card>
+   690→          )}
+   691→
+   692→          {/* Batch Import */}
+   693→          {showBatch && (
+   694→            <Card className="border-0 shadow-md bg-purple-50/50">
+   695→              <CardContent className="p-4 space-y-2">
+   696→                <p className="text-xs text-gray-500">Format: Question|OptA|OptB|OptC|OptD|Answer|Explanation|Subject (one per line)</p>
+   697→                <Textarea
+   698→                  placeholder={"What is 2+2?|4|3|5|6|A|Basic addition|Math\nCapital of India?|Mumbai|Delhi|Kolkata|Chennai|B|India's capital|GK"}
+   699→                  value={batchText}
+   700→                  onChange={e => setBatchText(e.target.value)}
+   701→                  className="rounded-xl font-mono text-xs"
+   702→                  rows={5}
+   703→                />
+   704→                <div className="flex gap-2">
+   705→                  <Button size="sm" className="rounded-xl" onClick={handleBatchQuestions} disabled={!batchText.trim()}>Import Batch</Button>
+   706→                  <Button size="sm" variant="outline" className="rounded-xl" onClick={() => setShowBatch(false)}>Cancel</Button>
+   707→                </div>
+   708→              </CardContent>
+   709→            </Card>
+   710→          )}
+   711→
+   712→          {questions.length === 0 ? (
+   713→            <Card className="border-0 shadow-sm">
+   714→              <CardContent className="p-8 text-center">
+   715→                <HelpCircle className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+   716→                <p className="text-gray-400 text-sm">No questions in this test</p>
+   717→                <p className="text-gray-300 text-xs mt-1">Add questions individually or use batch import</p>
+   718→              </CardContent>
+   719→            </Card>
+   720→          ) : (
+   721→            <div className="space-y-2 max-h-[60vh] overflow-y-auto">
+   722→              {questions.map((q, i) => (
+   723→                <Card key={q.id} className="border-0 shadow-sm">
+   724→                  <CardContent className="p-3">
+   725→                    <div className="flex items-start gap-2">
+   726→                      <span className="text-xs text-gray-400 mt-0.5 flex-shrink-0">#{i + 1}</span>
+   727→                      <div className="flex-1 min-w-0">
+   728→                        <p className="text-sm font-medium">{q.questionText}</p>
+   729→                        {q.questionImage && (
+   730→                          <div className="mt-1.5 mb-1.5">
+   731→                            <img src={q.questionImage} alt="Question" className="max-h-24 rounded-lg object-contain" />
+   732→                          </div>
+   733→                        )}
+   734→                        <div className="grid grid-cols-2 gap-1 mt-1.5 text-xs">
+   735→                          <span className={`px-2 py-0.5 rounded ${q.correctAnswer === 'A' ? 'bg-emerald-100 text-emerald-700 font-medium' : 'bg-gray-50 text-gray-500'}`}>A: {q.optionA}</span>
+   736→                          <span className={`px-2 py-0.5 rounded ${q.correctAnswer === 'B' ? 'bg-emerald-100 text-emerald-700 font-medium' : 'bg-gray-50 text-gray-500'}`}>B: {q.optionB}</span>
+   737→                          <span className={`px-2 py-0.5 rounded ${q.correctAnswer === 'C' ? 'bg-emerald-100 text-emerald-700 font-medium' : 'bg-gray-50 text-gray-500'}`}>C: {q.optionC}</span>
+   738→                          <span className={`px-2 py-0.5 rounded ${q.correctAnswer === 'D' ? 'bg-emerald-100 text-emerald-700 font-medium' : 'bg-gray-50 text-gray-500'}`}>D: {q.optionD}</span>
+   739→                        </div>
+   740→                        {q.explanation && <p className="text-gray-400 text-[10px] mt-1">{q.explanation}</p>}
+   741→                        <div className="flex items-center gap-1 mt-1">
+   742→                          {q.subject && <Badge variant="secondary" className="text-[9px]">{q.subject}</Badge>}
+   743→                          {q.questionImage && <Badge className="text-[9px] bg-blue-100 text-blue-700">Image</Badge>}
+   744→                        </div>
+   745→                      </div>
+   746→                      <button onClick={() => handleDelete('question', q.id)} className="w-7 h-7 rounded-lg bg-red-50 hover:bg-red-100 flex items-center justify-center flex-shrink-0">
+   747→                        <Trash2 className="w-3 h-3 text-red-400" />
+   748→                      </button>
+   749→                    </div>
+   750→                  </CardContent>
+   751→                </Card>
+   752→              ))}
+   753→            </div>
+   754→          )}
+   755→        </div>
+   756→      )}
+   757→    </div>
+   758→  )
+   759→}
+   760→

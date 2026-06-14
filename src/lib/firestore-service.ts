@@ -1297,6 +1297,7 @@ export async function seedFirestoreIfEmpty(): Promise<boolean> {
           testCount: exam.testCount, categoryId: catRef.id,
         })
         opCount++
+        await commitIfNeeded()
       }
       await commitIfNeeded()
     }
@@ -1322,6 +1323,7 @@ export async function seedFirestoreIfEmpty(): Promise<boolean> {
           subject: q.subject, order: q.order, testId: testRef.id,
         })
         opCount++
+        await commitIfNeeded()
       }
       await commitIfNeeded()
     }

@@ -14,7 +14,7 @@ import {
   GraduationCap, Shield, Building, Train, ShieldCheck, Swords,
   LogOut, Loader2, Mail, AlertTriangle, Settings, Bell,
   ChevronDown, Star, Flame, TrendingUp, Calendar, Gift,
-  HelpCircle, Share2, MessageCircle, Crown, Lightbulb, ExternalLink, FileText,
+  HelpCircle, Share2, Crown, Lightbulb, ExternalLink, FileText,
   Menu, BookmarkPlus, Download, BarChart3, Wifi,
   ClipboardList, PenTool
 } from 'lucide-react'
@@ -3145,15 +3145,24 @@ export default function ExamPrepApp() {
                     const link = selectedNotification.link!
                     setSelectedNotification(null)
                     setShowNotificationPanel(false)
-                    // Check if it's an internal app page
-                    const internalPages = ['home', 'exams', 'tests', 'practice', 'leaderboard', 'profile', 'test-info', 'test-taking', 'results', 'about']
-                    if (internalPages.includes(link)) {
-                      handleBottomNav(link as Page)
-                    } else if (link.startsWith('/admin')) {
-                      window.location.href = link
+                    // Check if it's a special internal action
+                    if (link === 'about') {
+                      setShowAboutSheet(true)
+                    } else if (link === 'help') {
+                      setShowHelpSheet(true)
+                    } else if (link === 'offline') {
+                      setShowOfflineSheet(true)
                     } else {
-                      // External URL - open in new tab
-                      window.open(link.startsWith('http') ? link : `https://${link}`, '_blank')
+                      // Check if it's an internal app page
+                      const internalPages = ['home', 'exams', 'tests', 'practice', 'leaderboard', 'profile', 'test-info', 'test-taking', 'results']
+                      if (internalPages.includes(link)) {
+                        handleBottomNav(link as Page)
+                      } else if (link.startsWith('/admin')) {
+                        window.location.href = link
+                      } else {
+                        // External URL - open in new tab
+                        window.open(link.startsWith('http') ? link : `https://${link}`, '_blank')
+                      }
                     }
                   }}
                 >
@@ -3230,7 +3239,7 @@ export default function ExamPrepApp() {
               </div>
               <h3 className="font-bold text-xl text-gray-900">Create Account to Continue</h3>
               <p className="text-gray-500 text-sm mt-2 leading-relaxed">
-                Guest users can try one free Quick Practice. Sign up now to unlock unlimited mock tests, track progress, and compete on the leaderboard!
+                Guest users can try up to 5 free Quick Practice sessions. Sign up now to unlock unlimited mock tests, track progress, and compete on the leaderboard!
               </p>
             </div>
             <div className="px-6 pb-6 space-y-2.5">
