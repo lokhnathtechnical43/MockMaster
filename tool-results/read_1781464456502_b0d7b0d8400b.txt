@@ -1,0 +1,502 @@
+  1900→                  const randomExam = allExams[Math.floor(Math.random() * allExams.length)]
+  1901→                  const randomCat = allCats.find(c => c.exams.some(e => e.id === randomExam.id))!
+  1902→                  openExam(randomExam, randomCat)
+  1903→                }
+  1904→              }}>
+  1905→                <CardContent className="p-4 text-center">
+  1906→                  <div className="w-12 h-12 rounded-2xl bg-orange-50 flex items-center justify-center mx-auto mb-2">
+  1907→                    <Zap className="w-6 h-6 text-orange-500" />
+  1908→                  </div>
+  1909→                  <p className="font-semibold text-sm">{_t('practice.quick')}</p>
+  1910→                  <p className="text-gray-400 text-[11px] mt-1">{_t('practice.quickSub')}</p>
+  1911→                </CardContent>
+  1912→              </Card>
+  1913→              <Card className="border-0 shadow-sm cursor-pointer hover:shadow-md transition-shadow" onClick={() => handleBottomNav('exams')}>
+  1914→                <CardContent className="p-4 text-center">
+  1915→                  <div className="w-12 h-12 rounded-2xl bg-blue-50 flex items-center justify-center mx-auto mb-2">
+  1916→                    <Target className="w-6 h-6 text-blue-500" />
+  1917→                  </div>
+  1918→                  <p className="font-semibold text-sm">{_t('practice.topicWise')}</p>
+  1919→                  <p className="text-gray-400 text-[11px] mt-1">{_t('practice.topicWiseSub')}</p>
+  1920→                </CardContent>
+  1921→              </Card>
+  1922→              <Card className="border-0 shadow-sm cursor-pointer hover:shadow-md transition-shadow" onClick={() => {
+  1923→                if (auth.isLoggedIn) {
+  1924→                  // Show bookmarked/reviewed questions from past tests
+  1925→                  const results = getUserStats()
+  1926→                  if (results.testsTaken > 0) {
+  1927→                    handleBottomNav('tests')
+  1928→                  } else {
+  1929→                    handleBottomNav('exams')
+  1930→                  }
+  1931→                } else {
+  1932→                  setShowLoginModal(true)
+  1933→                }
+  1934→              }}>
+  1935→                <CardContent className="p-4 text-center">
+  1936→                  <div className="w-12 h-12 rounded-2xl bg-green-50 flex items-center justify-center mx-auto mb-2">
+  1937→                    <BookMarked className="w-6 h-6 text-green-500" />
+  1938→                  </div>
+  1939→                  <p className="font-semibold text-sm">{_t('practice.bookmarked')}</p>
+  1940→                  <p className="text-gray-400 text-[11px] mt-1">{_t('practice.bookmarkedSub')}</p>
+  1941→                </CardContent>
+  1942→              </Card>
+  1943→              <Card className="border-0 shadow-sm cursor-pointer hover:shadow-md transition-shadow" onClick={() => {
+  1944→                if (auth.isLoggedIn) {
+  1945→                  handleBottomNav('tests')
+  1946→                } else {
+  1947→                  setShowLoginModal(true)
+  1948→                }
+  1949→              }}>
+  1950→                <CardContent className="p-4 text-center">
+  1951→                  <div className="w-12 h-12 rounded-2xl bg-purple-50 flex items-center justify-center mx-auto mb-2">
+  1952→                    <PenTool className="w-6 h-6 text-purple-500" />
+  1953→                  </div>
+  1954→                  <p className="font-semibold text-sm">{_t('practice.weakAreas')}</p>
+  1955→                  <p className="text-gray-400 text-[11px] mt-1">{_t('practice.weakAreasSub')}</p>
+  1956→                </CardContent>
+  1957→              </Card>
+  1958→            </div>
+  1959→          </div>
+  1960→
+  1961→          {/* Practice by Category */}
+  1962→          <div>
+  1963→            <h2 className="font-bold text-lg mb-3">{_t('practice.byCategory')}</h2>
+  1964→            <div className="space-y-2">
+  1965→              {categories.map(cat => {
+  1966→                const color = getCatColor(cat.slug)
+  1967→                const totalQs = cat.exams.reduce((sum, e) => sum + e.totalQuestions, 0)
+  1968→                return (
+  1969→                  <Card
+  1970→                    key={cat.id}
+  1971→                    className="border-0 shadow-sm cursor-pointer hover:shadow-md transition-shadow"
+  1972→                    onClick={() => {
+  1973→                      setSelectedCategory(cat)
+  1974→                      navigateTo('exams')
+  1975→                    }}
+  1976→                  >
+  1977→                    <CardContent className="p-3 flex items-center gap-3">
+  1978→                      <div className={`w-10 h-10 rounded-xl ${color.light} flex items-center justify-center ${color.text}`}>
+  1979→                        {getCatIcon(cat.slug)}
+  1980→                      </div>
+  1981→                      <div className="flex-1 min-w-0">
+  1982→                        <p className="font-semibold text-sm">{cat.name}</p>
+  1983→                        <p className="text-gray-400 text-xs">{cat.exams.length} {_t('home.exams')} · {totalQs} {_t('about.questions')}</p>
+  1984→                      </div>
+  1985→                      <Button size="sm" variant="outline" className="rounded-xl text-orange-600 border-orange-200 text-xs">
+  1986→                        {_t('home.start')}
+  1987→                      </Button>
+  1988→                    </CardContent>
+  1989→                  </Card>
+  1990→                )
+  1991→              })}
+  1992→            </div>
+  1993→          </div>
+  1994→
+  1995→          {/* Previous Practice Sessions */}
+  1996→          <div>
+  1997→            <h2 className="font-bold text-lg mb-3">{_t('practice.recent')}</h2>
+  1998→            {auth.isLoggedIn ? (
+  1999→              <Card className="border-0 shadow-sm">
+  2000→                <CardContent className="p-4 text-center">
+  2001→                  <Clock className="w-8 h-8 text-gray-300 mx-auto mb-2" />
+  2002→                  <p className="text-gray-400 text-sm">{_t('practice.historyEmpty')}</p>
+  2003→                </CardContent>
+  2004→              </Card>
+  2005→            ) : (
+  2006→              <Card className="border-0 shadow-sm bg-gradient-to-r from-orange-50 to-red-50">
+  2007→                <CardContent className="p-4 text-center">
+  2008→                  <PenTool className="w-8 h-8 text-orange-400 mx-auto mb-2" />
+  2009→                  <p className="font-semibold text-sm text-gray-700">{_t('practice.loginSave')}</p>
+  2010→                  <Button size="sm" className="bg-gradient-to-r from-orange-500 to-red-500 text-white rounded-xl mt-2" onClick={() => setShowLoginModal(true)}>
+  2011→                    {_t('home.loginNow')}
+  2012→                  </Button>
+  2013→                </CardContent>
+  2014→              </Card>
+  2015→            )}
+  2016→          </div>
+  2017→        </div>
+  2018→      </div>
+  2019→    )
+  2020→  }
+  2021→
+  2022→  // ===== RENDER: Profile Page =====
+  2023→  function renderProfile() {
+  2024→    const stats = getUserStats()
+  2025→    const userDisplay = auth.getUserDisplay()
+  2026→    const userEmail = auth.getUserEmail()
+  2027→    const isEmailUser = !auth.isGuest && auth.isLoggedIn
+  2028→
+  2029→    return (
+  2030→      <div className="pb-20">
+  2031→        {/* Header with gradient */}
+  2032→        <div className="bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 px-5 pt-[calc(env(safe-area-inset-top,0px)+3rem)] pb-10 rounded-b-[28px] relative overflow-hidden">
+  2033→          {/* Page Image - Profile Header Background */}
+  2034→          {getPageImg('profile_header') && (
+  2035→            <img src={getPageImg('profile_header')} alt="" className="absolute inset-0 w-full h-full object-cover opacity-20" />
+  2036→          )}
+  2037→          {/* Decorative circles */}
+  2038→          <div className="absolute top-0 right-0 w-40 h-40 bg-orange-500/10 rounded-full -translate-y-1/2 translate-x-1/4" />
+  2039→          <div className="absolute bottom-0 left-0 w-32 h-32 bg-orange-500/10 rounded-full translate-y-1/2 -translate-x-1/4" />
+  2040→
+  2041→          {/* Top bar */}
+  2042→          <div className="flex items-center justify-between mb-6 relative z-10">
+  2043→            <h1 className="text-white text-xl font-bold">{_t('profile.title')}</h1>
+  2044→            <button
+  2045→              onClick={() => setShowAboutSheet(true)}
+  2046→              className="w-9 h-9 rounded-full bg-white/10 backdrop-blur flex items-center justify-center"
+  2047→            >
+  2048→              <Settings className="w-4 h-4 text-white/70" />
+  2049→            </button>
+  2050→          </div>
+  2051→
+  2052→          {/* Profile Card */}
+  2053→          <div className="bg-white/10 backdrop-blur-md rounded-2xl p-5 border border-white/10 relative z-10">
+  2054→            <div className="flex items-center gap-4">
+  2055→              <div className="relative">
+  2056→                <div className="w-16 h-16 rounded-full bg-gradient-to-br from-orange-400 to-red-500 flex items-center justify-center shadow-lg shadow-orange-500/20">
+  2057→                  <span className="text-white font-bold text-xl">{getAvatarDisplay()}</span>
+  2058→                </div>
+  2059→                {isEmailUser && (
+  2060→                  <div className="absolute -bottom-1 -right-1 w-6 h-6 rounded-full bg-emerald-500 flex items-center justify-center border-2 border-slate-900">
+  2061→                    <CheckCircle2 className="w-3 h-3 text-white" />
+  2062→                  </div>
+  2063→                )}
+  2064→              </div>
+  2065→              <div className="flex-1 min-w-0">
+  2066→                <p className="text-white font-bold text-lg truncate">
+  2067→                  {isEmailUser ? (userDisplay || userEmail) : _t('profile.guestUser')}
+  2068→                </p>
+  2069→                <div className="flex items-center gap-2 mt-1">
+  2070→                  {isEmailUser ? (
+  2071→                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 text-xs font-medium">
+  2072→                      <Shield className="w-3 h-3" /> {_t('profile.verified')}
+  2073→                    </span>
+  2074→                  ) : (
+  2075→                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-400 text-xs font-medium">
+  2076→                      <AlertTriangle className="w-3 h-3" /> {_t('profile.guestMode')}
+  2077→                    </span>
+  2078→                  )}
+  2079→                </div>
+  2080→              </div>
+  2081→              {auth.isLoggedIn && !auth.isGuest && (
+  2082→                <button
+  2083→                  onClick={() => auth.logout()}
+  2084→                  className="w-9 h-9 rounded-full bg-white/10 flex items-center justify-center"
+  2085→                >
+  2086→                  <LogOut className="w-4 h-4 text-white/60" />
+  2087→                </button>
+  2088→              )}
+  2089→            </div>
+  2090→
+  2091→            {/* Stats Row */}
+  2092→            <div className="mt-5 pt-4 border-t border-white/10 grid grid-cols-3 gap-2">
+  2093→              <div className="text-center">
+  2094→                <p className="text-white font-bold text-xl">{stats.testsTaken}</p>
+  2095→                <p className="text-white/40 text-[10px] font-medium uppercase tracking-wider">{_t('profile.tests')}</p>
+  2096→              </div>
+  2097→              <div className="text-center border-x border-white/10">
+  2098→                <p className="text-white font-bold text-xl">{stats.avgScore}%</p>
+  2099→                <p className="text-white/40 text-[10px] font-medium uppercase tracking-wider">{_t('profile.avgScore')}</p>
+  2100→              </div>
+  2101→              <div className="text-center">
+  2102→                <p className="text-white font-bold text-xl">#{stats.bestRank}</p>
+  2103→                <p className="text-white/40 text-[10px] font-medium uppercase tracking-wider">{_t('profile.bestRank')}</p>
+  2104→              </div>
+  2105→            </div>
+  2106→          </div>
+  2107→        </div>
+  2108→
+  2109→        <div className="px-4 -mt-5 space-y-4 relative z-20">
+  2110→          {/* Guest Upgrade Banner */}
+  2111→          {auth.isGuest && (
+  2112→            <Card className="border-0 shadow-lg bg-gradient-to-r from-amber-500 to-orange-500 overflow-hidden">
+  2113→              <CardContent className="p-4">
+  2114→                <div className="flex items-center gap-3">
+  2115→                  <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center flex-shrink-0">
+  2116→                    <Crown className="w-5 h-5 text-white" />
+  2117→                  </div>
+  2118→                  <div className="flex-1 min-w-0">
+  2119→                    <p className="text-white font-bold text-sm">{_t('profile.upgradeTitle')}</p>
+  2120→                    <p className="text-white/80 text-xs mt-0.5">{_t('profile.upgradeSub')}</p>
+  2121→                  </div>
+  2122→                  <Button
+  2123→                    size="sm"
+  2124→                    className="bg-white text-orange-600 hover:bg-white/90 rounded-xl font-bold px-3"
+  2125→                    onClick={() => setShowLoginModal(true)}
+  2126→                  >
+  2127→                    <Mail className="w-3 h-3 mr-1" /> {_t('profile.login')}
+  2128→                  </Button>
+  2129→                </div>
+  2130→              </CardContent>
+  2131→            </Card>
+  2132→          )}
+  2133→
+  2134→          {/* Not logged in - Login Card */}
+  2135→          {!auth.isLoggedIn && (
+  2136→            <Card className="border-0 shadow-lg overflow-hidden">
+  2137→              <CardContent className="p-5">
+  2138→                <div className="text-center mb-4">
+  2139→                  <div className="w-14 h-14 rounded-full bg-orange-50 flex items-center justify-center mx-auto mb-3">
+  2140→                    <User className="w-7 h-7 text-orange-500" />
+  2141→                  </div>
+  2142→                  <p className="font-bold text-base">{_t('profile.loginUnlock')}</p>
+  2143→                  <p className="text-gray-400 text-xs mt-1">{_t('profile.loginUnlockSub')}</p>
+  2144→                </div>
+  2145→                <Button
+  2146→                  className="w-full h-11 bg-gradient-to-r from-orange-500 to-red-500 text-white rounded-xl font-semibold"
+  2147→                  onClick={() => setShowLoginModal(true)}
+  2148→                >
+  2149→                  <Mail className="w-4 h-4 mr-2" /> {_t('profile.loginEmail')}
+  2150→                </Button>
+  2151→              </CardContent>
+  2152→            </Card>
+  2153→          )}
+  2154→
+  2155→          {/* Quick Actions Grid */}
+  2156→          <div className="grid grid-cols-2 gap-3">
+  2157→            <Card
+  2158→              className="border-0 shadow-sm cursor-pointer hover:shadow-md transition-all active:scale-[0.98]"
+  2159→              onClick={() => { pageHistoryRef.current.push(currentPage); setCurrentPage('exams') }}
+  2160→            >
+  2161→              <CardContent className="p-4">
+  2162→                <div className="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center mb-2">
+  2163→                  <BookOpen className="w-5 h-5 text-blue-600" />
+  2164→                </div>
+  2165→                <p className="font-semibold text-sm">{_t('profile.myExams')}</p>
+  2166→                <p className="text-gray-400 text-[10px] mt-0.5">{categories.length} {_t('profile.categories')}</p>
+  2167→              </CardContent>
+  2168→            </Card>
+  2169→            <Card
+  2170→              className="border-0 shadow-sm cursor-pointer hover:shadow-md transition-all active:scale-[0.98]"
+  2171→              onClick={async () => {
+  2172→                try {
+  2173→                  const fsResults = isFirestore() ? await getFsResults() : []
+  2174→                  const localResults = getLocalResults()
+  2175→                  const allResults = [...fsResults, ...localResults]
+  2176→                  const uniqueResults = allResults.filter((r, i, arr) => arr.findIndex(x => x.id === r.id) === i)
+  2177→                  setLeaderboardData(uniqueResults.sort((a, b) => b.score - a.score).slice(0, 50))
+  2178→                  setLeaderboardTestId('all')
+  2179→                } catch {
+  2180→                  setLeaderboardData(getLocalResults().sort((a, b) => b.score - a.score).slice(0, 50))
+  2181→                  setLeaderboardTestId('all')
+  2182→                }
+  2183→                pageHistoryRef.current.push(currentPage)
+  2184→                setCurrentPage('leaderboard')
+  2185→              }}
+  2186→            >
+  2187→              <CardContent className="p-4">
+  2188→                <div className="w-10 h-10 rounded-xl bg-amber-50 flex items-center justify-center mb-2">
+  2189→                  <Trophy className="w-5 h-5 text-amber-600" />
+  2190→                </div>
+  2191→                <p className="font-semibold text-sm">{_t('leaderboard.title')}</p>
+  2192→                <p className="text-gray-400 text-[10px] mt-0.5">{_t('profile.viewRankings')}</p>
+  2193→              </CardContent>
+  2194→            </Card>
+  2195→          </div>
+  2196→
+  2197→          {/* Settings Section */}
+  2198→          <div>
+  2199→            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider px-1 mb-2">{_t('profile.settings')}</p>
+  2200→            <Card className="border-0 shadow-sm overflow-hidden">
+  2201→              <CardContent className="p-0">
+  2202→                {/* Language */}
+  2203→                <button
+  2204→                  className="w-full flex items-center gap-3 p-4 hover:bg-gray-50/80 transition-colors active:bg-gray-100"
+  2205→                  onClick={() => setShowLanguageSheet(true)}
+  2206→                >
+  2207→                  <div className="w-9 h-9 rounded-xl bg-indigo-50 flex items-center justify-center">
+  2208→                    <BookOpen className="w-4 h-4 text-indigo-600" />
+  2209→                  </div>
+  2210→                  <div className="flex-1 text-left">
+  2211→                    <p className="font-semibold text-[13px]">{_t('profile.language')}</p>
+  2212→                    <p className="text-gray-400 text-[11px]">{lng === 'en' ? _t('lang.english') : lng === 'hi' ? _t('lang.hindi') : _t('lang.bangla')}</p>
+  2213→                  </div>
+  2214→                  <ChevronRight className="w-4 h-4 text-gray-300" />
+  2215→                </button>
+  2216→                <div className="mx-4 border-t border-gray-100" />
+  2217→                {/* About */}
+  2218→                <button
+  2219→                  className="w-full flex items-center gap-3 p-4 hover:bg-gray-50/80 transition-colors active:bg-gray-100"
+  2220→                  onClick={() => setShowAboutSheet(true)}
+  2221→                >
+  2222→                  <div className="w-9 h-9 rounded-xl bg-purple-50 flex items-center justify-center">
+  2223→                    <Shield className="w-4 h-4 text-purple-600" />
+  2224→                  </div>
+  2225→                  <div className="flex-1 text-left">
+  2226→                    <p className="font-semibold text-[13px]">{_t('profile.about')}</p>
+  2227→                    <p className="text-gray-400 text-[11px]">{_t('profile.aboutSub')}</p>
+  2228→                  </div>
+  2229→                  <ChevronRight className="w-4 h-4 text-gray-300" />
+  2230→                </button>
+  2231→              </CardContent>
+  2232→            </Card>
+  2233→          </div>
+  2234→
+  2235→          {/* Support Section */}
+  2236→          <div>
+  2237→            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider px-1 mb-2">{_t('profile.support')}</p>
+  2238→            <Card className="border-0 shadow-sm overflow-hidden">
+  2239→              <CardContent className="p-0">
+  2240→                <button
+  2241→                  className="w-full flex items-center gap-3 p-4 hover:bg-gray-50/80 transition-colors active:bg-gray-100"
+  2242→                  onClick={() => setShowHelpSheet(true)}
+  2243→                >
+  2244→                  <div className="w-9 h-9 rounded-xl bg-teal-50 flex items-center justify-center">
+  2245→                    <HelpCircle className="w-4 h-4 text-teal-600" />
+  2246→                  </div>
+  2247→                  <div className="flex-1 text-left">
+  2248→                    <p className="font-semibold text-[13px]">{_t('profile.helpFaq')}</p>
+  2249→                    <p className="text-gray-400 text-[11px]">{_t('profile.helpFaqSub')}</p>
+  2250→                  </div>
+  2251→                  <ChevronRight className="w-4 h-4 text-gray-300" />
+  2252→                </button>
+  2253→                <div className="mx-4 border-t border-gray-100" />
+  2254→                <button
+  2255→                  className="w-full flex items-center gap-3 p-4 hover:bg-gray-50/80 transition-colors active:bg-gray-100"
+  2256→                  onClick={() => {
+  2257→                    if (navigator.share) {
+  2258→                      navigator.share({ title: _t('app.name'), text: _t('share.text'), url: window.location.href })
+  2259→                    }
+  2260→                  }}
+  2261→                >
+  2262→                  <div className="w-9 h-9 rounded-xl bg-pink-50 flex items-center justify-center">
+  2263→                    <Share2 className="w-4 h-4 text-pink-600" />
+  2264→                  </div>
+  2265→                  <div className="flex-1 text-left">
+  2266→                    <p className="font-semibold text-[13px]">{_t('profile.shareApp')}</p>
+  2267→                    <p className="text-gray-400 text-[11px]">{_t('profile.shareAppSub')}</p>
+  2268→                  </div>
+  2269→                  <ChevronRight className="w-4 h-4 text-gray-300" />
+  2270→                </button>
+  2271→              </CardContent>
+  2272→            </Card>
+  2273→          </div>
+  2274→
+  2275→          {/* Logout Button */}
+  2276→          {auth.isLoggedIn && !auth.isGuest && (
+  2277→            <Button
+  2278→              variant="outline"
+  2279→              className="w-full rounded-xl border-red-200 text-red-500 hover:bg-red-50 hover:text-red-600 h-11 font-semibold"
+  2280→              onClick={() => auth.logout()}
+  2281→            >
+  2282→              <LogOut className="w-4 h-4 mr-2" /> {_t('profile.logout')}
+  2283→            </Button>
+  2284→          )}
+  2285→
+  2286→          {/* App Version */}
+  2287→          <p className="text-center text-gray-300 text-[10px] pt-2 pb-4">{_t('app.versionFull')}</p>
+  2288→        </div>
+  2289→
+  2290→        {/* Language Sheet */}
+  2291→        {showLanguageSheet && (
+  2292→          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-end justify-center" onClick={() => setShowLanguageSheet(false)}>
+  2293→            <div className="bg-white rounded-t-[28px] w-full p-6 animate-slide-up" onClick={e => e.stopPropagation()}>
+  2294→              <div className="w-10 h-1 rounded-full bg-gray-200 mx-auto mb-5" />
+  2295→              <h3 className="font-bold text-lg mb-4">{_t('lang.select')}</h3>
+  2296→              <div className="space-y-1">
+  2297→                {[
+  2298→                  { code: 'en', name: _t('lang.english'), flag: '🇬🇧', available: true },
+  2299→                  { code: 'hi', name: _t('lang.hindi'), flag: '🇮🇳', available: true },
+  2300→                  { code: 'bn', name: _t('lang.bangla'), flag: '🇧🇩', available: true },
+  2301→                ].map(lang => (
+  2302→                  <button
+  2303→                    key={lang.code}
+  2304→                    className={`w-full flex items-center gap-3 p-4 rounded-xl transition-colors ${
+  2305→                      lang.available ? 'hover:bg-gray-50 active:bg-gray-100' : 'opacity-50'
+  2306→                    }`}
+  2307→                    onClick={() => {
+  2308→                      if (lang.available) {
+  2309→                        setSelectedLanguage(lang.code)
+  2310→                        setShowLanguageSheet(false)
+  2311→                      }
+  2312→                    }}
+  2313→                    onTouchEnd={(e) => {
+  2314→                      if (lang.available) {
+  2315→                        e.preventDefault()
+  2316→                        setSelectedLanguage(lang.code)
+  2317→                        setShowLanguageSheet(false)
+  2318→                      }
+  2319→                    }}
+  2320→                  >
+  2321→                    <span className="text-xl">{lang.flag}</span>
+  2322→                    <span className="font-medium text-sm flex-1">{lang.name}</span>
+  2323→                    {!lang.available && <Badge variant="secondary" className="text-[10px]">{_t('lang.comingSoon')}</Badge>}
+  2324→                    {selectedLanguage === lang.code && (
+  2325→                      <div className="w-6 h-6 rounded-full bg-orange-500 flex items-center justify-center">
+  2326→                        <CheckCircle2 className="w-4 h-4 text-white" />
+  2327→                      </div>
+  2328→                    )}
+  2329→                  </button>
+  2330→                ))}
+  2331→              </div>
+  2332→              <Button
+  2333→                variant="outline"
+  2334→                className="w-full mt-5 rounded-xl h-11"
+  2335→                onClick={() => setShowLanguageSheet(false)}
+  2336→              >
+  2337→                {_t('lang.cancel')}
+  2338→              </Button>
+  2339→            </div>
+  2340→          </div>
+  2341→        )}
+  2342→
+  2343→        {/* About Sheet */}
+  2344→        {showAboutSheet && (
+  2345→          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-end justify-center" onClick={() => setShowAboutSheet(false)}>
+  2346→            <div className="bg-white rounded-t-[28px] w-full p-6 animate-slide-up" onClick={e => e.stopPropagation()}>
+  2347→              <div className="w-10 h-1 rounded-full bg-gray-200 mx-auto mb-5" />
+  2348→              <div className="text-center mb-5">
+  2349→                <div className="w-16 h-16 bg-gradient-to-br from-orange-500 to-red-500 rounded-2xl flex items-center justify-center mx-auto mb-3 shadow-lg shadow-orange-500/20">
+  2350→                  <span className="text-white text-2xl font-bold">E</span>
+  2351→                </div>
+  2352→                <h3 className="font-bold text-lg">{_t('app.name')}</h3>
+  2353→                <p className="text-gray-400 text-sm">{_t('app.version')}</p>
+  2354→              </div>
+  2355→              <div className="space-y-2">
+  2356→                {[
+  2357→                  { label: _t('about.version'), value: '1.0' },
+  2358→                  { label: _t('about.size'), value: '~5 MB' },
+  2359→                  { label: _t('about.exams'), value: '21+' },
+  2360→                  { label: _t('about.questions'), value: '210+' },
+  2361→                  { label: _t('about.offline'), value: _t('about.yes'), green: true },
+  2362→                  { label: _t('about.ads'), value: _t('about.no'), green: true },
+  2363→                ].map(item => (
+  2364→                  <div key={item.label} className="flex justify-between text-sm p-3 bg-gray-50 rounded-xl">
+  2365→                    <span className="text-gray-500">{item.label}</span>
+  2366→                    <span className={`font-medium ${item.green ? 'text-emerald-600' : ''}`}>{item.value}</span>
+  2367→                  </div>
+  2368→                ))}
+  2369→              </div>
+  2370→              <p className="text-center text-sm text-gray-400 mt-5">{_t('app.madeIn')}</p>
+  2371→              <Button
+  2372→                variant="outline"
+  2373→                className="w-full mt-4 rounded-xl h-11"
+  2374→                onClick={() => setShowAboutSheet(false)}
+  2375→              >
+  2376→                {_t('about.close')}
+  2377→              </Button>
+  2378→            </div>
+  2379→          </div>
+  2380→        )}
+  2381→
+  2382→        {/* Help & FAQ Sheet */}
+  2383→        {showHelpSheet && (
+  2384→          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-end justify-center" onClick={() => setShowHelpSheet(false)}>
+  2385→            <div className="bg-white rounded-t-[28px] w-full max-h-[80vh] overflow-y-auto p-6 animate-slide-up" onClick={e => e.stopPropagation()}>
+  2386→              <div className="w-10 h-1 rounded-full bg-gray-200 mx-auto mb-5" />
+  2387→              <div className="text-center mb-5">
+  2388→                <div className="w-16 h-16 bg-gradient-to-br from-teal-500 to-emerald-500 rounded-2xl flex items-center justify-center mx-auto mb-3 shadow-lg">
+  2389→                  <HelpCircle className="w-8 h-8 text-white" />
+  2390→                </div>
+  2391→                <h3 className="font-bold text-lg">{_t('profile.helpFaq')}</h3>
+  2392→              </div>
+  2393→              <div className="space-y-3">
+  2394→                {[
+  2395→                  { q: 'How do I start a test?', a: 'Go to the Exams page, select an exam category, choose a test and tap "Start Test". You can also use Quick Practice for a random test.' },
+  2396→                  { q: 'How is my score calculated?', a: 'Your score is calculated based on correct answers (marks added) and wrong answers (negative marking as per test scheme). Skipped questions get zero marks.' },
+  2397→                  { q: 'Can I review my answers?', a: 'Yes! After completing a test, you can see the full Answer Key with explanations for each question.' },
+  2398→                  { q: 'How do I track my progress?', a: 'Login with email to save your progress. Your test scores, accuracy, and rankings are tracked in your Profile page.' },
+  2399→                  { q: 'Is offline mode available?', a: 'You can download tests for offline use from the Offline Mode section in the side menu.' },
+
+[showing lines 1900-2399 of 2952; use offset=2400 with limit to continue reading]

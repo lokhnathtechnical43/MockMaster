@@ -1,0 +1,753 @@
+  2200→            <Card className="border-0 shadow-sm overflow-hidden">
+  2201→              <CardContent className="p-0">
+  2202→                {/* Language */}
+  2203→                <button
+  2204→                  className="w-full flex items-center gap-3 p-4 hover:bg-gray-50/80 transition-colors active:bg-gray-100"
+  2205→                  onClick={() => setShowLanguageSheet(true)}
+  2206→                >
+  2207→                  <div className="w-9 h-9 rounded-xl bg-indigo-50 flex items-center justify-center">
+  2208→                    <BookOpen className="w-4 h-4 text-indigo-600" />
+  2209→                  </div>
+  2210→                  <div className="flex-1 text-left">
+  2211→                    <p className="font-semibold text-[13px]">{_t('profile.language')}</p>
+  2212→                    <p className="text-gray-400 text-[11px]">{lng === 'en' ? _t('lang.english') : lng === 'hi' ? _t('lang.hindi') : _t('lang.bangla')}</p>
+  2213→                  </div>
+  2214→                  <ChevronRight className="w-4 h-4 text-gray-300" />
+  2215→                </button>
+  2216→                <div className="mx-4 border-t border-gray-100" />
+  2217→                {/* About */}
+  2218→                <button
+  2219→                  className="w-full flex items-center gap-3 p-4 hover:bg-gray-50/80 transition-colors active:bg-gray-100"
+  2220→                  onClick={() => setShowAboutSheet(true)}
+  2221→                >
+  2222→                  <div className="w-9 h-9 rounded-xl bg-purple-50 flex items-center justify-center">
+  2223→                    <Shield className="w-4 h-4 text-purple-600" />
+  2224→                  </div>
+  2225→                  <div className="flex-1 text-left">
+  2226→                    <p className="font-semibold text-[13px]">{_t('profile.about')}</p>
+  2227→                    <p className="text-gray-400 text-[11px]">{_t('profile.aboutSub')}</p>
+  2228→                  </div>
+  2229→                  <ChevronRight className="w-4 h-4 text-gray-300" />
+  2230→                </button>
+  2231→              </CardContent>
+  2232→            </Card>
+  2233→          </div>
+  2234→
+  2235→          {/* Support Section */}
+  2236→          <div>
+  2237→            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider px-1 mb-2">{_t('profile.support')}</p>
+  2238→            <Card className="border-0 shadow-sm overflow-hidden">
+  2239→              <CardContent className="p-0">
+  2240→                <button
+  2241→                  className="w-full flex items-center gap-3 p-4 hover:bg-gray-50/80 transition-colors active:bg-gray-100"
+  2242→                  onClick={() => setShowHelpSheet(true)}
+  2243→                >
+  2244→                  <div className="w-9 h-9 rounded-xl bg-teal-50 flex items-center justify-center">
+  2245→                    <HelpCircle className="w-4 h-4 text-teal-600" />
+  2246→                  </div>
+  2247→                  <div className="flex-1 text-left">
+  2248→                    <p className="font-semibold text-[13px]">{_t('profile.helpFaq')}</p>
+  2249→                    <p className="text-gray-400 text-[11px]">{_t('profile.helpFaqSub')}</p>
+  2250→                  </div>
+  2251→                  <ChevronRight className="w-4 h-4 text-gray-300" />
+  2252→                </button>
+  2253→                <div className="mx-4 border-t border-gray-100" />
+  2254→                <button
+  2255→                  className="w-full flex items-center gap-3 p-4 hover:bg-gray-50/80 transition-colors active:bg-gray-100"
+  2256→                  onClick={() => {
+  2257→                    if (navigator.share) {
+  2258→                      navigator.share({ title: _t('app.name'), text: _t('share.text'), url: window.location.href })
+  2259→                    }
+  2260→                  }}
+  2261→                >
+  2262→                  <div className="w-9 h-9 rounded-xl bg-pink-50 flex items-center justify-center">
+  2263→                    <Share2 className="w-4 h-4 text-pink-600" />
+  2264→                  </div>
+  2265→                  <div className="flex-1 text-left">
+  2266→                    <p className="font-semibold text-[13px]">{_t('profile.shareApp')}</p>
+  2267→                    <p className="text-gray-400 text-[11px]">{_t('profile.shareAppSub')}</p>
+  2268→                  </div>
+  2269→                  <ChevronRight className="w-4 h-4 text-gray-300" />
+  2270→                </button>
+  2271→              </CardContent>
+  2272→            </Card>
+  2273→          </div>
+  2274→
+  2275→          {/* Logout Button */}
+  2276→          {auth.isLoggedIn && !auth.isGuest && (
+  2277→            <Button
+  2278→              variant="outline"
+  2279→              className="w-full rounded-xl border-red-200 text-red-500 hover:bg-red-50 hover:text-red-600 h-11 font-semibold"
+  2280→              onClick={() => auth.logout()}
+  2281→            >
+  2282→              <LogOut className="w-4 h-4 mr-2" /> {_t('profile.logout')}
+  2283→            </Button>
+  2284→          )}
+  2285→
+  2286→          {/* App Version */}
+  2287→          <p className="text-center text-gray-300 text-[10px] pt-2 pb-4">{_t('app.versionFull')}</p>
+  2288→        </div>
+  2289→
+  2290→        {/* Language Sheet */}
+  2291→        {showLanguageSheet && (
+  2292→          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-end justify-center" onClick={() => setShowLanguageSheet(false)}>
+  2293→            <div className="bg-white rounded-t-[28px] w-full p-6 animate-slide-up" onClick={e => e.stopPropagation()}>
+  2294→              <div className="w-10 h-1 rounded-full bg-gray-200 mx-auto mb-5" />
+  2295→              <h3 className="font-bold text-lg mb-4">{_t('lang.select')}</h3>
+  2296→              <div className="space-y-1">
+  2297→                {[
+  2298→                  { code: 'en', name: _t('lang.english'), flag: '🇬🇧', available: true },
+  2299→                  { code: 'hi', name: _t('lang.hindi'), flag: '🇮🇳', available: true },
+  2300→                  { code: 'bn', name: _t('lang.bangla'), flag: '🇧🇩', available: true },
+  2301→                ].map(lang => (
+  2302→                  <button
+  2303→                    key={lang.code}
+  2304→                    className={`w-full flex items-center gap-3 p-4 rounded-xl transition-colors ${
+  2305→                      lang.available ? 'hover:bg-gray-50 active:bg-gray-100' : 'opacity-50'
+  2306→                    }`}
+  2307→                    onClick={() => {
+  2308→                      if (lang.available) {
+  2309→                        setSelectedLanguage(lang.code)
+  2310→                        setShowLanguageSheet(false)
+  2311→                      }
+  2312→                    }}
+  2313→                    onTouchEnd={(e) => {
+  2314→                      if (lang.available) {
+  2315→                        e.preventDefault()
+  2316→                        setSelectedLanguage(lang.code)
+  2317→                        setShowLanguageSheet(false)
+  2318→                      }
+  2319→                    }}
+  2320→                  >
+  2321→                    <span className="text-xl">{lang.flag}</span>
+  2322→                    <span className="font-medium text-sm flex-1">{lang.name}</span>
+  2323→                    {!lang.available && <Badge variant="secondary" className="text-[10px]">{_t('lang.comingSoon')}</Badge>}
+  2324→                    {selectedLanguage === lang.code && (
+  2325→                      <div className="w-6 h-6 rounded-full bg-orange-500 flex items-center justify-center">
+  2326→                        <CheckCircle2 className="w-4 h-4 text-white" />
+  2327→                      </div>
+  2328→                    )}
+  2329→                  </button>
+  2330→                ))}
+  2331→              </div>
+  2332→              <Button
+  2333→                variant="outline"
+  2334→                className="w-full mt-5 rounded-xl h-11"
+  2335→                onClick={() => setShowLanguageSheet(false)}
+  2336→              >
+  2337→                {_t('lang.cancel')}
+  2338→              </Button>
+  2339→            </div>
+  2340→          </div>
+  2341→        )}
+  2342→
+  2343→        {/* About Sheet */}
+  2344→        {showAboutSheet && (
+  2345→          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-end justify-center" onClick={() => setShowAboutSheet(false)}>
+  2346→            <div className="bg-white rounded-t-[28px] w-full p-6 animate-slide-up" onClick={e => e.stopPropagation()}>
+  2347→              <div className="w-10 h-1 rounded-full bg-gray-200 mx-auto mb-5" />
+  2348→              <div className="text-center mb-5">
+  2349→                <div className="w-16 h-16 bg-gradient-to-br from-orange-500 to-red-500 rounded-2xl flex items-center justify-center mx-auto mb-3 shadow-lg shadow-orange-500/20">
+  2350→                  <span className="text-white text-2xl font-bold">E</span>
+  2351→                </div>
+  2352→                <h3 className="font-bold text-lg">{_t('app.name')}</h3>
+  2353→                <p className="text-gray-400 text-sm">{_t('app.version')}</p>
+  2354→              </div>
+  2355→              <div className="space-y-2">
+  2356→                {[
+  2357→                  { label: _t('about.version'), value: '1.0' },
+  2358→                  { label: _t('about.size'), value: '~5 MB' },
+  2359→                  { label: _t('about.exams'), value: '21+' },
+  2360→                  { label: _t('about.questions'), value: '210+' },
+  2361→                  { label: _t('about.offline'), value: _t('about.yes'), green: true },
+  2362→                  { label: _t('about.ads'), value: _t('about.no'), green: true },
+  2363→                ].map(item => (
+  2364→                  <div key={item.label} className="flex justify-between text-sm p-3 bg-gray-50 rounded-xl">
+  2365→                    <span className="text-gray-500">{item.label}</span>
+  2366→                    <span className={`font-medium ${item.green ? 'text-emerald-600' : ''}`}>{item.value}</span>
+  2367→                  </div>
+  2368→                ))}
+  2369→              </div>
+  2370→              <p className="text-center text-sm text-gray-400 mt-5">{_t('app.madeIn')}</p>
+  2371→              <Button
+  2372→                variant="outline"
+  2373→                className="w-full mt-4 rounded-xl h-11"
+  2374→                onClick={() => setShowAboutSheet(false)}
+  2375→              >
+  2376→                {_t('about.close')}
+  2377→              </Button>
+  2378→            </div>
+  2379→          </div>
+  2380→        )}
+  2381→
+  2382→        {/* Help & FAQ Sheet */}
+  2383→        {showHelpSheet && (
+  2384→          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-end justify-center" onClick={() => setShowHelpSheet(false)}>
+  2385→            <div className="bg-white rounded-t-[28px] w-full max-h-[80vh] overflow-y-auto p-6 animate-slide-up" onClick={e => e.stopPropagation()}>
+  2386→              <div className="w-10 h-1 rounded-full bg-gray-200 mx-auto mb-5" />
+  2387→              <div className="text-center mb-5">
+  2388→                <div className="w-16 h-16 bg-gradient-to-br from-teal-500 to-emerald-500 rounded-2xl flex items-center justify-center mx-auto mb-3 shadow-lg">
+  2389→                  <HelpCircle className="w-8 h-8 text-white" />
+  2390→                </div>
+  2391→                <h3 className="font-bold text-lg">{_t('profile.helpFaq')}</h3>
+  2392→              </div>
+  2393→              <div className="space-y-3">
+  2394→                {[
+  2395→                  { q: 'How do I start a test?', a: 'Go to the Exams page, select an exam category, choose a test and tap "Start Test". You can also use Quick Practice for a random test.' },
+  2396→                  { q: 'How is my score calculated?', a: 'Your score is calculated based on correct answers (marks added) and wrong answers (negative marking as per test scheme). Skipped questions get zero marks.' },
+  2397→                  { q: 'Can I review my answers?', a: 'Yes! After completing a test, you can see the full Answer Key with explanations for each question.' },
+  2398→                  { q: 'How do I track my progress?', a: 'Login with email to save your progress. Your test scores, accuracy, and rankings are tracked in your Profile page.' },
+  2399→                  { q: 'Is offline mode available?', a: 'You can download tests for offline use from the Offline Mode section in the side menu.' },
+  2400→                  { q: 'How do I change the language?', a: 'Go to Profile > Language or use the side menu > Language option. We support English, Hindi, and Bangla.' },
+  2401→                  { q: 'How do I bookmark questions?', a: 'During a test, use the "Mark for Review" button to flag questions. You can review them before submitting.' },
+  2402→                  { q: 'Can I retry a test?', a: 'Yes! After seeing your results, tap "Retry" to take the test again and improve your score.' },
+  2403→                ].map((item, i) => (
+  2404→                  <details key={i} className="group bg-gray-50 rounded-xl overflow-hidden">
+  2405→                    <summary className="flex items-center justify-between p-4 cursor-pointer font-medium text-sm text-gray-800 hover:bg-gray-100 transition-colors">
+  2406→                      {item.q}
+  2407→                      <ChevronDown className="w-4 h-4 text-gray-400 group-open:rotate-180 transition-transform" />
+  2408→                    </summary>
+  2409→                    <div className="px-4 pb-4 text-sm text-gray-600 leading-relaxed">{item.a}</div>
+  2410→                  </details>
+  2411→                ))}
+  2412→              </div>
+  2413→              <Button
+  2414→                variant="outline"
+  2415→                className="w-full mt-5 rounded-xl h-11"
+  2416→                onClick={() => setShowHelpSheet(false)}
+  2417→              >
+  2418→                {_t('about.close')}
+  2419→              </Button>
+  2420→            </div>
+  2421→          </div>
+  2422→        )}
+  2423→
+  2424→        {/* Offline Mode Sheet */}
+  2425→        {showOfflineSheet && (
+  2426→          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-end justify-center" onClick={() => setShowOfflineSheet(false)}>
+  2427→            <div className="bg-white rounded-t-[28px] w-full p-6 animate-slide-up" onClick={e => e.stopPropagation()}>
+  2428→              <div className="w-10 h-1 rounded-full bg-gray-200 mx-auto mb-5" />
+  2429→              <div className="text-center mb-5">
+  2430→                <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-indigo-500 rounded-2xl flex items-center justify-center mx-auto mb-3 shadow-lg">
+  2431→                  <Wifi className="w-8 h-8 text-white" />
+  2432→                </div>
+  2433→                <h3 className="font-bold text-lg">{_t('menu.offlineMode')}</h3>
+  2434→                <p className="text-gray-400 text-sm mt-1">{_t('menu.downloadTests')}</p>
+  2435→              </div>
+  2436→              <div className="space-y-3">
+  2437→                {categories.map(cat => {
+  2438→                  const color = getCatColor(cat.slug)
+  2439→                  const testCount = cat.exams.reduce((sum, e) => sum + (e as any).testCount || 0, 0)
+  2440→                  return (
+  2441→                    <div key={cat.id} className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl">
+  2442→                      <div className={`w-10 h-10 rounded-xl ${color.light} flex items-center justify-center ${color.text}`}>
+  2443→                        {getCatIcon(cat.slug)}
+  2444→                      </div>
+  2445→                      <div className="flex-1 min-w-0">
+  2446→                        <p className="font-semibold text-sm">{cat.name}</p>
+  2447→                        <p className="text-gray-400 text-xs">{cat.exams.length} {_t('home.exams')}</p>
+  2448→                      </div>
+  2449→                      <Button size="sm" variant="outline" className="rounded-xl text-xs" onClick={() => {
+  2450→                        // Download/sync category data to localStorage
+  2451→                        try {
+  2452→                          const key = `examprep_offline_${cat.slug}`
+  2453→                          localStorage.setItem(key, JSON.stringify(cat))
+  2454→                        } catch {}
+  2455→                      }}>
+  2456→                        <Download className="w-3 h-3 mr-1" /> Save
+  2457→                      </Button>
+  2458→                    </div>
+  2459→                  )
+  2460→                })}
+  2461→              </div>
+  2462→              <Button
+  2463→                variant="outline"
+  2464→                className="w-full mt-5 rounded-xl h-11"
+  2465→                onClick={() => setShowOfflineSheet(false)}
+  2466→              >
+  2467→                {_t('about.close')}
+  2468→              </Button>
+  2469→            </div>
+  2470→          </div>
+  2471→        )}
+  2472→      </div>
+  2473→    )
+  2474→  }
+  2475→
+  2476→  // ===== RENDER: Bottom Navigation =====
+  2477→  function renderBottomNav() {
+  2478→    const pages: Page[] = ['home', 'practice', 'tests', 'leaderboard']
+  2479→    if (!pages.includes(currentPage)) return null
+  2480→
+  2481→    const navItems = [
+  2482→      { page: 'home' as Page, icon: Home, label: _t('nav.home') },
+  2483→      { page: 'practice' as Page, icon: Zap, label: _t('nav.practice') },
+  2484→      { page: 'tests' as Page, icon: ClipboardList, label: _t('nav.tests') },
+  2485→      { page: 'leaderboard' as Page, icon: Trophy, label: _t('nav.ranks') },
+  2486→    ]
+  2487→
+  2488→    return (
+  2489→      <div className="fixed bottom-0 left-0 right-0 z-40 safe-area-pb" style={{ touchAction: 'manipulation' }}>
+  2490→        <div className="bg-white/95 backdrop-blur-lg border-t border-gray-100 w-full">
+  2491→          <div className="flex items-center justify-around py-2">
+  2492→            {navItems.map(item => {
+  2493→              const isActive = currentPage === item.page
+  2494→              const Icon = item.icon
+  2495→              return (
+  2496→                <button
+  2497→                  key={item.page}
+  2498→                  onClick={() => handleBottomNav(item.page)}
+  2499→                  onTouchEnd={(e) => { e.preventDefault(); handleBottomNav(item.page) }}
+  2500→                  className={`flex flex-col items-center gap-0.5 py-1 px-4 rounded-xl transition-all ${
+  2501→                    isActive ? 'text-orange-600' : 'text-gray-400 active:text-gray-600'
+  2502→                  }`}
+  2503→                  style={{ touchAction: 'manipulation', WebkitTapHighlightColor: 'transparent' }}
+  2504→                >
+  2505→                  <div className={`relative ${isActive ? '' : ''}`}>
+  2506→                    <Icon className={`w-5 h-5 ${isActive ? 'text-orange-600' : ''}`} />
+  2507→                    {isActive && (
+  2508→                      <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-orange-500" />
+  2509→                    )}
+  2510→                  </div>
+  2511→                  <span className={`text-[10px] font-medium ${isActive ? 'text-orange-600' : ''}`}>{item.label}</span>
+  2512→                </button>
+  2513→              )
+  2514→            })}
+  2515→          </div>
+  2516→        </div>
+  2517→      </div>
+  2518→    )
+  2519→  }
+  2520→
+  2521→  // ===== MAIN RENDER =====
+  2522→  const renderPage = () => {
+  2523→    switch (currentPage) {
+  2524→      case 'home': return renderHome()
+  2525→      case 'exams': return renderExams()
+  2526→      case 'tests': return renderTests()
+  2527→      case 'test-info': return renderTestInfo()
+  2528→      case 'test-taking': return renderTestTaking()
+  2529→      case 'results': return renderResults()
+  2530→      case 'leaderboard': return renderLeaderboard()
+  2531→      case 'profile': return renderProfile()
+  2532→      case 'practice': return renderPractice()
+  2533→      default: return renderHome()
+  2534→    }
+  2535→  }
+  2536→
+  2537→  return (
+  2538→    <div className="min-h-screen min-h-dvh bg-gray-50 relative w-full overflow-x-hidden" style={{ touchAction: 'manipulation' }}>
+  2539→      {renderPage()}
+  2540→      {renderBottomNav()}
+  2541→
+  2542→      {/* ===== Side Menu Drawer ===== */}
+  2543→      {showSideMenu && (
+  2544→        <div className="fixed inset-0 z-[100]">
+  2545→          {/* Backdrop */}
+  2546→          <div
+  2547→            className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+  2548→            onClick={() => setShowSideMenu(false)}
+  2549→            onTouchEnd={(e) => { e.preventDefault(); setShowSideMenu(false) }}
+  2550→            style={{ touchAction: 'manipulation' }}
+  2551→          />
+  2552→          {/* Drawer Panel */}
+  2553→          <div className="absolute left-0 top-0 bottom-0 w-[280px] bg-white shadow-2xl flex flex-col" style={{ touchAction: 'manipulation' }}>
+  2554→            {/* Drawer Header */}
+  2555→            <div className="bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 px-5 pt-[calc(env(safe-area-inset-top,0px)+1.5rem)] pb-5">
+  2556→              <div className="flex items-center justify-between mb-4">
+  2557→                <div className="w-10 h-10 bg-gradient-to-br from-orange-400 to-red-500 rounded-xl flex items-center justify-center shadow-lg shadow-orange-500/20">
+  2558→                  <span className="text-white font-bold text-sm">E</span>
+  2559→                </div>
+  2560→                <button
+  2561→                  onClick={() => setShowSideMenu(false)}
+  2562→                  onTouchEnd={(e) => { e.preventDefault(); setShowSideMenu(false) }}
+  2563→                  className="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center"
+  2564→                  style={{ touchAction: 'manipulation', WebkitTapHighlightColor: 'transparent' }}
+  2565→                >
+  2566→                  <X className="w-4 h-4 text-white/60" />
+  2567→                </button>
+  2568→              </div>
+  2569→              <p className="text-white font-bold text-base">{_t('app.name')}</p>
+  2570→              <p className="text-white/40 text-xs mt-0.5">{_t('app.partner')}</p>
+  2571→            </div>
+  2572→
+  2573→            {/* Menu Items */}
+  2574→            <div className="flex-1 overflow-y-auto py-2">
+  2575→              {/* Main Navigation */}
+  2576→              <div className="px-3 py-2">
+  2577→                <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider px-3 mb-1">{_t('menu.navigation')}</p>
+  2578→                {[
+  2579→                  { icon: Home, label: _t('menu.home'), page: 'home' as Page, active: currentPage === 'home' },
+  2580→                  { icon: BookOpen, label: _t('menu.allExams'), page: 'exams' as Page, active: currentPage === 'exams' },
+  2581→                  { icon: Trophy, label: _t('menu.leaderboard'), page: 'leaderboard' as Page, active: currentPage === 'leaderboard' },
+  2582→                  { icon: User, label: _t('menu.myProfile'), page: 'profile' as Page, active: currentPage === 'profile' },
+  2583→                ].map(item => (
+  2584→                  <button
+  2585→                    key={item.page}
+  2586→                    onClick={() => { handleBottomNav(item.page); setShowSideMenu(false) }}
+  2587→                    className={`w-full flex items-center gap-3 px-3 py-3 rounded-xl transition-colors ${
+  2588→                      item.active ? 'bg-orange-50 text-orange-600' : 'text-gray-600 hover:bg-gray-50 active:bg-gray-100'
+  2589→                    }`}
+  2590→                  >
+  2591→                    <item.icon className={`w-5 h-5 ${item.active ? 'text-orange-500' : 'text-gray-400'}`} />
+  2592→                    <span className={`font-medium text-sm ${item.active ? 'font-semibold' : ''}`}>{item.label}</span>
+  2593→                    {item.active && <div className="ml-auto w-1.5 h-1.5 rounded-full bg-orange-500" />}
+  2594→                  </button>
+  2595→                ))}
+  2596→              </div>
+  2597→
+  2598→              <div className="mx-5 border-t border-gray-100 my-1" />
+  2599→
+  2600→              {/* Quick Actions */}
+  2601→              <div className="px-3 py-2">
+  2602→                <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider px-3 mb-1">{_t('menu.quickActions')}</p>
+  2603→                {[
+  2604→                  { icon: Zap, label: _t('menu.quickPractice'), soon: false, action: () => {
+  2605→                    const allCats = categories
+  2606→                    const allExams = allCats.flatMap(c => c.exams)
+  2607→                    if (allExams.length > 0) {
+  2608→                      const randomExam = allExams[Math.floor(Math.random() * allExams.length)]
+  2609→                      const randomCat = allCats.find(c => c.exams.some(e => e.id === randomExam.id))!
+  2610→                      openExam(randomExam, randomCat)
+  2611→                    }
+  2612→                  }},
+  2613→                  { icon: BookmarkPlus, label: _t('menu.bookmarkedQ'), soon: false, action: () => {
+  2614→                    if (auth.isLoggedIn) {
+  2615→                      handleBottomNav('tests')
+  2616→                    } else {
+  2617→                      setShowLoginModal(true)
+  2618→                    }
+  2619→                  }},
+  2620→                  { icon: Download, label: _t('menu.offlineTests'), soon: false, action: () => {
+  2621→                    handleBottomNav('exams')
+  2622→                  }},
+  2623→                  { icon: BarChart3, label: _t('menu.perfReport'), soon: false, action: () => {
+  2624→                    if (auth.isLoggedIn) {
+  2625→                      handleBottomNav('profile')
+  2626→                    } else {
+  2627→                      setShowLoginModal(true)
+  2628→                    }
+  2629→                  }},
+  2630→                ].map((item, i) => (
+  2631→                  <button
+  2632→                    key={i}
+  2633→                    onClick={() => { item.action(); setShowSideMenu(false) }}
+  2634→                    className="w-full flex items-center gap-3 px-3 py-3 rounded-xl text-gray-600 hover:bg-gray-50 active:bg-gray-100 transition-colors"
+  2635→                  >
+  2636→                    <item.icon className="w-5 h-5 text-gray-400" />
+  2637→                    <span className="font-medium text-sm">{item.label}</span>
+  2638→                    {item.soon && (
+  2639→                      <Badge variant="secondary" className="text-[9px] ml-auto">{_t('menu.soon')}</Badge>
+  2640→                    )}
+  2641→                  </button>
+  2642→                ))}
+  2643→              </div>
+  2644→
+  2645→              <div className="mx-5 border-t border-gray-100 my-1" />
+  2646→
+  2647→              {/* Settings & Support */}
+  2648→              <div className="px-3 py-2">
+  2649→                <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider px-3 mb-1">{_t('menu.settings')}</p>
+  2650→                {[
+  2651→                  { icon: BookOpen, id: 'language', label: _t('profile.language'), sub: lng === 'en' ? _t('lang.english') : lng === 'hi' ? _t('lang.hindi') : _t('lang.bangla'), action: () => setShowLanguageSheet(true) },
+  2652→                  { icon: Bell, id: 'notifications', label: _t('menu.notifications'), sub: unreadCount > 0 ? `${unreadCount} ${_t('menu.unread')}` : _t('menu.manageAlerts'), action: () => { setShowSideMenu(false); setCurrentPage('home'); setTimeout(() => setShowNotificationPanel(true), 300) } },
+  2653→                  { icon: Wifi, id: 'offline', label: _t('menu.offlineMode'), sub: _t('menu.downloadTests'), action: () => { setShowSideMenu(false); setShowOfflineSheet(true) } },
+  2654→                  { icon: HelpCircle, id: 'help', label: _t('menu.helpFaq'), sub: _t('menu.getSupport'), action: () => { setShowSideMenu(false); setShowHelpSheet(true) } },
+  2655→                  { icon: Share2, id: 'share', label: _t('menu.shareApp'), sub: _t('menu.tellFriends'), action: () => {
+  2656→                    if (navigator.share) {
+  2657→                      navigator.share({ title: _t('app.name'), text: _t('share.text'), url: window.location.href })
+  2658→                    }
+  2659→                  }},
+  2660→                  { icon: Shield, id: 'about', label: _t('menu.about'), sub: _t('app.version'), action: () => setShowAboutSheet(true) },
+  2661→                ].map((item, i) => (
+  2662→                  <button
+  2663→                    key={i}
+  2664→                    onClick={() => { item.action(); setShowSideMenu(false) }}
+  2665→                    className="w-full flex items-center gap-3 px-3 py-3 rounded-xl text-gray-600 hover:bg-gray-50 active:bg-gray-100 transition-colors"
+  2666→                  >
+  2667→                    <item.icon className="w-5 h-5 text-gray-400" />
+  2668→                    <div className="flex-1 text-left">
+  2669→                      <span className="font-medium text-sm block">{item.label}</span>
+  2670→                      {item.sub && <span className="text-gray-400 text-[11px]">{item.sub}</span>}
+  2671→                    </div>
+  2672→                    {item.id === 'notifications' && unreadCount > 0 ? (
+  2673→                      <span className="w-5 h-5 bg-orange-500 rounded-full flex items-center justify-center text-white text-[10px] font-bold">{unreadCount}</span>
+  2674→                    ) : (
+  2675→                      <ChevronRight className="w-4 h-4 text-gray-300" />
+  2676→                    )}
+  2677→                  </button>
+  2678→                ))}
+  2679→              </div>
+  2680→            </div>
+  2681→
+  2682→            {/* Drawer Footer */}
+  2683→            <div className="border-t border-gray-100 px-5 py-4">
+  2684→              {auth.isLoggedIn ? (
+  2685→                <button
+  2686→                  onClick={() => { auth.logout(); setShowSideMenu(false) }}
+  2687→                  className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-red-500 hover:bg-red-50 active:bg-red-100 transition-colors"
+  2688→                >
+  2689→                  <LogOut className="w-5 h-5" />
+  2690→                  <span className="font-medium text-sm">{_t('menu.logout')}</span>
+  2691→                </button>
+  2692→              ) : (
+  2693→                <button
+  2694→                  onClick={() => { setShowLoginModal(true); setShowSideMenu(false) }}
+  2695→                  className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-gradient-to-r from-orange-500 to-red-500 text-white rounded-xl font-semibold text-sm"
+  2696→                >
+  2697→                  <Mail className="w-4 h-4" /> {_t('profile.login')}
+  2698→                </button>
+  2699→              )}
+  2700→            </div>
+  2701→          </div>
+  2702→        </div>
+  2703→      )}
+  2704→
+  2705→      {/* Login Modal */}
+  2706→      {showLoginModal && (
+  2707→        <LoginModal
+  2708→          error={auth.error}
+  2709→          loginLoading={auth.loginLoading}
+  2710→          signupLoading={auth.signupLoading}
+  2711→          guestLoading={auth.guestLoading}
+  2712→          onLogin={auth.loginWithEmail}
+  2713→          onSignUp={auth.signUpWithEmail}
+  2714→          onGuestLogin={auth.loginAsGuest}
+  2715→          onClose={() => setShowLoginModal(false)}
+  2716→        />
+  2717→      )}
+  2718→
+  2719→      {/* Notification Detail Modal */}
+  2720→      {selectedNotification && (
+  2721→        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40" onClick={() => setSelectedNotification(null)}>
+  2722→          <div className="bg-white w-full max-w-lg rounded-t-3xl shadow-2xl animate-in slide-in-from-bottom duration-300" onClick={e => e.stopPropagation()}>
+  2723→            <div className="p-6">
+  2724→              <div className="flex items-start gap-4 mb-4">
+  2725→                <div className={`w-12 h-12 rounded-2xl flex items-center justify-center flex-shrink-0 ${
+  2726→                  selectedNotification.type === 'update' ? 'bg-blue-100' :
+  2727→                  selectedNotification.type === 'alert' ? 'bg-amber-100' :
+  2728→                  'bg-green-100'
+  2729→                }`}>
+  2730→                  {selectedNotification.type === 'update' ? <Zap className="w-6 h-6 text-blue-500" /> :
+  2731→                   selectedNotification.type === 'alert' ? <AlertTriangle className="w-6 h-6 text-amber-500" /> :
+  2732→                   <Gift className="w-6 h-6 text-green-500" />}
+  2733→                </div>
+  2734→                <div className="flex-1 min-w-0">
+  2735→                  <h3 className="font-bold text-lg text-gray-900">{selectedNotification.title}</h3>
+  2736→                  <p className="text-gray-400 text-xs mt-0.5">{selectedNotification.time}</p>
+  2737→                </div>
+  2738→                <button onClick={() => setSelectedNotification(null)} className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center flex-shrink-0">
+  2739→                  <X className="w-4 h-4 text-gray-500" />
+  2740→                </button>
+  2741→              </div>
+  2742→              <p className="text-gray-700 text-sm leading-relaxed mb-4">{selectedNotification.message}</p>
+  2743→              {selectedNotification.link && (
+  2744→                <Button
+  2745→                  className="w-full bg-gradient-to-r from-orange-500 to-red-500 text-white rounded-xl h-11 font-semibold"
+  2746→                  onClick={() => {
+  2747→                    const link = selectedNotification.link!
+  2748→                    setSelectedNotification(null)
+  2749→                    setShowNotificationPanel(false)
+  2750→                    // Check if it's an internal app page
+  2751→                    if (['home', 'exams', 'tests', 'practice', 'leaderboard', 'profile'].includes(link)) {
+  2752→                      handleBottomNav(link as Page)
+  2753→                    } else {
+  2754→                      // External URL - open in new tab
+  2755→                      window.open(link.startsWith('http') ? link : `https://${link}`, '_blank')
+  2756→                    }
+  2757→                  }}
+  2758→                >
+  2759→                  <ExternalLink className="w-4 h-4 mr-2" /> Open Link
+  2760→                </Button>
+  2761→              )}
+  2762→              {!selectedNotification.link && (
+  2763→                <Button
+  2764→                  className="w-full bg-gray-100 text-gray-700 hover:bg-gray-200 rounded-xl h-11 font-medium"
+  2765→                  onClick={() => setSelectedNotification(null)}
+  2766→                >
+  2767→                  Close
+  2768→                </Button>
+  2769→              )}
+  2770→            </div>
+  2771→          </div>
+  2772→        </div>
+  2773→      )}
+  2774→
+  2775→      {/* Daily Tip Detail Modal */}
+  2776→      {selectedTip && (
+  2777→        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40" onClick={() => setSelectedTip(null)}>
+  2778→          <div className="bg-white w-full max-w-lg rounded-t-3xl shadow-2xl animate-in slide-in-from-bottom duration-300" onClick={e => e.stopPropagation()}>
+  2779→            <div className="p-6">
+  2780→              <div className="flex items-start gap-4 mb-4">
+  2781→                <div className="w-12 h-12 rounded-2xl bg-amber-100 flex items-center justify-center flex-shrink-0">
+  2782→                  <Lightbulb className="w-6 h-6 text-amber-500" />
+  2783→                </div>
+  2784→                <div className="flex-1 min-w-0">
+  2785→                  <h3 className="font-bold text-lg text-gray-900">{_t('home.dailyTips')}</h3>
+  2786→                  <p className="text-gray-400 text-xs mt-0.5">Daily Tip</p>
+  2787→                </div>
+  2788→                <button onClick={() => setSelectedTip(null)} className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center flex-shrink-0">
+  2789→                  <X className="w-4 h-4 text-gray-500" />
+  2790→                </button>
+  2791→              </div>
+  2792→              <p className="text-gray-700 text-sm leading-relaxed mb-4">{selectedTip.text}</p>
+  2793→              {selectedTip.link && (
+  2794→                <Button
+  2795→                  className="w-full bg-gradient-to-r from-amber-500 to-orange-500 text-white rounded-xl h-11 font-semibold"
+  2796→                  onClick={() => {
+  2797→                    const link = selectedTip.link!
+  2798→                    setSelectedTip(null)
+  2799→                    if (['home', 'exams', 'tests', 'practice', 'leaderboard', 'profile'].includes(link)) {
+  2800→                      handleBottomNav(link as Page)
+  2801→                    } else {
+  2802→                      window.open(link.startsWith('http') ? link : `https://${link}`, '_blank')
+  2803→                    }
+  2804→                  }}
+  2805→                >
+  2806→                  <ExternalLink className="w-4 h-4 mr-2" /> Open Link
+  2807→                </Button>
+  2808→              )}
+  2809→              {!selectedTip.link && (
+  2810→                <Button
+  2811→                  className="w-full bg-gray-100 text-gray-700 hover:bg-gray-200 rounded-xl h-11 font-medium"
+  2812→                  onClick={() => setSelectedTip(null)}
+  2813→                >
+  2814→                  Close
+  2815→                </Button>
+  2816→              )}
+  2817→            </div>
+  2818→          </div>
+  2819→        </div>
+  2820→      )}
+  2821→
+  2822→      {/* Guest Warning Modal */}
+  2823→      {showGuestWarning && (
+  2824→        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-5">
+  2825→          <div className="bg-white rounded-3xl w-full max-w-sm shadow-2xl overflow-hidden animate-scale-in">
+  2826→            <div className="p-6 pb-4 text-center">
+  2827→              <div className="w-16 h-16 rounded-full bg-gradient-to-br from-orange-100 to-red-50 flex items-center justify-center mx-auto mb-4">
+  2828→                <Crown className="w-8 h-8 text-orange-500" />
+  2829→              </div>
+  2830→              <h3 className="font-bold text-xl text-gray-900">Create Account to Continue</h3>
+  2831→              <p className="text-gray-500 text-sm mt-2 leading-relaxed">
+  2832→                Guest users can try one free Quick Practice. Sign up now to unlock unlimited mock tests, track progress, and compete on the leaderboard!
+  2833→              </p>
+  2834→            </div>
+  2835→            <div className="px-6 pb-6 space-y-2.5">
+  2836→              <Button
+  2837→                className="w-full h-11 bg-gradient-to-r from-orange-500 to-red-500 text-white rounded-xl font-semibold text-sm"
+  2838→                onClick={() => { setShowGuestWarning(false); setShowLoginModal(true) }}
+  2839→              >
+  2840→                <Mail className="w-4 h-4 mr-2" /> Sign Up / Login
+  2841→              </Button>
+  2842→              <Button
+  2843→                variant="outline"
+  2844→                className="w-full h-11 rounded-xl border-gray-200 font-semibold text-sm"
+  2845→                onClick={() => setShowGuestWarning(false)}
+  2846→              >
+  2847→                Maybe Later
+  2848→              </Button>
+  2849→            </div>
+  2850→          </div>
+  2851→        </div>
+  2852→      )}
+  2853→
+  2854→      {/* Upcoming Exam Detail Modal */}
+  2855→      {selectedUpcomingExam && (
+  2856→        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40" onClick={() => setSelectedUpcomingExam(null)}>
+  2857→          <div className="bg-white w-full max-w-lg rounded-t-3xl shadow-2xl animate-in slide-in-from-bottom duration-300 max-h-[80vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+  2858→            <div className="p-6">
+  2859→              <div className="flex items-start gap-4 mb-4">
+  2860→                {selectedUpcomingExam.imageUrl ? (
+  2861→                  <div className="w-12 h-12 rounded-2xl overflow-hidden flex-shrink-0">
+  2862→                    <img src={selectedUpcomingExam.imageUrl} alt={selectedUpcomingExam.name} className="w-full h-full object-cover" />
+  2863→                  </div>
+  2864→                ) : (
+  2865→                  <div className="w-12 h-12 rounded-2xl bg-blue-100 flex items-center justify-center flex-shrink-0">
+  2866→                    <Calendar className="w-6 h-6 text-blue-500" />
+  2867→                  </div>
+  2868→                )}
+  2869→                <div className="flex-1 min-w-0">
+  2870→                  <h3 className="font-bold text-lg text-gray-900">{selectedUpcomingExam.name}</h3>
+  2871→                  <p className="text-gray-400 text-xs mt-0.5">{selectedUpcomingExam.date}</p>
+  2872→                </div>
+  2873→                <button onClick={() => setSelectedUpcomingExam(null)} className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center flex-shrink-0">
+  2874→                  <X className="w-4 h-4 text-gray-500" />
+  2875→                </button>
+  2876→              </div>
+  2877→
+  2878→              {/* Status Badge */}
+  2879→              <div className="mb-4">
+  2880→                <Badge variant="secondary" className={`text-xs ${
+  2881→                  selectedUpcomingExam.statusType === 'open' ? 'bg-green-100 text-green-700' :
+  2882→                  selectedUpcomingExam.statusType === 'admit' ? 'bg-amber-100 text-amber-700' :
+  2883→                  selectedUpcomingExam.statusType === 'closed' ? 'bg-red-100 text-red-700' :
+  2884→                  'bg-gray-100 text-gray-600'
+  2885→                }`}>
+  2886→                  {selectedUpcomingExam.status}
+  2887→                </Badge>
+  2888→              </div>
+  2889→
+  2890→              {/* Detail Info */}
+  2891→              <div className="space-y-3 mb-4">
+  2892→                <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl">
+  2893→                  <Calendar className="w-5 h-5 text-blue-500" />
+  2894→                  <div>
+  2895→                    <p className="text-xs text-gray-500">Exam Date</p>
+  2896→                    <p className="font-semibold text-sm">{selectedUpcomingExam.date}</p>
+  2897→                  </div>
+  2898→                </div>
+  2899→                {selectedUpcomingExam.catSlug && (
+  2900→                  <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl">
+  2901→                    <BookOpen className="w-5 h-5 text-orange-500" />
+  2902→                    <div>
+  2903→                      <p className="text-xs text-gray-500">Category</p>
+  2904→                      <p className="font-semibold text-sm capitalize">{selectedUpcomingExam.catSlug}</p>
+  2905→                    </div>
+  2906→                  </div>
+  2907→                )}
+  2908→                {selectedUpcomingExam.description && (
+  2909→                  <div className="p-3 bg-blue-50 rounded-xl">
+  2910→                    <p className="text-xs text-blue-500 font-medium mb-1">Details</p>
+  2911→                    <p className="text-sm text-gray-700 leading-relaxed">{selectedUpcomingExam.description}</p>
+  2912→                  </div>
+  2913→                )}
+  2914→              </div>
+  2915→
+  2916→              {/* Action Button */}
+  2917→              <Button
+  2918→                className="w-full bg-gradient-to-r from-blue-500 to-indigo-500 text-white rounded-xl h-11 font-semibold"
+  2919→                onClick={() => {
+  2920→                  const exam = selectedUpcomingExam
+  2921→                  setSelectedUpcomingExam(null)
+  2922→                  const cat = categories.find(c => c.slug === exam.catSlug)
+  2923→                  if (cat && cat.exams.length > 0) {
+  2924→                    openExam(cat.exams[0], cat)
+  2925→                  } else {
+  2926→                    handleBottomNav('exams')
+  2927→                  }
+  2928→                }}
+  2929→              >
+  2930→                <BookOpen className="w-4 h-4 mr-2" /> Start Practicing
+  2931→              </Button>
+  2932→            </div>
+  2933→          </div>
+  2934→        </div>
+  2935→      )}
+  2936→    </div>
+  2937→  )
+  2938→}
+  2939→
+  2940→// Missing icon helper
+  2941→function FileText(props: React.SVGProps<SVGSVGElement>) {
+  2942→  return (
+  2943→    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
+  2944→      <path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z" />
+  2945→      <path d="M14 2v4a2 2 0 0 0 2 2h4" />
+  2946→      <path d="M10 9H8" />
+  2947→      <path d="M16 13H8" />
+  2948→      <path d="M16 17H8" />
+  2949→    </svg>
+  2950→  )
+  2951→}
+  2952→
