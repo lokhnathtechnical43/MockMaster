@@ -99,7 +99,7 @@ export default function SettingsTab() {
   }
 
   const handleChangePassword = () => {
-    const savedPassword = localStorage.getItem('examprep_admin_password') || 'admin123'
+    const savedPassword = localStorage.getItem('examprep_admin_password') || ''
     if (currentPassword !== savedPassword) {
       alert('Current password is incorrect')
       return

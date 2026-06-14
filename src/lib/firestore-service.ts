@@ -891,9 +891,11 @@ export async function deleteUser(userId: string): Promise<void> {
 export async function getAnnouncements(): Promise<Announcement[]> {
   return firestoreOperation(
     async () => {
+      // Check metadata doc to distinguish "never initialized" from "intentionally empty"
+      const metaSnap = await getDoc(doc(db, COLLECTIONS.announcements, '_meta'))
+      if (!metaSnap.exists()) return DEFAULT_ANNOUNCEMENTS // Never initialized → use defaults
       const snap = await getDocs(collection(db, COLLECTIONS.announcements))
-      if (snap.empty) return DEFAULT_ANNOUNCEMENTS
-      return snap.docs.map((d) => ({ id: d.id, ...d.data() } as Announcement))
+      return snap.docs.filter(d => d.id !== '_meta').map((d) => ({ id: d.id, ...d.data() } as Announcement))
     },
     () => getLocalAnnouncements()
   )
@@ -912,14 +914,16 @@ export async function saveAnnouncements(
   }
   try {
     const batch = writeBatch(db)
-    // Delete existing
+    // Delete existing (skip _meta doc)
     const existing = await getDocs(collection(db, COLLECTIONS.announcements))
-    existing.docs.forEach((d) => batch.delete(d.ref))
-    // Add new
+    existing.docs.forEach((d) => { if (d.id !== '_meta') batch.delete(d.ref) })
+    // Add new items
     for (const item of data) {
       const docRef = doc(collection(db, COLLECTIONS.announcements))
       batch.set(docRef, { ...item, id: docRef.id })
     }
+    // Write sentinel metadata doc so we know collection has been initialized
+    batch.set(doc(db, COLLECTIONS.announcements, '_meta'), { _initialized: true, updatedAt: serverTimestamp() })
     await batch.commit()
     // Also persist locally for offline access
     saveLocalAnnouncements(data)
@@ -939,9 +943,10 @@ export async function saveAnnouncements(
 export async function getNotifications(): Promise<Notification[]> {
   return firestoreOperation(
     async () => {
+      const metaSnap = await getDoc(doc(db, COLLECTIONS.notifications, '_meta'))
+      if (!metaSnap.exists()) return DEFAULT_NOTIFICATIONS
       const snap = await getDocs(collection(db, COLLECTIONS.notifications))
-      if (snap.empty) return DEFAULT_NOTIFICATIONS
-      return snap.docs.map((d) => ({ id: d.id, ...d.data() } as Notification))
+      return snap.docs.filter(d => d.id !== '_meta').map((d) => ({ id: d.id, ...d.data() } as Notification))
     },
     () => getLocalNotifications()
   )
@@ -960,14 +965,16 @@ export async function saveNotifications(
   }
   try {
     const batch = writeBatch(db)
-    // Delete existing
+    // Delete existing (skip _meta doc)
     const existing = await getDocs(collection(db, COLLECTIONS.notifications))
-    existing.docs.forEach((d) => batch.delete(d.ref))
-    // Add new
+    existing.docs.forEach((d) => { if (d.id !== '_meta') batch.delete(d.ref) })
+    // Add new items
     for (const item of data) {
       const docRef = doc(collection(db, COLLECTIONS.notifications))
       batch.set(docRef, { ...item, id: docRef.id })
     }
+    // Write sentinel metadata doc
+    batch.set(doc(db, COLLECTIONS.notifications, '_meta'), { _initialized: true, updatedAt: serverTimestamp() })
     await batch.commit()
     // Also persist locally for offline access
     saveLocalNotifications(data)
@@ -987,9 +994,10 @@ export async function saveNotifications(
 export async function getDailyTips(): Promise<DailyTip[]> {
   return firestoreOperation(
     async () => {
+      const metaSnap = await getDoc(doc(db, COLLECTIONS.dailyTips, '_meta'))
+      if (!metaSnap.exists()) return DEFAULT_DAILY_TIPS
       const snap = await getDocs(collection(db, COLLECTIONS.dailyTips))
-      if (snap.empty) return DEFAULT_DAILY_TIPS
-      return snap.docs.map((d) => ({ id: d.id, ...d.data() } as DailyTip))
+      return snap.docs.filter(d => d.id !== '_meta').map((d) => ({ id: d.id, ...d.data() } as DailyTip))
     },
     () => getLocalDailyTips()
   )
@@ -1007,16 +1015,14 @@ export async function saveDailyTips(
   }
   try {
     const batch = writeBatch(db)
-    // Delete existing
     const existing = await getDocs(collection(db, COLLECTIONS.dailyTips))
-    existing.docs.forEach((d) => batch.delete(d.ref))
-    // Add new
+    existing.docs.forEach((d) => { if (d.id !== '_meta') batch.delete(d.ref) })
     for (const item of data) {
       const docRef = doc(collection(db, COLLECTIONS.dailyTips))
       batch.set(docRef, { ...item, id: docRef.id })
     }
+    batch.set(doc(db, COLLECTIONS.dailyTips, '_meta'), { _initialized: true, updatedAt: serverTimestamp() })
     await batch.commit()
-    // Also persist locally for offline access
     saveLocalDailyTips(data)
   } catch (error) {
     console.error('[Firestore] saveDailyTips error, saving locally:', error)
@@ -1034,9 +1040,10 @@ export async function saveDailyTips(
 export async function getUpcomingExams(): Promise<UpcomingExam[]> {
   return firestoreOperation(
     async () => {
+      const metaSnap = await getDoc(doc(db, COLLECTIONS.upcomingExams, '_meta'))
+      if (!metaSnap.exists()) return DEFAULT_UPCOMING_EXAMS
       const snap = await getDocs(collection(db, COLLECTIONS.upcomingExams))
-      if (snap.empty) return DEFAULT_UPCOMING_EXAMS
-      return snap.docs.map((d) => ({ id: d.id, ...d.data() } as UpcomingExam))
+      return snap.docs.filter(d => d.id !== '_meta').map((d) => ({ id: d.id, ...d.data() } as UpcomingExam))
     },
     () => getLocalUpcomingExams()
   )
@@ -1054,16 +1061,14 @@ export async function saveUpcomingExams(
   }
   try {
     const batch = writeBatch(db)
-    // Delete existing
     const existing = await getDocs(collection(db, COLLECTIONS.upcomingExams))
-    existing.docs.forEach((d) => batch.delete(d.ref))
-    // Add new
+    existing.docs.forEach((d) => { if (d.id !== '_meta') batch.delete(d.ref) })
     for (const item of data) {
       const docRef = doc(collection(db, COLLECTIONS.upcomingExams))
       batch.set(docRef, { ...item, id: docRef.id })
     }
+    batch.set(doc(db, COLLECTIONS.upcomingExams, '_meta'), { _initialized: true, updatedAt: serverTimestamp() })
     await batch.commit()
-    // Also persist locally for offline access
     saveLocalUpcomingExams(data)
   } catch (error) {
     console.error('[Firestore] saveUpcomingExams error, saving locally:', error)

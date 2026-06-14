@@ -181,7 +181,7 @@ export default function AdminPanel() {
     }
   }, [upcomingExams])
 
-  const ADMIN_PASSWORD = 'admin123'
+  const ADMIN_PASSWORD = 'examprep2025'
 
   const getAdminPassword = () => {
     try {

@@ -15,7 +15,7 @@ import {
   GraduationCap, Shield, Building, Train, ShieldCheck, Swords,
   LogOut, Loader2, Mail, AlertTriangle, Settings, Bell,
   ChevronDown, Star, Flame, TrendingUp, Calendar, Gift,
-  HelpCircle, Share2, MessageCircle, Crown, Lightbulb, ExternalLink,
+  HelpCircle, Share2, MessageCircle, Crown, Lightbulb, ExternalLink, FileText,
   Menu, BookmarkPlus, Download, BarChart3, Wifi,
   ClipboardList, PenTool
 } from 'lucide-react'
@@ -30,7 +30,7 @@ import {
   getTestById as getFsTestById, saveResult as saveFsResult,
   getLeaderboard as getFsLeaderboard, getUseFirestore,
   getAnnouncements as getFsAnnouncements, getNotifications as getFsNotifications,
-  getDailyTips as getFsDailyTips,
+  getDailyTips as getFsDailyTips, saveNotifications as saveFsNotifications,
   getResults as getFsResults,
 } from '@/lib/firestore-service'
 import { useFirebaseAuth } from '@/lib/use-firebase-auth'
@@ -154,6 +154,7 @@ export default function ExamPrepApp() {
   const [showLanguageSheet, setShowLanguageSheet] = useState(false)
   const [showAboutSheet, setShowAboutSheet] = useState(false)
   const [showHelpSheet, setShowHelpSheet] = useState(false)
+  const [showOfflineSheet, setShowOfflineSheet] = useState(false)
   const [selectedLanguage, setSelectedLanguage] = useState<Lang>('en')
   const [showQuestionNav, setShowQuestionNav] = useState(false)
   const [showSideMenu, setShowSideMenu] = useState(false)
@@ -196,7 +197,7 @@ export default function ExamPrepApp() {
   }
   function canGuestPractice(): boolean {
     if (auth.isLoggedIn && !auth.isGuest) return true
-    return guestPracticeCount < 3
+    return guestPracticeCount < 5
   }
 
   // --- Guest Auth Guard ---
@@ -225,8 +226,24 @@ export default function ExamPrepApp() {
   // --- Load categories + admin data on mount ---
 
   // Helper to load page images into a lookup map
-  function loadPageImages() {
+  async function loadPageImages() {
     try {
+      // If Firestore mode, try Firestore first
+      if (isFirestore()) {
+        try {
+          const { getPageImagesFromFirestore } = await import('@/lib/firestore-service')
+          const fsImages = await getPageImagesFromFirestore()
+          if (fsImages.length > 0) {
+            const map: Record<string, string> = {}
+            fsImages.forEach((img: { id: string; imageUrl: string }) => {
+              map[img.id] = img.imageUrl
+            })
+            setPageImages(map)
+            return
+          }
+        } catch {}
+      }
+      // Fallback to local
       const images = getPageImagesAdmin()
       const map: Record<string, string> = {}
       images.forEach((img: { id: string; imageUrl: string }) => {
@@ -769,9 +786,10 @@ export default function ExamPrepApp() {
                       onClick={() => {
                         const updated = notifications.map(n => ({ ...n, read: true }))
                         setNotifications(updated)
-                        // Persist read status to localStorage
+                        // Persist read status
                         try {
                           saveLocalNotifications(updated)
+                          if (isFirestore()) saveFsNotifications(updated)
                         } catch {}
                       }}
                       className="text-[11px] text-orange-500 font-semibold hover:text-orange-600"
@@ -805,6 +823,7 @@ export default function ExamPrepApp() {
                           // Persist read status
                           try {
                             saveLocalNotifications(updated)
+                            if (isFirestore()) saveFsNotifications(updated)
                           } catch {}
                           return updated
                         })
@@ -867,7 +886,7 @@ export default function ExamPrepApp() {
                   }
                 }
               }}
-              onTouchStart={() => { if (carouselTimerRef.current) clearInterval(carouselTimerRef.current) }}
+              onTouchStart={() => { if (carouselTimerRef.current) clearInterval(carouselTimerRef.current); carouselTimerRef.current = null }}
               onTouchEnd={() => {
                 if (carouselTimerRef.current) clearInterval(carouselTimerRef.current)
                 carouselTimerRef.current = setInterval(() => {
@@ -1235,8 +1254,7 @@ export default function ExamPrepApp() {
                 <Card className="border-0 shadow-sm">
                   <CardContent className="p-3 text-center">
                     <Award className="w-6 h-6 text-blue-500 mx-auto mb-1" />
-                    <p className="font-bold text-lg">#{stats.bestRank}</p>
-                    <p className="text-gray-400 text-[10px]">{_t('home.bestRank')}</p>
+                    <p className="font-bold text-lg">{stats.bestRank > 0 ? `#${stats.bestRank}` : '-'}</p>
                   </CardContent>
                 </Card>
               </div>
@@ -2066,16 +2084,16 @@ export default function ExamPrepApp() {
                         catScores[cat.id].count++
                       }
                     })
-                    let weakestCat: LocalExamCategory | null = null
+                    let weakestCatId: string | null = null
                     let lowestAvg = 101
                     Object.entries(catScores).forEach(([catId, data]) => {
                       const avg = data.total / data.count
                       if (avg < lowestAvg) {
                         lowestAvg = avg
-                        const found = categories.find(c => c.id === catId)
-                        if (found) weakestCat = found
+                        weakestCatId = catId
                       }
                     })
+                    const weakestCat = weakestCatId ? categories.find(c => c.id === weakestCatId) : null
                     if (weakestCat && weakestCat.exams && weakestCat.exams.length > 0) {
                       const tests = await fetchTestsByExam(weakestCat.exams[0].id)
                       if (tests.length > 0) {
@@ -2140,8 +2158,7 @@ export default function ExamPrepApp() {
             <h2 className="font-bold text-lg mb-3">{_t('practice.recent')}</h2>
             {(() => {
               try {
-                const data = localStorage.getItem('examprep_results')
-                const allResults: TestResult[] = data ? JSON.parse(data) : []
+                const allResults = getLocalResults()
                 const userId = auth.getUserId()
                 const userResults = userId
                   ? allResults.filter((r: TestResult) => r.userId === userId)
@@ -2290,7 +2307,7 @@ export default function ExamPrepApp() {
                 <p className="text-white/40 text-[10px] font-medium uppercase tracking-wider">{_t('profile.avgScore')}</p>
               </div>
               <div className="text-center">
-                <p className="text-white font-bold text-xl">#{stats.bestRank}</p>
+                <p className="text-white font-bold text-xl">{stats.bestRank > 0 ? `#${stats.bestRank}` : '-'}</p>
                 <p className="text-white/40 text-[10px] font-medium uppercase tracking-wider">{_t('profile.bestRank')}</p>
               </div>
             </div>
@@ -2547,8 +2564,8 @@ export default function ExamPrepApp() {
                 {[
                   { label: _t('about.version'), value: '2.0' },
                   { label: _t('about.size'), value: '~5 MB' },
-                  { label: _t('about.exams'), value: '21+' },
-                  { label: _t('about.questions'), value: '210+' },
+                  { label: _t('about.exams'), value: `${categories.reduce((sum, c) => sum + c.exams.length, 0)}+` },
+                  { label: _t('about.questions'), value: `${categories.reduce((sum, c) => sum + c.exams.reduce((s, e) => s + e.totalQuestions, 0), 0)}+` },
                   { label: _t('about.offline'), value: _t('about.yes'), green: true },
                   { label: _t('about.ads'), value: _t('about.no'), green: true },
                 ].map(item => (
@@ -2939,8 +2956,11 @@ export default function ExamPrepApp() {
                     setSelectedNotification(null)
                     setShowNotificationPanel(false)
                     // Check if it's an internal app page
-                    if (['home', 'exams', 'tests', 'practice', 'leaderboard', 'profile', 'test-info', 'test-taking', 'results'].includes(link)) {
+                    const internalPages = ['home', 'exams', 'tests', 'practice', 'leaderboard', 'profile', 'test-info', 'test-taking', 'results', 'about']
+                    if (internalPages.includes(link)) {
                       handleBottomNav(link as Page)
+                    } else if (link.startsWith('/admin')) {
+                      window.location.href = link
                     } else {
                       // External URL - open in new tab
                       window.open(link.startsWith('http') ? link : `https://${link}`, '_blank')

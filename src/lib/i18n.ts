@@ -9,8 +9,8 @@ const translations: Record<Lang, Record<string, string>> = {
     'app.name': 'ExamPrep Bharat',
     'app.subtitle': 'Prepare for government exams',
     'app.partner': 'Your exam preparation partner',
-    'app.version': 'Version 1.0',
-    'app.versionFull': 'ExamPrep Bharat v1.0',
+    'app.version': 'Version 2.0',
+    'app.versionFull': 'ExamPrep Bharat v2.0',
     'app.madeIn': 'Made with ❤️ in India',
 
     // === Home Page ===
@@ -215,8 +215,8 @@ const translations: Record<Lang, Record<string, string>> = {
     'app.name': 'ExamPrep Bharat',
     'app.subtitle': 'सरकारी परीक्षा की तैयारी करें',
     'app.partner': 'आपका परीक्षा तैयारी साथी',
-    'app.version': 'संस्करण 1.0',
-    'app.versionFull': 'ExamPrep Bharat v1.0',
+    'app.version': 'संस्करण 2.0',
+    'app.versionFull': 'ExamPrep Bharat v2.0',
     'app.madeIn': '❤️ भारत में बनाया गया',
 
     // === Home Page ===
@@ -421,8 +421,8 @@ const translations: Record<Lang, Record<string, string>> = {
     'app.name': 'ExamPrep Bharat',
     'app.subtitle': 'সরকারি পরীক্ষার প্রস্তুতি নিন',
     'app.partner': 'আপনার পরীক্ষা প্রস্তুতির সঙ্গী',
-    'app.version': 'সংস্করণ 1.0',
-    'app.versionFull': 'ExamPrep Bharat v1.0',
+    'app.version': 'সংস্করণ 2.0',
+    'app.versionFull': 'ExamPrep Bharat v2.0',
     'app.madeIn': '❤️ ভারতে তৈরি',
 
     // === Home Page ===
