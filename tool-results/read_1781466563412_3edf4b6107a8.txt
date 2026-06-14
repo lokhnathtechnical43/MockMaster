@@ -1,0 +1,627 @@
+  2400→                        <CheckCircle2 className="w-4 h-4 text-white" />
+  2401→                      </div>
+  2402→                    )}
+  2403→                  </button>
+  2404→                ))}
+  2405→              </div>
+  2406→              <Button
+  2407→                variant="outline"
+  2408→                className="w-full mt-5 rounded-xl h-11"
+  2409→                onClick={() => setShowLanguageSheet(false)}
+  2410→              >
+  2411→                {_t('lang.cancel')}
+  2412→              </Button>
+  2413→            </div>
+  2414→          </div>
+  2415→        )}
+  2416→
+  2417→        {/* About Sheet */}
+  2418→        {showAboutSheet && (
+  2419→          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-end justify-center" onClick={() => setShowAboutSheet(false)}>
+  2420→            <div className="bg-white rounded-t-[28px] w-full p-6 animate-slide-up" onClick={e => e.stopPropagation()}>
+  2421→              <div className="w-10 h-1 rounded-full bg-gray-200 mx-auto mb-5" />
+  2422→              <div className="text-center mb-5">
+  2423→                <div className="w-16 h-16 bg-gradient-to-br from-orange-500 to-red-500 rounded-2xl flex items-center justify-center mx-auto mb-3 shadow-lg shadow-orange-500/20">
+  2424→                  <span className="text-white text-2xl font-bold">E</span>
+  2425→                </div>
+  2426→                <h3 className="font-bold text-lg">{_t('app.name')}</h3>
+  2427→                <p className="text-gray-400 text-sm">{_t('app.version')}</p>
+  2428→              </div>
+  2429→              <div className="space-y-2">
+  2430→                {[
+  2431→                  { label: _t('about.version'), value: '1.0' },
+  2432→                  { label: _t('about.size'), value: '~5 MB' },
+  2433→                  { label: _t('about.exams'), value: '21+' },
+  2434→                  { label: _t('about.questions'), value: '210+' },
+  2435→                  { label: _t('about.offline'), value: _t('about.yes'), green: true },
+  2436→                  { label: _t('about.ads'), value: _t('about.no'), green: true },
+  2437→                ].map(item => (
+  2438→                  <div key={item.label} className="flex justify-between text-sm p-3 bg-gray-50 rounded-xl">
+  2439→                    <span className="text-gray-500">{item.label}</span>
+  2440→                    <span className={`font-medium ${item.green ? 'text-emerald-600' : ''}`}>{item.value}</span>
+  2441→                  </div>
+  2442→                ))}
+  2443→              </div>
+  2444→              <p className="text-center text-sm text-gray-400 mt-5">{_t('app.madeIn')}</p>
+  2445→              <Button
+  2446→                variant="outline"
+  2447→                className="w-full mt-4 rounded-xl h-11"
+  2448→                onClick={() => setShowAboutSheet(false)}
+  2449→              >
+  2450→                {_t('about.close')}
+  2451→              </Button>
+  2452→            </div>
+  2453→          </div>
+  2454→        )}
+  2455→
+  2456→        {/* Help & FAQ Sheet */}
+  2457→        {showHelpSheet && (
+  2458→          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-end justify-center" onClick={() => setShowHelpSheet(false)}>
+  2459→            <div className="bg-white rounded-t-[28px] w-full max-h-[80vh] overflow-y-auto p-6 animate-slide-up" onClick={e => e.stopPropagation()}>
+  2460→              <div className="w-10 h-1 rounded-full bg-gray-200 mx-auto mb-5" />
+  2461→              <div className="text-center mb-5">
+  2462→                <div className="w-16 h-16 bg-gradient-to-br from-teal-500 to-emerald-500 rounded-2xl flex items-center justify-center mx-auto mb-3 shadow-lg">
+  2463→                  <HelpCircle className="w-8 h-8 text-white" />
+  2464→                </div>
+  2465→                <h3 className="font-bold text-lg">{_t('profile.helpFaq')}</h3>
+  2466→              </div>
+  2467→              <div className="space-y-3">
+  2468→                {[
+  2469→                  { q: 'How do I start a test?', a: 'Go to the Exams page, select an exam category, choose a test and tap "Start Test". You can also use Quick Practice for a random test.' },
+  2470→                  { q: 'How is my score calculated?', a: 'Your score is calculated based on correct answers (marks added) and wrong answers (negative marking as per test scheme). Skipped questions get zero marks.' },
+  2471→                  { q: 'Can I review my answers?', a: 'Yes! After completing a test, you can see the full Answer Key with explanations for each question.' },
+  2472→                  { q: 'How do I track my progress?', a: 'Login with email to save your progress. Your test scores, accuracy, and rankings are tracked in your Profile page.' },
+  2473→                  { q: 'Is offline mode available?', a: 'You can download tests for offline use from the Offline Mode section in the side menu.' },
+  2474→                  { q: 'How do I change the language?', a: 'Go to Profile > Language or use the side menu > Language option. We support English, Hindi, and Bangla.' },
+  2475→                  { q: 'How do I bookmark questions?', a: 'During a test, use the "Mark for Review" button to flag questions. You can review them before submitting.' },
+  2476→                  { q: 'Can I retry a test?', a: 'Yes! After seeing your results, tap "Retry" to take the test again and improve your score.' },
+  2477→                ].map((item, i) => (
+  2478→                  <details key={i} className="group bg-gray-50 rounded-xl overflow-hidden">
+  2479→                    <summary className="flex items-center justify-between p-4 cursor-pointer font-medium text-sm text-gray-800 hover:bg-gray-100 transition-colors">
+  2480→                      {item.q}
+  2481→                      <ChevronDown className="w-4 h-4 text-gray-400 group-open:rotate-180 transition-transform" />
+  2482→                    </summary>
+  2483→                    <div className="px-4 pb-4 text-sm text-gray-600 leading-relaxed">{item.a}</div>
+  2484→                  </details>
+  2485→                ))}
+  2486→              </div>
+  2487→              <Button
+  2488→                variant="outline"
+  2489→                className="w-full mt-5 rounded-xl h-11"
+  2490→                onClick={() => setShowHelpSheet(false)}
+  2491→              >
+  2492→                {_t('about.close')}
+  2493→              </Button>
+  2494→            </div>
+  2495→          </div>
+  2496→        )}
+  2497→
+  2498→        {/* Offline Mode Sheet */}
+  2499→        {showOfflineSheet && (
+  2500→          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-end justify-center" onClick={() => setShowOfflineSheet(false)}>
+  2501→            <div className="bg-white rounded-t-[28px] w-full p-6 animate-slide-up" onClick={e => e.stopPropagation()}>
+  2502→              <div className="w-10 h-1 rounded-full bg-gray-200 mx-auto mb-5" />
+  2503→              <div className="text-center mb-5">
+  2504→                <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-indigo-500 rounded-2xl flex items-center justify-center mx-auto mb-3 shadow-lg">
+  2505→                  <Wifi className="w-8 h-8 text-white" />
+  2506→                </div>
+  2507→                <h3 className="font-bold text-lg">{_t('menu.offlineMode')}</h3>
+  2508→                <p className="text-gray-400 text-sm mt-1">{_t('menu.downloadTests')}</p>
+  2509→              </div>
+  2510→              <div className="space-y-3">
+  2511→                {categories.map(cat => {
+  2512→                  const color = getCatColor(cat.slug)
+  2513→                  const testCount = cat.exams.reduce((sum, e) => sum + (e as any).testCount || 0, 0)
+  2514→                  return (
+  2515→                    <div key={cat.id} className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl">
+  2516→                      <div className={`w-10 h-10 rounded-xl ${color.light} flex items-center justify-center ${color.text}`}>
+  2517→                        {getCatIcon(cat.slug)}
+  2518→                      </div>
+  2519→                      <div className="flex-1 min-w-0">
+  2520→                        <p className="font-semibold text-sm">{cat.name}</p>
+  2521→                        <p className="text-gray-400 text-xs">{cat.exams.length} {_t('home.exams')}</p>
+  2522→                      </div>
+  2523→                      <Button size="sm" variant="outline" className="rounded-xl text-xs" onClick={() => {
+  2524→                        // Download/sync category data to localStorage
+  2525→                        try {
+  2526→                          const key = `examprep_offline_${cat.slug}`
+  2527→                          localStorage.setItem(key, JSON.stringify(cat))
+  2528→                        } catch {}
+  2529→                      }}>
+  2530→                        <Download className="w-3 h-3 mr-1" /> Save
+  2531→                      </Button>
+  2532→                    </div>
+  2533→                  )
+  2534→                })}
+  2535→              </div>
+  2536→              <Button
+  2537→                variant="outline"
+  2538→                className="w-full mt-5 rounded-xl h-11"
+  2539→                onClick={() => setShowOfflineSheet(false)}
+  2540→              >
+  2541→                {_t('about.close')}
+  2542→              </Button>
+  2543→            </div>
+  2544→          </div>
+  2545→        )}
+  2546→      </div>
+  2547→    )
+  2548→  }
+  2549→
+  2550→  // ===== RENDER: Bottom Navigation =====
+  2551→  function renderBottomNav() {
+  2552→    const pages: Page[] = ['home', 'practice', 'tests', 'leaderboard']
+  2553→    if (!pages.includes(currentPage)) return null
+  2554→
+  2555→    const navItems = [
+  2556→      { page: 'home' as Page, icon: Home, label: _t('nav.home') },
+  2557→      { page: 'practice' as Page, icon: Zap, label: _t('nav.practice') },
+  2558→      { page: 'tests' as Page, icon: ClipboardList, label: _t('nav.tests') },
+  2559→      { page: 'leaderboard' as Page, icon: Trophy, label: _t('nav.ranks') },
+  2560→    ]
+  2561→
+  2562→    return (
+  2563→      <div className="fixed bottom-0 left-0 right-0 z-40 safe-area-pb" style={{ touchAction: 'manipulation' }}>
+  2564→        <div className="bg-white/95 backdrop-blur-lg border-t border-gray-100 w-full">
+  2565→          <div className="flex items-center justify-around py-2">
+  2566→            {navItems.map(item => {
+  2567→              const isActive = currentPage === item.page
+  2568→              const Icon = item.icon
+  2569→              return (
+  2570→                <button
+  2571→                  key={item.page}
+  2572→                  onClick={() => handleBottomNav(item.page)}
+  2573→                  onTouchEnd={(e) => { e.preventDefault(); handleBottomNav(item.page) }}
+  2574→                  className={`flex flex-col items-center gap-0.5 py-1 px-4 rounded-xl transition-all ${
+  2575→                    isActive ? 'text-orange-600' : 'text-gray-400 active:text-gray-600'
+  2576→                  }`}
+  2577→                  style={{ touchAction: 'manipulation', WebkitTapHighlightColor: 'transparent' }}
+  2578→                >
+  2579→                  <div className={`relative ${isActive ? '' : ''}`}>
+  2580→                    <Icon className={`w-5 h-5 ${isActive ? 'text-orange-600' : ''}`} />
+  2581→                    {isActive && (
+  2582→                      <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-orange-500" />
+  2583→                    )}
+  2584→                  </div>
+  2585→                  <span className={`text-[10px] font-medium ${isActive ? 'text-orange-600' : ''}`}>{item.label}</span>
+  2586→                </button>
+  2587→              )
+  2588→            })}
+  2589→          </div>
+  2590→        </div>
+  2591→      </div>
+  2592→    )
+  2593→  }
+  2594→
+  2595→  // ===== MAIN RENDER =====
+  2596→  const renderPage = () => {
+  2597→    switch (currentPage) {
+  2598→      case 'home': return renderHome()
+  2599→      case 'exams': return renderExams()
+  2600→      case 'tests': return renderTests()
+  2601→      case 'test-info': return renderTestInfo()
+  2602→      case 'test-taking': return renderTestTaking()
+  2603→      case 'results': return renderResults()
+  2604→      case 'leaderboard': return renderLeaderboard()
+  2605→      case 'profile': return renderProfile()
+  2606→      case 'practice': return renderPractice()
+  2607→      default: return renderHome()
+  2608→    }
+  2609→  }
+  2610→
+  2611→  return (
+  2612→    <div className="min-h-screen min-h-dvh bg-gray-50 relative w-full overflow-x-hidden" style={{ touchAction: 'manipulation' }}>
+  2613→      {renderPage()}
+  2614→      {renderBottomNav()}
+  2615→
+  2616→      {/* ===== Side Menu Drawer ===== */}
+  2617→      {showSideMenu && (
+  2618→        <div className="fixed inset-0 z-[100]">
+  2619→          {/* Backdrop */}
+  2620→          <div
+  2621→            className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+  2622→            onClick={() => setShowSideMenu(false)}
+  2623→            onTouchEnd={(e) => { e.preventDefault(); setShowSideMenu(false) }}
+  2624→            style={{ touchAction: 'manipulation' }}
+  2625→          />
+  2626→          {/* Drawer Panel */}
+  2627→          <div className="absolute left-0 top-0 bottom-0 w-[280px] bg-white shadow-2xl flex flex-col" style={{ touchAction: 'manipulation' }}>
+  2628→            {/* Drawer Header */}
+  2629→            <div className="bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 px-5 pt-[calc(env(safe-area-inset-top,0px)+1.5rem)] pb-5">
+  2630→              <div className="flex items-center justify-between mb-4">
+  2631→                <div className="w-10 h-10 bg-gradient-to-br from-orange-400 to-red-500 rounded-xl flex items-center justify-center shadow-lg shadow-orange-500/20">
+  2632→                  <span className="text-white font-bold text-sm">E</span>
+  2633→                </div>
+  2634→                <button
+  2635→                  onClick={() => setShowSideMenu(false)}
+  2636→                  onTouchEnd={(e) => { e.preventDefault(); setShowSideMenu(false) }}
+  2637→                  className="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center"
+  2638→                  style={{ touchAction: 'manipulation', WebkitTapHighlightColor: 'transparent' }}
+  2639→                >
+  2640→                  <X className="w-4 h-4 text-white/60" />
+  2641→                </button>
+  2642→              </div>
+  2643→              <p className="text-white font-bold text-base">{_t('app.name')}</p>
+  2644→              <p className="text-white/40 text-xs mt-0.5">{_t('app.partner')}</p>
+  2645→            </div>
+  2646→
+  2647→            {/* Menu Items */}
+  2648→            <div className="flex-1 overflow-y-auto py-2">
+  2649→              {/* Main Navigation */}
+  2650→              <div className="px-3 py-2">
+  2651→                <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider px-3 mb-1">{_t('menu.navigation')}</p>
+  2652→                {[
+  2653→                  { icon: Home, label: _t('menu.home'), page: 'home' as Page, active: currentPage === 'home' },
+  2654→                  { icon: BookOpen, label: _t('menu.allExams'), page: 'exams' as Page, active: currentPage === 'exams' },
+  2655→                  { icon: Trophy, label: _t('menu.leaderboard'), page: 'leaderboard' as Page, active: currentPage === 'leaderboard' },
+  2656→                  { icon: User, label: _t('menu.myProfile'), page: 'profile' as Page, active: currentPage === 'profile' },
+  2657→                ].map(item => (
+  2658→                  <button
+  2659→                    key={item.page}
+  2660→                    onClick={() => { handleBottomNav(item.page); setShowSideMenu(false) }}
+  2661→                    className={`w-full flex items-center gap-3 px-3 py-3 rounded-xl transition-colors ${
+  2662→                      item.active ? 'bg-orange-50 text-orange-600' : 'text-gray-600 hover:bg-gray-50 active:bg-gray-100'
+  2663→                    }`}
+  2664→                  >
+  2665→                    <item.icon className={`w-5 h-5 ${item.active ? 'text-orange-500' : 'text-gray-400'}`} />
+  2666→                    <span className={`font-medium text-sm ${item.active ? 'font-semibold' : ''}`}>{item.label}</span>
+  2667→                    {item.active && <div className="ml-auto w-1.5 h-1.5 rounded-full bg-orange-500" />}
+  2668→                  </button>
+  2669→                ))}
+  2670→              </div>
+  2671→
+  2672→              <div className="mx-5 border-t border-gray-100 my-1" />
+  2673→
+  2674→              {/* Quick Actions */}
+  2675→              <div className="px-3 py-2">
+  2676→                <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider px-3 mb-1">{_t('menu.quickActions')}</p>
+  2677→                {[
+  2678→                  { icon: Zap, label: _t('menu.quickPractice'), soon: false, action: () => {
+  2679→                    const allCats = categories
+  2680→                    const allExams = allCats.flatMap(c => c.exams)
+  2681→                    if (allExams.length > 0) {
+  2682→                      const randomExam = allExams[Math.floor(Math.random() * allExams.length)]
+  2683→                      const randomCat = allCats.find(c => c.exams.some(e => e.id === randomExam.id))!
+  2684→                      openExam(randomExam, randomCat)
+  2685→                    }
+  2686→                  }},
+  2687→                  { icon: BookmarkPlus, label: _t('menu.bookmarkedQ'), soon: false, action: () => {
+  2688→                    if (auth.isLoggedIn) {
+  2689→                      handleBottomNav('tests')
+  2690→                    } else {
+  2691→                      setShowLoginModal(true)
+  2692→                    }
+  2693→                  }},
+  2694→                  { icon: Download, label: _t('menu.offlineTests'), soon: false, action: () => {
+  2695→                    handleBottomNav('exams')
+  2696→                  }},
+  2697→                  { icon: BarChart3, label: _t('menu.perfReport'), soon: false, action: () => {
+  2698→                    if (auth.isLoggedIn) {
+  2699→                      handleBottomNav('profile')
+  2700→                    } else {
+  2701→                      setShowLoginModal(true)
+  2702→                    }
+  2703→                  }},
+  2704→                ].map((item, i) => (
+  2705→                  <button
+  2706→                    key={i}
+  2707→                    onClick={() => { item.action(); setShowSideMenu(false) }}
+  2708→                    className="w-full flex items-center gap-3 px-3 py-3 rounded-xl text-gray-600 hover:bg-gray-50 active:bg-gray-100 transition-colors"
+  2709→                  >
+  2710→                    <item.icon className="w-5 h-5 text-gray-400" />
+  2711→                    <span className="font-medium text-sm">{item.label}</span>
+  2712→                    {item.soon && (
+  2713→                      <Badge variant="secondary" className="text-[9px] ml-auto">{_t('menu.soon')}</Badge>
+  2714→                    )}
+  2715→                  </button>
+  2716→                ))}
+  2717→              </div>
+  2718→
+  2719→              <div className="mx-5 border-t border-gray-100 my-1" />
+  2720→
+  2721→              {/* Settings & Support */}
+  2722→              <div className="px-3 py-2">
+  2723→                <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider px-3 mb-1">{_t('menu.settings')}</p>
+  2724→                {[
+  2725→                  { icon: BookOpen, id: 'language', label: _t('profile.language'), sub: lng === 'en' ? _t('lang.english') : lng === 'hi' ? _t('lang.hindi') : _t('lang.bangla'), action: () => setShowLanguageSheet(true) },
+  2726→                  { icon: Bell, id: 'notifications', label: _t('menu.notifications'), sub: unreadCount > 0 ? `${unreadCount} ${_t('menu.unread')}` : _t('menu.manageAlerts'), action: () => { setShowSideMenu(false); setCurrentPage('home'); setTimeout(() => setShowNotificationPanel(true), 300) } },
+  2727→                  { icon: Wifi, id: 'offline', label: _t('menu.offlineMode'), sub: _t('menu.downloadTests'), action: () => { setShowSideMenu(false); setShowOfflineSheet(true) } },
+  2728→                  { icon: HelpCircle, id: 'help', label: _t('menu.helpFaq'), sub: _t('menu.getSupport'), action: () => { setShowSideMenu(false); setShowHelpSheet(true) } },
+  2729→                  { icon: Share2, id: 'share', label: _t('menu.shareApp'), sub: _t('menu.tellFriends'), action: () => {
+  2730→                    if (navigator.share) {
+  2731→                      navigator.share({ title: _t('app.name'), text: _t('share.text'), url: window.location.href })
+  2732→                    }
+  2733→                  }},
+  2734→                  { icon: Shield, id: 'about', label: _t('menu.about'), sub: _t('app.version'), action: () => setShowAboutSheet(true) },
+  2735→                ].map((item, i) => (
+  2736→                  <button
+  2737→                    key={i}
+  2738→                    onClick={() => { item.action(); setShowSideMenu(false) }}
+  2739→                    className="w-full flex items-center gap-3 px-3 py-3 rounded-xl text-gray-600 hover:bg-gray-50 active:bg-gray-100 transition-colors"
+  2740→                  >
+  2741→                    <item.icon className="w-5 h-5 text-gray-400" />
+  2742→                    <div className="flex-1 text-left">
+  2743→                      <span className="font-medium text-sm block">{item.label}</span>
+  2744→                      {item.sub && <span className="text-gray-400 text-[11px]">{item.sub}</span>}
+  2745→                    </div>
+  2746→                    {item.id === 'notifications' && unreadCount > 0 ? (
+  2747→                      <span className="w-5 h-5 bg-orange-500 rounded-full flex items-center justify-center text-white text-[10px] font-bold">{unreadCount}</span>
+  2748→                    ) : (
+  2749→                      <ChevronRight className="w-4 h-4 text-gray-300" />
+  2750→                    )}
+  2751→                  </button>
+  2752→                ))}
+  2753→              </div>
+  2754→            </div>
+  2755→
+  2756→            {/* Drawer Footer */}
+  2757→            <div className="border-t border-gray-100 px-5 py-4">
+  2758→              {auth.isLoggedIn ? (
+  2759→                <button
+  2760→                  onClick={() => { auth.logout(); setShowSideMenu(false) }}
+  2761→                  className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-red-500 hover:bg-red-50 active:bg-red-100 transition-colors"
+  2762→                >
+  2763→                  <LogOut className="w-5 h-5" />
+  2764→                  <span className="font-medium text-sm">{_t('menu.logout')}</span>
+  2765→                </button>
+  2766→              ) : (
+  2767→                <button
+  2768→                  onClick={() => { setShowLoginModal(true); setShowSideMenu(false) }}
+  2769→                  className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-gradient-to-r from-orange-500 to-red-500 text-white rounded-xl font-semibold text-sm"
+  2770→                >
+  2771→                  <Mail className="w-4 h-4" /> {_t('profile.login')}
+  2772→                </button>
+  2773→              )}
+  2774→            </div>
+  2775→          </div>
+  2776→        </div>
+  2777→      )}
+  2778→
+  2779→      {/* Login Modal */}
+  2780→      {showLoginModal && (
+  2781→        <LoginModal
+  2782→          error={auth.error}
+  2783→          loginLoading={auth.loginLoading}
+  2784→          signupLoading={auth.signupLoading}
+  2785→          guestLoading={auth.guestLoading}
+  2786→          onLogin={auth.loginWithEmail}
+  2787→          onSignUp={auth.signUpWithEmail}
+  2788→          onGuestLogin={auth.loginAsGuest}
+  2789→          onClose={() => setShowLoginModal(false)}
+  2790→        />
+  2791→      )}
+  2792→
+  2793→      {/* Notification Detail Modal */}
+  2794→      {selectedNotification && (
+  2795→        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40" onClick={() => setSelectedNotification(null)}>
+  2796→          <div className="bg-white w-full max-w-lg rounded-t-3xl shadow-2xl animate-in slide-in-from-bottom duration-300" onClick={e => e.stopPropagation()}>
+  2797→            <div className="p-6">
+  2798→              <div className="flex items-start gap-4 mb-4">
+  2799→                <div className={`w-12 h-12 rounded-2xl flex items-center justify-center flex-shrink-0 ${
+  2800→                  selectedNotification.type === 'update' ? 'bg-blue-100' :
+  2801→                  selectedNotification.type === 'alert' ? 'bg-amber-100' :
+  2802→                  'bg-green-100'
+  2803→                }`}>
+  2804→                  {selectedNotification.type === 'update' ? <Zap className="w-6 h-6 text-blue-500" /> :
+  2805→                   selectedNotification.type === 'alert' ? <AlertTriangle className="w-6 h-6 text-amber-500" /> :
+  2806→                   <Gift className="w-6 h-6 text-green-500" />}
+  2807→                </div>
+  2808→                <div className="flex-1 min-w-0">
+  2809→                  <h3 className="font-bold text-lg text-gray-900">{selectedNotification.title}</h3>
+  2810→                  <p className="text-gray-400 text-xs mt-0.5">{selectedNotification.time}</p>
+  2811→                </div>
+  2812→                <button onClick={() => setSelectedNotification(null)} className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center flex-shrink-0">
+  2813→                  <X className="w-4 h-4 text-gray-500" />
+  2814→                </button>
+  2815→              </div>
+  2816→              <p className="text-gray-700 text-sm leading-relaxed mb-4">{selectedNotification.message}</p>
+  2817→              {selectedNotification.link && (
+  2818→                <Button
+  2819→                  className="w-full bg-gradient-to-r from-orange-500 to-red-500 text-white rounded-xl h-11 font-semibold"
+  2820→                  onClick={() => {
+  2821→                    const link = selectedNotification.link!
+  2822→                    setSelectedNotification(null)
+  2823→                    setShowNotificationPanel(false)
+  2824→                    // Check if it's an internal app page
+  2825→                    if (['home', 'exams', 'tests', 'practice', 'leaderboard', 'profile'].includes(link)) {
+  2826→                      handleBottomNav(link as Page)
+  2827→                    } else {
+  2828→                      // External URL - open in new tab
+  2829→                      window.open(link.startsWith('http') ? link : `https://${link}`, '_blank')
+  2830→                    }
+  2831→                  }}
+  2832→                >
+  2833→                  <ExternalLink className="w-4 h-4 mr-2" /> Open Link
+  2834→                </Button>
+  2835→              )}
+  2836→              {!selectedNotification.link && (
+  2837→                <Button
+  2838→                  className="w-full bg-gray-100 text-gray-700 hover:bg-gray-200 rounded-xl h-11 font-medium"
+  2839→                  onClick={() => setSelectedNotification(null)}
+  2840→                >
+  2841→                  Close
+  2842→                </Button>
+  2843→              )}
+  2844→            </div>
+  2845→          </div>
+  2846→        </div>
+  2847→      )}
+  2848→
+  2849→      {/* Daily Tip Detail Modal */}
+  2850→      {selectedTip && (
+  2851→        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40" onClick={() => setSelectedTip(null)}>
+  2852→          <div className="bg-white w-full max-w-lg rounded-t-3xl shadow-2xl animate-in slide-in-from-bottom duration-300" onClick={e => e.stopPropagation()}>
+  2853→            <div className="p-6">
+  2854→              <div className="flex items-start gap-4 mb-4">
+  2855→                <div className="w-12 h-12 rounded-2xl bg-amber-100 flex items-center justify-center flex-shrink-0">
+  2856→                  <Lightbulb className="w-6 h-6 text-amber-500" />
+  2857→                </div>
+  2858→                <div className="flex-1 min-w-0">
+  2859→                  <h3 className="font-bold text-lg text-gray-900">{_t('home.dailyTips')}</h3>
+  2860→                  <p className="text-gray-400 text-xs mt-0.5">Daily Tip</p>
+  2861→                </div>
+  2862→                <button onClick={() => setSelectedTip(null)} className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center flex-shrink-0">
+  2863→                  <X className="w-4 h-4 text-gray-500" />
+  2864→                </button>
+  2865→              </div>
+  2866→              <p className="text-gray-700 text-sm leading-relaxed mb-4">{selectedTip.text}</p>
+  2867→              {selectedTip.link && (
+  2868→                <Button
+  2869→                  className="w-full bg-gradient-to-r from-amber-500 to-orange-500 text-white rounded-xl h-11 font-semibold"
+  2870→                  onClick={() => {
+  2871→                    const link = selectedTip.link!
+  2872→                    setSelectedTip(null)
+  2873→                    if (['home', 'exams', 'tests', 'practice', 'leaderboard', 'profile'].includes(link)) {
+  2874→                      handleBottomNav(link as Page)
+  2875→                    } else {
+  2876→                      window.open(link.startsWith('http') ? link : `https://${link}`, '_blank')
+  2877→                    }
+  2878→                  }}
+  2879→                >
+  2880→                  <ExternalLink className="w-4 h-4 mr-2" /> Open Link
+  2881→                </Button>
+  2882→              )}
+  2883→              {!selectedTip.link && (
+  2884→                <Button
+  2885→                  className="w-full bg-gray-100 text-gray-700 hover:bg-gray-200 rounded-xl h-11 font-medium"
+  2886→                  onClick={() => setSelectedTip(null)}
+  2887→                >
+  2888→                  Close
+  2889→                </Button>
+  2890→              )}
+  2891→            </div>
+  2892→          </div>
+  2893→        </div>
+  2894→      )}
+  2895→
+  2896→      {/* Guest Warning Modal */}
+  2897→      {showGuestWarning && (
+  2898→        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-5">
+  2899→          <div className="bg-white rounded-3xl w-full max-w-sm shadow-2xl overflow-hidden animate-scale-in">
+  2900→            <div className="p-6 pb-4 text-center">
+  2901→              <div className="w-16 h-16 rounded-full bg-gradient-to-br from-orange-100 to-red-50 flex items-center justify-center mx-auto mb-4">
+  2902→                <Crown className="w-8 h-8 text-orange-500" />
+  2903→              </div>
+  2904→              <h3 className="font-bold text-xl text-gray-900">Create Account to Continue</h3>
+  2905→              <p className="text-gray-500 text-sm mt-2 leading-relaxed">
+  2906→                Guest users can try one free Quick Practice. Sign up now to unlock unlimited mock tests, track progress, and compete on the leaderboard!
+  2907→              </p>
+  2908→            </div>
+  2909→            <div className="px-6 pb-6 space-y-2.5">
+  2910→              <Button
+  2911→                className="w-full h-11 bg-gradient-to-r from-orange-500 to-red-500 text-white rounded-xl font-semibold text-sm"
+  2912→                onClick={() => { setShowGuestWarning(false); setShowLoginModal(true) }}
+  2913→              >
+  2914→                <Mail className="w-4 h-4 mr-2" /> Sign Up / Login
+  2915→              </Button>
+  2916→              <Button
+  2917→                variant="outline"
+  2918→                className="w-full h-11 rounded-xl border-gray-200 font-semibold text-sm"
+  2919→                onClick={() => setShowGuestWarning(false)}
+  2920→              >
+  2921→                Maybe Later
+  2922→              </Button>
+  2923→            </div>
+  2924→          </div>
+  2925→        </div>
+  2926→      )}
+  2927→
+  2928→      {/* Upcoming Exam Detail Modal */}
+  2929→      {selectedUpcomingExam && (
+  2930→        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40" onClick={() => setSelectedUpcomingExam(null)}>
+  2931→          <div className="bg-white w-full max-w-lg rounded-t-3xl shadow-2xl animate-in slide-in-from-bottom duration-300 max-h-[80vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+  2932→            <div className="p-6">
+  2933→              <div className="flex items-start gap-4 mb-4">
+  2934→                {selectedUpcomingExam.imageUrl ? (
+  2935→                  <div className="w-12 h-12 rounded-2xl overflow-hidden flex-shrink-0">
+  2936→                    <img src={selectedUpcomingExam.imageUrl} alt={selectedUpcomingExam.name} className="w-full h-full object-cover" />
+  2937→                  </div>
+  2938→                ) : (
+  2939→                  <div className="w-12 h-12 rounded-2xl bg-blue-100 flex items-center justify-center flex-shrink-0">
+  2940→                    <Calendar className="w-6 h-6 text-blue-500" />
+  2941→                  </div>
+  2942→                )}
+  2943→                <div className="flex-1 min-w-0">
+  2944→                  <h3 className="font-bold text-lg text-gray-900">{selectedUpcomingExam.name}</h3>
+  2945→                  <p className="text-gray-400 text-xs mt-0.5">{selectedUpcomingExam.date}</p>
+  2946→                </div>
+  2947→                <button onClick={() => setSelectedUpcomingExam(null)} className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center flex-shrink-0">
+  2948→                  <X className="w-4 h-4 text-gray-500" />
+  2949→                </button>
+  2950→              </div>
+  2951→
+  2952→              {/* Status Badge */}
+  2953→              <div className="mb-4">
+  2954→                <Badge variant="secondary" className={`text-xs ${
+  2955→                  selectedUpcomingExam.statusType === 'open' ? 'bg-green-100 text-green-700' :
+  2956→                  selectedUpcomingExam.statusType === 'admit' ? 'bg-amber-100 text-amber-700' :
+  2957→                  selectedUpcomingExam.statusType === 'closed' ? 'bg-red-100 text-red-700' :
+  2958→                  'bg-gray-100 text-gray-600'
+  2959→                }`}>
+  2960→                  {selectedUpcomingExam.status}
+  2961→                </Badge>
+  2962→              </div>
+  2963→
+  2964→              {/* Detail Info */}
+  2965→              <div className="space-y-3 mb-4">
+  2966→                <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl">
+  2967→                  <Calendar className="w-5 h-5 text-blue-500" />
+  2968→                  <div>
+  2969→                    <p className="text-xs text-gray-500">Exam Date</p>
+  2970→                    <p className="font-semibold text-sm">{selectedUpcomingExam.date}</p>
+  2971→                  </div>
+  2972→                </div>
+  2973→                {selectedUpcomingExam.catSlug && (
+  2974→                  <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl">
+  2975→                    <BookOpen className="w-5 h-5 text-orange-500" />
+  2976→                    <div>
+  2977→                      <p className="text-xs text-gray-500">Category</p>
+  2978→                      <p className="font-semibold text-sm capitalize">{selectedUpcomingExam.catSlug}</p>
+  2979→                    </div>
+  2980→                  </div>
+  2981→                )}
+  2982→                {selectedUpcomingExam.description && (
+  2983→                  <div className="p-3 bg-blue-50 rounded-xl">
+  2984→                    <p className="text-xs text-blue-500 font-medium mb-1">Details</p>
+  2985→                    <p className="text-sm text-gray-700 leading-relaxed">{selectedUpcomingExam.description}</p>
+  2986→                  </div>
+  2987→                )}
+  2988→              </div>
+  2989→
+  2990→              {/* Action Button */}
+  2991→              <Button
+  2992→                className="w-full bg-gradient-to-r from-blue-500 to-indigo-500 text-white rounded-xl h-11 font-semibold"
+  2993→                onClick={() => {
+  2994→                  const exam = selectedUpcomingExam
+  2995→                  setSelectedUpcomingExam(null)
+  2996→                  const cat = categories.find(c => c.slug === exam.catSlug)
+  2997→                  if (cat && cat.exams.length > 0) {
+  2998→                    openExam(cat.exams[0], cat)
+  2999→                  } else {
+  3000→                    handleBottomNav('exams')
+  3001→                  }
+  3002→                }}
+  3003→              >
+  3004→                <BookOpen className="w-4 h-4 mr-2" /> Start Practicing
+  3005→              </Button>
+  3006→            </div>
+  3007→          </div>
+  3008→        </div>
+  3009→      )}
+  3010→    </div>
+  3011→  )
+  3012→}
+  3013→
+  3014→// Missing icon helper
+  3015→function FileText(props: React.SVGProps<SVGSVGElement>) {
+  3016→  return (
+  3017→    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
+  3018→      <path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z" />
+  3019→      <path d="M14 2v4a2 2 0 0 0 2 2h4" />
+  3020→      <path d="M10 9H8" />
+  3021→      <path d="M16 13H8" />
+  3022→      <path d="M16 17H8" />
+  3023→    </svg>
+  3024→  )
+  3025→}
+  3026→
