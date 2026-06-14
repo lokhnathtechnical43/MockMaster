@@ -50,6 +50,7 @@ export interface UpcomingExam {
   isActive: boolean // Only active exams are shown to users
   order: number // Display order
   imageUrl?: string // Optional custom image (base64 data URL or external URL)
+  description?: string // Detailed description shown in detail modal
 }
 
 export const STORAGE_KEYS = {
@@ -162,9 +163,9 @@ export function getPageImage(id: string): string | undefined {
 
 // Upcoming Exams - allow admin to manage upcoming exams shown on home page
 export const DEFAULT_UPCOMING_EXAMS: UpcomingExam[] = [
-  { id: '1', name: 'SSC CGL 2025', date: '15 Jul 2025', status: 'Registration Open', statusType: 'open', catSlug: 'ssc', isActive: true, order: 1 },
-  { id: '2', name: 'IBPS PO 2025', date: '20 Aug 2025', status: 'Coming Soon', statusType: 'coming', catSlug: 'banking', isActive: true, order: 2 },
-  { id: '3', name: 'RRB NTPC 2025', date: '10 Sep 2025', status: 'Admit Card Out', statusType: 'admit', catSlug: 'railways', isActive: true, order: 3 },
+  { id: '1', name: 'SSC CGL 2025', date: '15 Jul 2025', status: 'Registration Open', statusType: 'open', catSlug: 'ssc', isActive: true, order: 1, description: 'Staff Selection Commission Combined Graduate Level Examination 2025. Application deadline: 30 Jun 2025. Tier-I exam expected in Aug-Sep 2025.' },
+  { id: '2', name: 'IBPS PO 2025', date: '20 Aug 2025', status: 'Coming Soon', statusType: 'coming', catSlug: 'banking', isActive: true, order: 2, description: 'Institute of Banking Personnel Selection Probationary Officer Exam 2025. Notification expected in Jul 2025. Prelims in Oct 2025.' },
+  { id: '3', name: 'RRB NTPC 2025', date: '10 Sep 2025', status: 'Admit Card Out', statusType: 'admit', catSlug: 'railways', isActive: true, order: 3, description: 'Railway Recruitment Board Non-Technical Popular Categories Exam 2025. CBT Stage-I scheduled for Sep 2025. Download admit card from official RRB website.' },
 ]
 
 export function getUpcomingExams(): UpcomingExam[] {

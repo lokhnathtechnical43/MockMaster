@@ -118,6 +118,8 @@ export default function ExamPrepApp() {
   // --- Page / Navigation ---
   const [currentPage, setCurrentPage] = useState<Page>('home')
   const pageHistoryRef = useRef<Page[]>([])
+  const scrollPositionsRef = useRef<Record<string, number>>({})
+  const mainContainerRef = useRef<HTMLDivElement>(null)
 
   // --- Data ---
   const [categories, setCategories] = useState<LocalExamCategory[]>([])
@@ -144,6 +146,8 @@ export default function ExamPrepApp() {
   // --- UI State ---
   const [showLoginModal, setShowLoginModal] = useState(false)
   const [showBackConfirm, setShowBackConfirm] = useState(false)
+  const [showGuestWarning, setShowGuestWarning] = useState(false)
+  const [selectedUpcomingExam, setSelectedUpcomingExam] = useState<UpcomingExam | null>(null)
   const [showLanguageSheet, setShowLanguageSheet] = useState(false)
   const [showAboutSheet, setShowAboutSheet] = useState(false)
   const [showHelpSheet, setShowHelpSheet] = useState(false)
@@ -172,6 +176,26 @@ export default function ExamPrepApp() {
 
   // --- Upcoming Exams (loaded from shared admin storage) ---
   const [upcomingExams, setUpcomingExams] = useState<UpcomingExam[]>([])
+
+  // --- Guest Practice Counter ---
+  const [guestPracticeCount, setGuestPracticeCount] = useState(0)
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const stored = localStorage.getItem('mockmaster_guest_practice_count')
+        setGuestPracticeCount(stored ? parseInt(stored) : 0)
+      } catch {}
+    }
+  }, [])
+  function incrementGuestPractice() {
+    const newCount = guestPracticeCount + 1
+    setGuestPracticeCount(newCount)
+    try { localStorage.setItem('mockmaster_guest_practice_count', newCount.toString()) } catch {}
+  }
+  function canGuestPractice(): boolean {
+    if (auth.isLoggedIn && !auth.isGuest) return true
+    return guestPracticeCount < 1
+  }
 
   // --- Page Images (loaded from admin storage) ---
   const [pageImages, setPageImages] = useState<Record<string, string>>({})
@@ -298,16 +322,29 @@ export default function ExamPrepApp() {
 
   // --- Navigation ---
   const navigateTo = useCallback((page: Page) => {
+    // Save scroll position before navigating
+    if (mainContainerRef.current) {
+      scrollPositionsRef.current[currentPage] = window.scrollY
+    }
     pageHistoryRef.current.push(currentPage)
     setCurrentPage(page)
+    window.scrollTo(0, 0)
   }, [currentPage])
 
   const goBack = useCallback(() => {
     const prev = pageHistoryRef.current.pop()
     if (prev) {
       setCurrentPage(prev)
+      // Restore scroll position
+      setTimeout(() => {
+        const savedY = scrollPositionsRef.current[prev]
+        if (savedY !== undefined) {
+          window.scrollTo(0, savedY)
+        }
+      }, 50)
     } else {
       setCurrentPage('home')
+      window.scrollTo(0, 0)
     }
   }, [])
 
@@ -528,8 +565,13 @@ export default function ExamPrepApp() {
 
   // --- Bottom nav handler ---
   function handleBottomNav(page: Page) {
+    // Save scroll before switching
+    if (mainContainerRef.current) {
+      scrollPositionsRef.current[currentPage] = window.scrollY
+    }
     pageHistoryRef.current = []
     setCurrentPage(page)
+    window.scrollTo(0, 0)
   }
 
   // --- Exam select handler ---
@@ -859,13 +901,23 @@ export default function ExamPrepApp() {
                 <Button
                   size="sm"
                   className="bg-gradient-to-r from-orange-500 to-red-500 text-white rounded-xl"
-                  onClick={() => {
+                  onClick={async () => {
+                    if (!canGuestPractice()) {
+                      setShowGuestWarning(true)
+                      return
+                    }
                     const allCats = categories
                     const allExams = allCats.flatMap(c => c.exams)
                     if (allExams.length > 0) {
                       const randomExam = allExams[Math.floor(Math.random() * allExams.length)]
                       const randomCat = allCats.find(c => c.exams.some(e => e.id === randomExam.id))!
-                      openExam(randomExam, randomCat)
+                      await openExam(randomExam, randomCat)
+                      // Auto-start first test if available
+                      const tests = await fetchTestsByExam(randomExam.id)
+                      if (tests.length > 0) {
+                        incrementGuestPractice()
+                        startTest(tests[0])
+                      }
                     }
                   }}
                 >
@@ -897,7 +949,7 @@ export default function ExamPrepApp() {
                     className="border-0 shadow-sm cursor-pointer hover:shadow-md transition-shadow"
                     onClick={() => {
                       setSelectedCategory(cat)
-                      handleBottomNav('exams')
+                      navigateTo('exams')
                     }}
                   >
                     <CardContent className="p-4">
@@ -1125,6 +1177,7 @@ export default function ExamPrepApp() {
 
   // ===== RENDER: Exams Page =====
   function renderExams() {
+    const displayCategories = selectedCategory ? [selectedCategory] : categories
     return (
       <div className="pb-20">
         <div className="bg-gradient-to-r from-orange-500 to-red-500 px-4 pt-[calc(env(safe-area-inset-top,0px)+3rem)] pb-6 rounded-b-3xl relative overflow-hidden">
@@ -1135,12 +1188,20 @@ export default function ExamPrepApp() {
             <button onClick={goBack} className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center">
               <ArrowLeft className="w-5 h-5 text-white" />
             </button>
-            <h1 className="text-white text-xl font-bold">{_t('exams.allExams')}</h1>
+            <h1 className="text-white text-xl font-bold">{selectedCategory ? selectedCategory.name : _t('exams.allExams')}</h1>
           </div>
+          {selectedCategory && (
+            <button
+              onClick={() => { setSelectedCategory(null) }}
+              className="text-white/70 text-xs flex items-center gap-1"
+            >
+              <ChevronLeft className="w-3 h-3" /> Show all categories
+            </button>
+          )}
         </div>
 
         <div className="px-4 mt-4 space-y-6">
-          {categories.map(cat => {
+          {displayCategories.map(cat => {
             const color = getCatColor(cat.slug)
             return (
               <div key={cat.id}>
@@ -1910,7 +1971,7 @@ export default function ExamPrepApp() {
                     className="border-0 shadow-sm cursor-pointer hover:shadow-md transition-shadow"
                     onClick={() => {
                       setSelectedCategory(cat)
-                      handleBottomNav('exams')
+                      navigateTo('exams')
                     }}
                   >
                     <CardContent className="p-3 flex items-center gap-3">
@@ -2753,6 +2814,121 @@ export default function ExamPrepApp() {
                   Close
                 </Button>
               )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Guest Warning Modal */}
+      {showGuestWarning && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-5">
+          <div className="bg-white rounded-3xl w-full max-w-sm shadow-2xl overflow-hidden animate-scale-in">
+            <div className="p-6 pb-4 text-center">
+              <div className="w-16 h-16 rounded-full bg-gradient-to-br from-orange-100 to-red-50 flex items-center justify-center mx-auto mb-4">
+                <Crown className="w-8 h-8 text-orange-500" />
+              </div>
+              <h3 className="font-bold text-xl text-gray-900">Create Account to Continue</h3>
+              <p className="text-gray-500 text-sm mt-2 leading-relaxed">
+                Guest users can try one free Quick Practice. Sign up now to unlock unlimited mock tests, track progress, and compete on the leaderboard!
+              </p>
+            </div>
+            <div className="px-6 pb-6 space-y-2.5">
+              <Button
+                className="w-full h-11 bg-gradient-to-r from-orange-500 to-red-500 text-white rounded-xl font-semibold text-sm"
+                onClick={() => { setShowGuestWarning(false); setShowLoginModal(true) }}
+              >
+                <Mail className="w-4 h-4 mr-2" /> Sign Up / Login
+              </Button>
+              <Button
+                variant="outline"
+                className="w-full h-11 rounded-xl border-gray-200 font-semibold text-sm"
+                onClick={() => setShowGuestWarning(false)}
+              >
+                Maybe Later
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Upcoming Exam Detail Modal */}
+      {selectedUpcomingExam && (
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40" onClick={() => setSelectedUpcomingExam(null)}>
+          <div className="bg-white w-full max-w-lg rounded-t-3xl shadow-2xl animate-in slide-in-from-bottom duration-300 max-h-[80vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+            <div className="p-6">
+              <div className="flex items-start gap-4 mb-4">
+                {selectedUpcomingExam.imageUrl ? (
+                  <div className="w-12 h-12 rounded-2xl overflow-hidden flex-shrink-0">
+                    <img src={selectedUpcomingExam.imageUrl} alt={selectedUpcomingExam.name} className="w-full h-full object-cover" />
+                  </div>
+                ) : (
+                  <div className="w-12 h-12 rounded-2xl bg-blue-100 flex items-center justify-center flex-shrink-0">
+                    <Calendar className="w-6 h-6 text-blue-500" />
+                  </div>
+                )}
+                <div className="flex-1 min-w-0">
+                  <h3 className="font-bold text-lg text-gray-900">{selectedUpcomingExam.name}</h3>
+                  <p className="text-gray-400 text-xs mt-0.5">{selectedUpcomingExam.date}</p>
+                </div>
+                <button onClick={() => setSelectedUpcomingExam(null)} className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center flex-shrink-0">
+                  <X className="w-4 h-4 text-gray-500" />
+                </button>
+              </div>
+
+              {/* Status Badge */}
+              <div className="mb-4">
+                <Badge variant="secondary" className={`text-xs ${
+                  selectedUpcomingExam.statusType === 'open' ? 'bg-green-100 text-green-700' :
+                  selectedUpcomingExam.statusType === 'admit' ? 'bg-amber-100 text-amber-700' :
+                  selectedUpcomingExam.statusType === 'closed' ? 'bg-red-100 text-red-700' :
+                  'bg-gray-100 text-gray-600'
+                }`}>
+                  {selectedUpcomingExam.status}
+                </Badge>
+              </div>
+
+              {/* Detail Info */}
+              <div className="space-y-3 mb-4">
+                <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl">
+                  <Calendar className="w-5 h-5 text-blue-500" />
+                  <div>
+                    <p className="text-xs text-gray-500">Exam Date</p>
+                    <p className="font-semibold text-sm">{selectedUpcomingExam.date}</p>
+                  </div>
+                </div>
+                {selectedUpcomingExam.catSlug && (
+                  <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl">
+                    <BookOpen className="w-5 h-5 text-orange-500" />
+                    <div>
+                      <p className="text-xs text-gray-500">Category</p>
+                      <p className="font-semibold text-sm capitalize">{selectedUpcomingExam.catSlug}</p>
+                    </div>
+                  </div>
+                )}
+                {selectedUpcomingExam.description && (
+                  <div className="p-3 bg-blue-50 rounded-xl">
+                    <p className="text-xs text-blue-500 font-medium mb-1">Details</p>
+                    <p className="text-sm text-gray-700 leading-relaxed">{selectedUpcomingExam.description}</p>
+                  </div>
+                )}
+              </div>
+
+              {/* Action Button */}
+              <Button
+                className="w-full bg-gradient-to-r from-blue-500 to-indigo-500 text-white rounded-xl h-11 font-semibold"
+                onClick={() => {
+                  const exam = selectedUpcomingExam
+                  setSelectedUpcomingExam(null)
+                  const cat = categories.find(c => c.slug === exam.catSlug)
+                  if (cat && cat.exams.length > 0) {
+                    openExam(cat.exams[0], cat)
+                  } else {
+                    handleBottomNav('exams')
+                  }
+                }}
+              >
+                <BookOpen className="w-4 h-4 mr-2" /> Start Practicing
+              </Button>
             </div>
           </div>
         </div>

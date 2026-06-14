@@ -32,6 +32,7 @@ export default function UpcomingExamsTab({ exams, onUpdate }: UpcomingExamsTabPr
   const [newStatusType, setNewStatusType] = useState<UpcomingExam['statusType']>('open')
   const [newCatSlug, setNewCatSlug] = useState('')
   const [newImageUrl, setNewImageUrl] = useState('')
+  const [newDescription, setNewDescription] = useState('')
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   // Edit state
@@ -42,6 +43,7 @@ export default function UpcomingExamsTab({ exams, onUpdate }: UpcomingExamsTabPr
   const [editStatusType, setEditStatusType] = useState<UpcomingExam['statusType']>('open')
   const [editCatSlug, setEditCatSlug] = useState('')
   const [editImageUrl, setEditImageUrl] = useState('')
+  const [editDescription, setEditDescription] = useState('')
   const editFileInputRef = useRef<HTMLInputElement>(null)
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -95,6 +97,7 @@ export default function UpcomingExamsTab({ exams, onUpdate }: UpcomingExamsTabPr
       isActive: true,
       order: maxOrder + 1,
       imageUrl: newImageUrl || undefined,
+      description: newDescription || undefined,
     }
     onUpdate([...exams, newExam])
     setNewName('')
@@ -103,6 +106,7 @@ export default function UpcomingExamsTab({ exams, onUpdate }: UpcomingExamsTabPr
     setNewStatusType('open')
     setNewCatSlug('')
     setNewImageUrl('')
+    setNewDescription('')
   }
 
   const handleDelete = (index: number) => {
@@ -142,6 +146,7 @@ export default function UpcomingExamsTab({ exams, onUpdate }: UpcomingExamsTabPr
     setEditStatusType(exam.statusType)
     setEditCatSlug(exam.catSlug)
     setEditImageUrl(exam.imageUrl || '')
+    setEditDescription(exam.description || '')
   }
 
   const cancelEdit = () => {
@@ -158,6 +163,7 @@ export default function UpcomingExamsTab({ exams, onUpdate }: UpcomingExamsTabPr
       statusType: editStatusType,
       catSlug: editCatSlug,
       imageUrl: editImageUrl || undefined,
+      description: editDescription || undefined,
     }
     onUpdate(updated)
     setEditingIndex(null)
@@ -222,6 +228,13 @@ export default function UpcomingExamsTab({ exams, onUpdate }: UpcomingExamsTabPr
               onChange={e => setNewStatus(e.target.value)}
               placeholder="Custom status text (optional, auto-filled from type)"
               className="w-full px-3 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300"
+            />
+            <textarea
+              value={newDescription}
+              onChange={e => setNewDescription(e.target.value)}
+              placeholder="Description (shown in detail view - exam details, dates, links etc.)"
+              rows={3}
+              className="w-full px-3 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300 resize-none"
             />
 
             {/* Image Upload Section */}
@@ -359,6 +372,13 @@ export default function UpcomingExamsTab({ exams, onUpdate }: UpcomingExamsTabPr
                       onChange={e => setEditStatus(e.target.value)}
                       placeholder="Custom status text"
                       className="w-full px-3 py-2 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300"
+                    />
+                    <textarea
+                      value={editDescription}
+                      onChange={e => setEditDescription(e.target.value)}
+                      placeholder="Description (exam details, dates, links)"
+                      rows={3}
+                      className="w-full px-3 py-2 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300 resize-none"
                     />
 
                     {/* Edit Image */}
