@@ -22,7 +22,7 @@ import {
 import {
   getCategories as getLocalCategories, getTestsByExam as getLocalTestsByExam,
   getTestById as getLocalTestById, saveResult as saveLocalResult,
-  getLeaderboard as getLocalLeaderboard,
+  getLeaderboard as getLocalLeaderboard, getResults as getLocalResults,
   type LocalExamCategory, type LocalExam, type LocalTest, type LocalQuestion, type TestResult
 } from '@/lib/local-data'
 import {
@@ -30,6 +30,7 @@ import {
   getTestById as getFsTestById, saveResult as saveFsResult,
   getLeaderboard as getFsLeaderboard, getUseFirestore,
   getAnnouncements as getFsAnnouncements, getNotifications as getFsNotifications,
+  getResults as getFsResults,
 } from '@/lib/firestore-service'
 import { useFirebaseAuth } from '@/lib/use-firebase-auth'
 import LoginModal from '@/components/LoginModal'
@@ -864,11 +865,20 @@ export default function ExamPrepApp() {
             </div>
             <div className="space-y-2">
               {[
-                { name: _t('upcoming.sscCgl'), date: _t('upcoming.sscCglDate'), status: _t('upcoming.sscCglStatus'), statusType: 'open' },
-                { name: _t('upcoming.ibpsPo'), date: _t('upcoming.ibpsPoDate'), status: _t('upcoming.ibpsPoStatus'), statusType: 'coming' },
-                { name: _t('upcoming.rrbNtpc'), date: _t('upcoming.rrbNtpcDate'), status: _t('upcoming.rrbNtpcStatus'), statusType: 'admit' },
+                { name: _t('upcoming.sscCgl'), date: _t('upcoming.sscCglDate'), status: _t('upcoming.sscCglStatus'), statusType: 'open', catSlug: 'ssc' },
+                { name: _t('upcoming.ibpsPo'), date: _t('upcoming.ibpsPoDate'), status: _t('upcoming.ibpsPoStatus'), statusType: 'coming', catSlug: 'banking' },
+                { name: _t('upcoming.rrbNtpc'), date: _t('upcoming.rrbNtpcDate'), status: _t('upcoming.rrbNtpcStatus'), statusType: 'admit', catSlug: 'railways' },
               ].map((exam, i) => (
-                <Card key={i} className="border-0 shadow-sm">
+                <Card key={i} className="border-0 shadow-sm cursor-pointer hover:shadow-md transition-shadow"
+                  onClick={() => {
+                    const cat = categories.find(c => c.slug === exam.catSlug)
+                    if (cat && cat.exams.length > 0) {
+                      openExam(cat.exams[0], cat)
+                    } else {
+                      handleBottomNav('exams')
+                    }
+                  }}
+                >
                   <CardContent className="p-3 flex items-center gap-3">
                     <div className="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center">
                       <Calendar className="w-5 h-5 text-blue-500" />
@@ -1535,6 +1545,7 @@ export default function ExamPrepApp() {
 
   // ===== RENDER: Leaderboard =====
   function renderLeaderboard() {
+    const isAllResults = leaderboardTestId === 'all'
     return (
       <div className="pb-20">
         <div className="bg-gradient-to-r from-orange-500 to-red-500 px-4 pt-[calc(env(safe-area-inset-top,0px)+3rem)] pb-6 rounded-b-3xl">
@@ -1543,7 +1554,7 @@ export default function ExamPrepApp() {
               <ArrowLeft className="w-5 h-5 text-white" />
             </button>
             <Trophy className="w-6 h-6 text-yellow-300" />
-            <h1 className="text-white text-xl font-bold">{_t('leaderboard.title')}</h1>
+            <h1 className="text-white text-xl font-bold">{isAllResults ? _t('profile.myExams') : _t('leaderboard.title')}</h1>
           </div>
         </div>
 
@@ -1624,7 +1635,7 @@ export default function ExamPrepApp() {
                   <p className="text-gray-400 text-[11px] mt-1">{_t('practice.quickSub')}</p>
                 </CardContent>
               </Card>
-              <Card className="border-0 shadow-sm cursor-pointer hover:shadow-md transition-shadow">
+              <Card className="border-0 shadow-sm cursor-pointer hover:shadow-md transition-shadow" onClick={() => handleBottomNav('exams')}>
                 <CardContent className="p-4 text-center">
                   <div className="w-12 h-12 rounded-2xl bg-blue-50 flex items-center justify-center mx-auto mb-2">
                     <Target className="w-6 h-6 text-blue-500" />
@@ -1633,7 +1644,19 @@ export default function ExamPrepApp() {
                   <p className="text-gray-400 text-[11px] mt-1">{_t('practice.topicWiseSub')}</p>
                 </CardContent>
               </Card>
-              <Card className="border-0 shadow-sm cursor-pointer hover:shadow-md transition-shadow">
+              <Card className="border-0 shadow-sm cursor-pointer hover:shadow-md transition-shadow" onClick={() => {
+                if (auth.isLoggedIn) {
+                  // Show bookmarked/reviewed questions from past tests
+                  const results = getUserStats()
+                  if (results.testsTaken > 0) {
+                    handleBottomNav('tests')
+                  } else {
+                    handleBottomNav('exams')
+                  }
+                } else {
+                  setShowLoginModal(true)
+                }
+              }}>
                 <CardContent className="p-4 text-center">
                   <div className="w-12 h-12 rounded-2xl bg-green-50 flex items-center justify-center mx-auto mb-2">
                     <BookMarked className="w-6 h-6 text-green-500" />
@@ -1642,7 +1665,13 @@ export default function ExamPrepApp() {
                   <p className="text-gray-400 text-[11px] mt-1">{_t('practice.bookmarkedSub')}</p>
                 </CardContent>
               </Card>
-              <Card className="border-0 shadow-sm cursor-pointer hover:shadow-md transition-shadow">
+              <Card className="border-0 shadow-sm cursor-pointer hover:shadow-md transition-shadow" onClick={() => {
+                if (auth.isLoggedIn) {
+                  handleBottomNav('tests')
+                } else {
+                  setShowLoginModal(true)
+                }
+              }}>
                 <CardContent className="p-4 text-center">
                   <div className="w-12 h-12 rounded-2xl bg-purple-50 flex items-center justify-center mx-auto mb-2">
                     <PenTool className="w-6 h-6 text-purple-500" />
@@ -1860,7 +1889,21 @@ export default function ExamPrepApp() {
             </Card>
             <Card
               className="border-0 shadow-sm cursor-pointer hover:shadow-md transition-all active:scale-[0.98]"
-              onClick={() => { pageHistoryRef.current.push(currentPage); setCurrentPage('leaderboard') }}
+              onClick={async () => {
+                try {
+                  const fsResults = isFirestore() ? await getFsResults() : []
+                  const localResults = getLocalResults()
+                  const allResults = [...fsResults, ...localResults]
+                  const uniqueResults = allResults.filter((r, i, arr) => arr.findIndex(x => x.id === r.id) === i)
+                  setLeaderboardData(uniqueResults.sort((a, b) => b.score - a.score).slice(0, 50))
+                  setLeaderboardTestId('all')
+                } catch {
+                  setLeaderboardData(getLocalResults().sort((a, b) => b.score - a.score).slice(0, 50))
+                  setLeaderboardTestId('all')
+                }
+                pageHistoryRef.current.push(currentPage)
+                setCurrentPage('leaderboard')
+              }}
             >
               <CardContent className="p-4">
                 <div className="w-10 h-10 rounded-xl bg-amber-50 flex items-center justify-center mb-2">
@@ -2197,9 +2240,23 @@ export default function ExamPrepApp() {
                       openExam(randomExam, randomCat)
                     }
                   }},
-                  { icon: BookmarkPlus, label: _t('menu.bookmarkedQ'), soon: true, action: () => {} },
-                  { icon: Download, label: _t('menu.offlineTests'), soon: true, action: () => {} },
-                  { icon: BarChart3, label: _t('menu.perfReport'), soon: true, action: () => {} },
+                  { icon: BookmarkPlus, label: _t('menu.bookmarkedQ'), soon: false, action: () => {
+                    if (auth.isLoggedIn) {
+                      handleBottomNav('tests')
+                    } else {
+                      setShowLoginModal(true)
+                    }
+                  }},
+                  { icon: Download, label: _t('menu.offlineTests'), soon: false, action: () => {
+                    handleBottomNav('exams')
+                  }},
+                  { icon: BarChart3, label: _t('menu.perfReport'), soon: false, action: () => {
+                    if (auth.isLoggedIn) {
+                      handleBottomNav('profile')
+                    } else {
+                      setShowLoginModal(true)
+                    }
+                  }},
                 ].map((item, i) => (
                   <button
                     key={i}
@@ -2223,7 +2280,7 @@ export default function ExamPrepApp() {
                 {[
                   { icon: BookOpen, id: 'language', label: _t('profile.language'), sub: lng === 'en' ? _t('lang.english') : lng === 'hi' ? _t('lang.hindi') : _t('lang.bangla'), action: () => setShowLanguageSheet(true) },
                   { icon: Bell, id: 'notifications', label: _t('menu.notifications'), sub: unreadCount > 0 ? `${unreadCount} ${_t('menu.unread')}` : _t('menu.manageAlerts'), action: () => { setShowSideMenu(false); setCurrentPage('home'); setTimeout(() => setShowNotificationPanel(true), 300) } },
-                  { icon: Wifi, id: 'offline', label: _t('menu.offlineMode'), sub: _t('menu.downloadTests'), action: () => {} },
+                  { icon: Wifi, id: 'offline', label: _t('menu.offlineMode'), sub: _t('menu.downloadTests'), action: () => { alert(_t('menu.offlineMode') + ' - Coming soon!') } },
                   { icon: HelpCircle, id: 'help', label: _t('menu.helpFaq'), sub: _t('menu.getSupport'), action: () => setShowAboutSheet(true) },
                   { icon: Share2, id: 'share', label: _t('menu.shareApp'), sub: _t('menu.tellFriends'), action: () => {
                     if (navigator.share) {

@@ -36,9 +36,9 @@ export interface LocalTest {
   description: string
   totalQuestions: number
   duration: number
-  correctMarks: number
-  wrongMarks: number
-  skipMarks: number
+  markingCorrect: number
+  markingWrong: number
+  markingSkipped: number
   difficulty: string
   isFree: boolean
   isLive: boolean
